@@ -1,0 +1,1894 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  body { margin:0; background:#0b0b0d; font-family:'Plus Jakarta Sans','Inter',system-ui,sans-serif; -webkit-font-smoothing:antialiased; }
+  * { box-sizing:border-box; }
+  a { color:#010E80; text-decoration:none; }
+  a:hover { color:#0057B8; }
+  button { font-family:inherit; }
+</style>
+</helmet>
+
+<div style="min-height:100vh;background:#0b0b0d;padding:0 0 64px">
+
+  <div style="position:sticky;top:0;z-index:60;background:#000;border-bottom:1px solid #1e293b;padding:14px 24px;display:flex;align-items:center;gap:24px;flex-wrap:wrap">
+    <div style="display:flex;align-items:center;gap:10px">
+      <img src="inter-logo-white.png" alt="Inter Academy" style="height:34px;width:auto;display:block" />
+      <span style="color:#64748b;font-size:12px;font-weight:500;margin-left:4px">UI Prototype</span>
+    </div>
+
+    <div style="display:flex;gap:6px;background:#111827;padding:5px;border-radius:14px">
+      <button onClick="{{ goLanding }}" style="{{ navLanding }}">Ana Sayfa</button>
+      <button onClick="{{ goParent }}" style="{{ navParent }}">Veli</button>
+      <button onClick="{{ goStaff }}" style="{{ navStaff }}">Eğitmen</button>
+      <button onClick="{{ goAdmin }}" style="{{ navAdmin }}">Yönetici</button>
+    </div>
+
+    <div style="margin-left:auto;display:flex;gap:6px;background:#111827;padding:5px;border-radius:14px">
+      <button onClick="{{ setDesktop }}" style="{{ viewDesktopBtn }}">Masaüstü 1440</button>
+      <button onClick="{{ setMobile }}" style="{{ viewMobileBtn }}">Mobil 390</button>
+    </div>
+  </div>
+
+  <div style="display:flex;justify-content:center;padding:32px 16px">
+    <div style="{{ shellStyle }}">
+
+      <!-- ===== LANDING ===== -->
+      <sc-if value="{{ isLanding }}" hint-placeholder-val="{{ true }}">
+      <div style="{{ landingWrapStyle }}">
+        <div style="{{ headerWrapStyle }}">
+        <div style="background:#010E80;display:flex;align-items:center;gap:8px;flex-wrap:nowrap;padding-right:8px">
+          <div style="{{ brandBoxStyle }}">
+            <img src="inter-logo-white.png" alt="Inter Academy Turkey" style="{{ logoImgStyle }}" />
+          </div>
+          <button onClick="{{ goParent }}" style="{{ portalBtnStyle }}" style-hover="background:#0431d4">ÖĞRENCİ TAKİP</button>
+          <button onClick="{{ goStaff }}" style="{{ portalBtnStyle }}" style-hover="background:#0431d4">EĞİTMEN PANELİ</button>
+          <button onClick="{{ goAdmin }}" style="{{ portalBtnStyle }}" style-hover="background:#0431d4">YÖNETİCİ PANELİ</button>
+          <button onClick="{{ preRegOpenBtn }}" style="background:#FFE600;color:#0F172A;border:none;border-radius:10px;padding:10px 16px;font-size:13px;font-weight:800;cursor:pointer;white-space:nowrap;margin:8px 0">ÖN KAYIT BAŞVURU</button>
+          <button onClick="{{ toggleTheme }}" title="Tema" style="background:transparent;border:1px solid rgba(255,255,255,0.35);border-radius:10px;width:38px;height:38px;font-size:15px;cursor:pointer;margin:8px 0">{{ themeIcon }}</button>
+          <button onClick="{{ toggleNav }}" style="{{ burgerStyle }}">☰</button>
+        </div>
+        <div style="{{ mainNavStyle }}">
+          <sc-for list="{{ mainNav }}" as="n" hint-placeholder-count="4">
+            <button onClick="{{ n.onClick }}" style="{{ n.style }}" style-hover="color:#fff">{{ n.label }}</button>
+          </sc-for>
+          <sc-if value="{{ isMobileView }}" hint-placeholder-val="{{ false }}">
+            <div style="display:grid;gap:8px;padding:10px 0 4px;border-top:1px solid #1e293b;margin-top:6px">
+              <button onClick="{{ goParent }}" style="background:#010E80;color:#fff;border:none;border-radius:11px;padding:13px;font-size:13px;font-weight:800;cursor:pointer;font-family:inherit;text-align:left">ÖĞRENCİ TAKİP</button>
+              <button onClick="{{ goStaff }}" style="background:#010E80;color:#fff;border:none;border-radius:11px;padding:13px;font-size:13px;font-weight:800;cursor:pointer;font-family:inherit;text-align:left">EĞİTMEN &amp; UZMAN PANELİ</button>
+              <button onClick="{{ goAdmin }}" style="background:#010E80;color:#fff;border:none;border-radius:11px;padding:13px;font-size:13px;font-weight:800;cursor:pointer;font-family:inherit;text-align:left">YÖNETİCİ PANELİ</button>
+            </div>
+          </sc-if>
+        </div>
+        </div>
+        <div style="{{ headerSpacerStyle }}"></div>
+
+        <div style="{{ heroWrapStyle }}">
+          <div onContextMenu="{{ edBadge.onContextMenu }}" onTouchStart="{{ edBadge.onTouchStart }}" onTouchEnd="{{ edBadge.onTouchEnd }}" onBlur="{{ edBadge.onBlur }}" contentEditable="{{ edBadge.editable }}" suppressContentEditableWarning="{{ true }}" style="{{ edBadge.style }}">
+            <span style="{{ edBadge.badgeStyle }}">✎</span>
+            <span style="display:inline-block;background:#010E80;color:#fff;font-size:12px;font-weight:700;padding:7px 14px;border-radius:999px;letter-spacing:0.4px">{{ content.badge }}</span>
+          </div>
+          <h1 onContextMenu="{{ edTitle.onContextMenu }}" onTouchStart="{{ edTitle.onTouchStart }}" onTouchEnd="{{ edTitle.onTouchEnd }}" onBlur="{{ edTitle.onBlur }}" contentEditable="{{ edTitle.editable }}" suppressContentEditableWarning="{{ true }}" style="{{ heroTitleStyle }}">{{ content.title }}<span style="{{ edTitle.badgeStyle }}">✎</span></h1>
+          <p onContextMenu="{{ edBody.onContextMenu }}" onTouchStart="{{ edBody.onTouchStart }}" onTouchEnd="{{ edBody.onTouchEnd }}" onBlur="{{ edBody.onBlur }}" contentEditable="{{ edBody.editable }}" suppressContentEditableWarning="{{ true }}" style="{{ heroBodyStyle }}">{{ content.body }}<span style="{{ edBody.badgeStyle }}">✎</span></p>
+
+          <div onContextMenu="{{ edHero.onContextMenu }}" onTouchStart="{{ edHero.onTouchStart }}" onTouchEnd="{{ edHero.onTouchEnd }}" style="{{ heroBannerStyle }}">
+            <span style="{{ edHero.badgeStyle }}">✎</span>
+            <div style="{{ slideTrackStyle }}">
+              <sc-for list="{{ slides }}" as="sl" hint-placeholder-count="1">
+                <div style="{{ sl.style }}">
+                  {{ sl.img }}
+                  <div style="{{ sl.placeholderStyle }}">haber görseli · 1600×600</div>
+                  <div style="{{ sl.overlayStyle }}">
+                    <div style="{{ sl.titleStyle }}">{{ sl.title }}</div>
+                    <div style="{{ sl.bodyStyle }}">{{ sl.body }}</div>
+                  </div>
+                </div>
+              </sc-for>
+            </div>
+            <button onClick="{{ prevSlide }}" style="{{ arrowStyle }};left:12px">‹</button>
+            <button onClick="{{ nextSlide }}" style="{{ arrowStyle }};right:12px">›</button>
+            <div style="position:absolute;left:0;right:0;bottom:12px;display:flex;justify-content:center;gap:7px;z-index:3">
+              <sc-for list="{{ dots }}" as="d" hint-placeholder-count="3">
+                <button onClick="{{ d.onClick }}" style="{{ d.style }}"></button>
+              </sc-for>
+            </div>
+            <sc-for list="{{ layers }}" as="l" hint-placeholder-count="0">
+              {{ l.el }}
+            </sc-for>
+          </div>
+
+          <div id="portallar" style="{{ portalGridStyle }}">
+            <button onClick="{{ goParent }}" style="text-align:left;cursor:pointer;border:1px solid #e2e8f0;border-left:6px solid #010E80;background:#fff;border-radius:20px;padding:26px;box-shadow:0 4px 20px rgba(1,14,128,0.07)" style-hover="box-shadow:0 10px 34px rgba(1,14,128,0.18);transform:translateY(-3px)">
+              <div style="width:46px;height:46px;border-radius:14px;background:#e8ecff;display:flex;align-items:center;justify-content:center;color:#010E80;font-size:22px;font-weight:700;margin-bottom:16px">👪</div>
+              <div style="font-size:19px;font-weight:800;color:#0f172a;margin-bottom:6px">Veli Takip Sistemi</div>
+              <div style="font-size:14px;color:#64748b;line-height:1.5;margin-bottom:18px">T.C. kimlik no ile şifresiz giriş. Takvim, yoklama ve antrenör notları.</div>
+              <div style="color:#010E80;font-weight:700;font-size:14px">Giriş Yap →</div>
+            </button>
+            <button onClick="{{ goStaff }}" style="text-align:left;cursor:pointer;border:1px solid #e2e8f0;border-left:6px solid #16a34a;background:#fff;border-radius:20px;padding:26px;box-shadow:0 4px 20px rgba(22,163,74,0.07)" style-hover="box-shadow:0 10px 34px rgba(22,163,74,0.18);transform:translateY(-3px)">
+              <div style="width:46px;height:46px;border-radius:14px;background:#f0fdf4;display:flex;align-items:center;justify-content:center;font-size:22px;margin-bottom:16px">🧑‍🏫</div>
+              <div style="font-size:19px;font-weight:800;color:#0f172a;margin-bottom:6px">Eğitmen &amp; Uzman Paneli</div>
+              <div style="font-size:14px;color:#64748b;line-height:1.5;margin-bottom:18px">Hızlı yoklama, performans notu ve seans takvimi.</div>
+              <div style="color:#16a34a;font-weight:700;font-size:14px">Panele Git →</div>
+            </button>
+            <button onClick="{{ goAdmin }}" style="text-align:left;cursor:pointer;border:1px solid #e2e8f0;border-left:6px solid #FFE600;background:#fff;border-radius:20px;padding:26px;box-shadow:0 4px 20px rgba(255,230,0,0.14)" style-hover="box-shadow:0 10px 34px rgba(234,179,8,0.2);transform:translateY(-3px)">
+              <div style="width:46px;height:46px;border-radius:14px;background:#fffbdb;display:flex;align-items:center;justify-content:center;font-size:22px;margin-bottom:16px">⚙️</div>
+              <div style="font-size:19px;font-weight:800;color:#0f172a;margin-bottom:6px">Yönetici Paneli</div>
+              <div style="font-size:14px;color:#64748b;line-height:1.5;margin-bottom:18px">Öğrenci, kadro, ödeme takibi ve site içerik yönetimi.</div>
+              <div style="color:#a16207;font-weight:700;font-size:14px">Yönetime Git →</div>
+            </button>
+          </div>
+        </div>
+
+        <div id="hakkimizda" style="{{ aboutSectionStyle }}">
+          <div style="font-size:12px;font-weight:800;color:#0057B8;letter-spacing:1.2px;margin-bottom:10px">HAKKIMIZDA</div>
+          <div style="{{ sectionTitleStyle }}">Sahada, mutfakta ve zihinde birlikte gelişim</div>
+          <div style="display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));margin-top:22px">
+            <sc-for list="{{ aboutBlocks }}" as="b" hint-placeholder-count="3">
+              <div style="background:{{ cardSurfaceStyle }};border-top:5px solid #010E80;border-radius:18px;padding:20px;border-width:1px 1px 5px 1px;border-style:solid">
+                <div style="font-size:16px;font-weight:800;color:{{ textPrimaryStyle }};margin-bottom:6px">{{ b.h }}</div>
+                <div style="font-size:13.5px;color:{{ textMutedStyle }};line-height:1.6">{{ b.b }}</div>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+
+        <div id="antrenman-programi" style="{{ programSectionStyle }}">
+          <div style="font-size:12px;font-weight:800;color:#0057B8;letter-spacing:1.2px;margin-bottom:10px">ANTRENMAN PROGRAMI</div>
+          <div style="{{ sectionTitleStyle }}">Yaş gruplarına göre haftalık plan</div>
+          <div style="{{ progReadOnlyNoteStyle }}">{{ progReadOnlyNote }}</div>
+
+          <sc-if value="{{ isProgDesktop }}" hint-placeholder-val="{{ true }}">
+          <div style="border:1px solid #e2e8f0;border-radius:18px;overflow:hidden;background:#fff;margin-top:14px">
+            <sc-for list="{{ programRows2 }}" as="r" hint-placeholder-count="5">
+              <div style="{{ r.rowStyle }}">
+                <div contentEditable="{{ r.editable }}" suppressContentEditableWarning="{{ true }}" onBlur="{{ r.onG }}" style="{{ r.gStyle }}">{{ r.g }}</div>
+                <div contentEditable="{{ r.editable }}" suppressContentEditableWarning="{{ true }}" onBlur="{{ r.onD }}" style="{{ r.dStyle }}">{{ r.d }}</div>
+                <div contentEditable="{{ r.editable }}" suppressContentEditableWarning="{{ true }}" onBlur="{{ r.onDesc }}" style="{{ r.descStyle }}">{{ r.desc }}</div>
+                <div contentEditable="{{ r.editable }}" suppressContentEditableWarning="{{ true }}" onBlur="{{ r.onT }}" style="{{ r.tStyle }}">{{ r.t }}</div>
+                <button onClick="{{ r.onRemove }}" style="{{ r.removeStyle }}">Sil</button>
+              </div>
+            </sc-for>
+            <sc-if value="{{ canAddRow }}" hint-placeholder-val="{{ false }}">
+              <button onClick="{{ addRow }}" style="width:100%;background:#f1f5f9;border:none;padding:14px;font-size:13.5px;font-weight:800;color:#010E80;cursor:pointer;font-family:inherit" style-hover="background:#e8ecff">+ Seans / Saat Ekle</button>
+            </sc-if>
+          </div>
+          </sc-if>
+
+          <sc-if value="{{ isProgMobile }}" hint-placeholder-val="{{ false }}">
+          <div style="margin-top:14px">
+            <div style="display:flex;gap:8px;overflow-x:auto;padding-bottom:8px;margin-bottom:14px">
+              <sc-for list="{{ dayPills }}" as="p" hint-placeholder-count="7">
+                <button onClick="{{ p.onClick }}" style="{{ p.style }}">{{ p.label }}</button>
+              </sc-for>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:12px">
+              <sc-for list="{{ dayCards }}" as="dc" hint-placeholder-count="3">
+                <div style="border:1px solid #e2e8f0;border-radius:16px;overflow:hidden;background:#fff">
+                  <div style="background:#010E80;color:#fff;font-size:13px;font-weight:800;letter-spacing:0.4px;padding:11px 14px;text-transform:uppercase">📅 {{ dc.day }}</div>
+                  <div style="padding:12px;display:flex;flex-direction:column;gap:10px">
+                    <sc-if value="{{ dc.hasSessions }}" hint-placeholder-val="{{ true }}">
+                      <sc-for list="{{ dc.sessions }}" as="ss" hint-placeholder-count="1">
+                        <div style="display:flex;gap:12px;align-items:flex-start;background:#f8fafc;border-radius:13px;padding:12px">
+                          <span style="{{ ss.timeStyle }}">{{ ss.t }}</span>
+                          <div style="flex:1">
+                            <span style="{{ ss.groupStyle }}">{{ ss.g }}</span>
+                            <div style="font-size:13px;color:#475569;font-weight:600;margin-top:6px">{{ ss.desc }}</div>
+                          </div>
+                        </div>
+                      </sc-for>
+                    </sc-if>
+                    <sc-if value="{{ dc.noSessions }}" hint-placeholder-val="{{ false }}">
+                      <div style="font-size:13px;color:#94a3b8;font-weight:600;padding:6px 2px">Bugün planlanmış antrenman bulunmamaktadır.</div>
+                    </sc-if>
+                  </div>
+                </div>
+              </sc-for>
+            </div>
+          </div>
+          </sc-if>
+        </div>
+
+        <div id="haberler" style="{{ landingBottomStyle }};background:{{ landingBottomBg }}">
+          <div>
+            <div style="{{ kickerStyle }}">GENEL ANTRENMAN PROGRAMI</div>
+            <div style="{{ cardSurfaceStyle }};border-radius:18px;overflow:hidden">
+              <sc-for list="{{ schedule }}" as="row" hint-placeholder-count="4">
+                <div style="display:flex;align-items:center;gap:14px;padding:14px 18px;border-bottom:1px solid {{ rowDividerColor }}">
+                  <div style="width:74px;font-weight:700;color:{{ textPrimaryStyle }};font-size:14px">{{ row.day }}</div>
+                  <div style="font-size:13px;color:{{ textMutedStyle }};font-variant-numeric:tabular-nums">{{ row.time }}</div>
+                  <div style="{{ row.tagStyle }}">{{ row.group }}</div>
+                </div>
+              </sc-for>
+            </div>
+          </div>
+          <div>
+            <div style="{{ kickerStyle }}">DUYURULAR</div>
+            <sc-for list="{{ announcements }}" as="a" hint-placeholder-count="3">
+              <div style="{{ announceCardStyle }}">
+                <div style="font-size:11px;font-weight:700;color:{{ textMutedStyle }};letter-spacing:0.6px;margin-bottom:6px">{{ a.date }}</div>
+                <div style="font-size:15px;font-weight:700;color:{{ textPrimaryStyle }};margin-bottom:4px">{{ a.title }}</div>
+                <div style="font-size:13.5px;color:{{ textMutedStyle }};line-height:1.5">{{ a.body }}</div>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+
+        <div id="iletisim" style="{{ contactSectionStyle }}">
+          <div style="font-size:12px;font-weight:800;color:#93c5fd;letter-spacing:1.2px;margin-bottom:10px">İLETİŞİM</div>
+          <div style="{{ contactTitleStyle }}">Bize ulaşın</div>
+          <div style="display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));margin-top:22px">
+            <a href="tel:+902121234567" style="background:#111827;border:1px solid #1e293b;border-radius:18px;padding:20px;transition:transform .15s ease" style-hover="transform:scale(1.03);background:#010E80;color:#fff">
+              <div style="font-size:12px;font-weight:700;color:#94a3b8;margin-bottom:6px">TELEFON</div>
+              <div style="font-size:17px;font-weight:800;color:#fff">0212 123 45 67</div>
+            </a>
+            <a href="https://wa.me/905321142208" target="_blank" style="background:#111827;border:1px solid #1e293b;border-radius:18px;padding:20px;transition:transform .15s ease" style-hover="transform:scale(1.03);background:#16A34A;color:#fff">
+              <div style="font-size:12px;font-weight:700;color:#94a3b8;margin-bottom:6px">WHATSAPP</div>
+              <div style="font-size:17px;font-weight:800;color:#fff">0532 114 22 08</div>
+            </a>
+            <a href="https://instagram.com" target="_blank" style="background:#111827;border:1px solid #1e293b;border-radius:18px;padding:20px;transition:transform .15s ease" style-hover="transform:scale(1.03);background:#0057B8;color:#fff">
+              <div style="font-size:12px;font-weight:700;color:#94a3b8;margin-bottom:6px">INSTAGRAM</div>
+              <div style="font-size:17px;font-weight:800;color:#fff">@interacademy</div>
+            </a>
+            <div style="background:#111827;border:1px solid #1e293b;border-radius:18px;padding:20px">
+              <div style="font-size:12px;font-weight:700;color:#94a3b8;margin-bottom:6px">ADRES</div>
+              <div style="font-size:14.5px;font-weight:600;color:#e2e8f0;line-height:1.5">Inter Academy Tesisleri, Ataşehir / İstanbul</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      </sc-if>
+
+      <!-- ===== PARENT ===== -->
+      <sc-if value="{{ isParentLogin }}" hint-placeholder-val="{{ false }}">
+      <div style="{{ themeScreenStyle }};display:flex;align-items:center;justify-content:center">
+        <div style="width:100%;max-width:420px">
+          <div style="background:#000;border-radius:16px;padding:14px 18px;display:inline-block;margin-bottom:22px"><img src="inter-logo-white.png" alt="Inter Academy" style="height:52px;width:auto;display:block" /></div>
+          <h2 style="font-size:28px;font-weight:800;color:{{ themeHeading }};letter-spacing:-0.8px;margin:0 0 8px">Veli Takip Girişi</h2>
+          <p style="font-size:15px;color:{{ themeMuted }};margin:0 0 28px;line-height:1.5">Şifre yok. Sadece öğrencinizin T.C. kimlik numarasını girin.</p>
+          <div style="{{ tcErrorStyle }}">{{ tcError }}</div>
+          <label style="display:block;font-size:13px;font-weight:700;color:{{ themeMuted }};margin-bottom:8px">Öğrenci T.C. Kimlik No</label>
+          <input value="{{ tcInput }}" onChange="{{ onTc }}" onKeyDown="{{ onTcKeyDown }}" placeholder="11 haneli numara" style="width:100%;padding:18px;font-size:18px;letter-spacing:2px;background:{{ themeInputBg }};color:{{ themeHeading }};border:2px solid {{ themeInputBorder }};border-radius:16px;outline:none;font-family:inherit;margin-bottom:16px" style-focus="border-color:#010E80" />
+          <button onClick="{{ parentLogin }}" style="width:100%;padding:18px;background:#010E80;color:#fff;border:none;border-radius:16px;font-size:17px;font-weight:700;cursor:pointer" style-hover="background:#0057B8">Giriş Yap</button>
+          <div style="margin-top:18px;font-size:13px;color:#94a3b8;text-align:center">Demo: 12345678901 ile devam edin</div>
+        </div>
+      </div>
+      </sc-if>
+
+      <sc-if value="{{ isParentDash }}" hint-placeholder-val="{{ false }}">
+      <div style="{{ themeScreenStyle }}">
+        <div style="background:#000;padding:22px 28px;display:flex;align-items:center;gap:18px;flex-wrap:wrap">
+          <div style="width:54px;height:54px;border-radius:16px;background:#010E80;display:flex;align-items:center;justify-content:center;color:#fff;font-size:20px;font-weight:800">AY</div>
+          <div style="flex:1;min-width:160px">
+            <div style="color:#fff;font-size:20px;font-weight:800;letter-spacing:-0.4px">Arda Yılmaz</div>
+            <div style="color:#94a3b8;font-size:13px;font-weight:500">12 yaş · U-12 Grubu · Veli: Mehmet Yılmaz</div>
+          </div>
+          <button onClick="{{ parentLogout }}" style="background:#111827;color:#fff;border:1px solid #334155;border-radius:12px;padding:10px 16px;font-size:12.5px;font-weight:700;cursor:pointer;white-space:nowrap">Çıkış Yap</button>
+          <div style="display:flex;gap:10px">
+            <div style="background:#111827;border-radius:14px;padding:10px 16px"><div style="color:#94a3b8;font-size:11px;font-weight:600">DEVAM</div><div style="color:#22c55e;font-size:18px;font-weight:800">%88</div></div>
+            <div style="background:#111827;border-radius:14px;padding:10px 16px"><div style="color:#94a3b8;font-size:11px;font-weight:600">SEANS</div><div style="color:#fff;font-size:18px;font-weight:800">14</div></div>
+          </div>
+        </div>
+
+        <div style="padding:24px 28px">
+          <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:16px">
+            <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+              <div style="font-size:19px;font-weight:800;color:{{ themeHeading }};letter-spacing:-0.3px">Aktivite Takvimi</div>
+              <select value="{{ calMonth }}" onChange="{{ onCalMonth }}" style="padding:8px 11px;border:1px solid #e2e8f0;border-radius:11px;font-size:13px;font-weight:700;font-family:inherit;background:#fff;color:#0F172A">
+                <option>Ocak</option><option>Şubat</option><option>Mart</option><option>Nisan</option><option>Mayıs</option><option>Haziran</option>
+                <option>Temmuz</option><option>Ağustos</option><option>Eylül</option><option>Ekim</option><option>Kasım</option><option>Aralık</option>
+              </select>
+              <select value="{{ calYear }}" onChange="{{ onCalYear }}" style="padding:8px 11px;border:1px solid #e2e8f0;border-radius:11px;font-size:13px;font-weight:700;font-family:inherit;background:#fff;color:#0F172A">
+                <option>2025</option><option>2026</option><option>2027</option>
+              </select>
+            </div>
+            <div style="display:flex;gap:14px;flex-wrap:wrap">
+              <div style="display:flex;align-items:center;gap:7px;font-size:12.5px;font-weight:600;color:#475569"><span style="width:12px;height:12px;border-radius:4px;background:#010E80"></span>Antrenman</div>
+              <div style="display:flex;align-items:center;gap:7px;font-size:12.5px;font-weight:600;color:#475569"><span style="width:12px;height:12px;border-radius:4px;background:#16a34a"></span>Diyetisyen</div>
+              <div style="display:flex;align-items:center;gap:7px;font-size:12.5px;font-weight:600;color:#475569"><span style="width:12px;height:12px;border-radius:4px;background:#eab308"></span>Psikolog</div>
+              <div style="display:flex;align-items:center;gap:7px;font-size:12.5px;font-weight:600;color:#475569"><span style="width:12px;height:12px;border-radius:4px;background:#dc2626"></span>Gelmedi</div>
+            </div>
+          </div>
+
+          <div style="{{ themeCardStyle }};border-radius:20px;padding:16px">
+            <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:6px;margin-bottom:8px">
+              <sc-for list="{{ weekdays }}" as="w" hint-placeholder-count="7">
+                <div style="text-align:center;font-size:11px;font-weight:700;color:{{ themeMuted }};letter-spacing:0.5px">{{ w }}</div>
+              </sc-for>
+            </div>
+            <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:6px">
+              <sc-for list="{{ days }}" as="d" hint-placeholder-count="35">
+                <button onClick="{{ d.onClick }}" style="{{ d.style }}">
+                  <span style="{{ d.numStyle }}">{{ d.num }}</span>
+                </button>
+              </sc-for>
+            </div>
+          </div>
+
+          <div style="margin-top:20px">
+            <div onClick="{{ openReportModal }}" style="font-size:15px;font-weight:800;color:{{ themeHeading }};margin-bottom:12px;cursor:pointer">{{ reportTitle }} →</div>
+            <div style="display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(240px,1fr))">
+              <sc-for list="{{ reportBlocks }}" as="rb" hint-placeholder-count="3">
+                <div style="{{ rb.cardStyle }}">
+                  <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
+                    <span style="{{ rb.dotStyle }}"></span>
+                    <span style="{{ rb.titleStyle }}">{{ rb.title }}</span>
+                  </div>
+                  <div style="font-size:13px;color:#475569;line-height:1.6">{{ rb.body }}</div>
+                </div>
+              </sc-for>
+            </div>
+          </div>
+        </div>
+      </div>
+      </sc-if>
+
+      <sc-if value="{{ isStaffLogin }}" hint-placeholder-val="{{ false }}">
+      <div style="{{ themeScreenStyle }};display:flex;align-items:center;justify-content:center">
+        <div style="width:100%;max-width:420px">
+          <div style="background:#000;border-radius:16px;padding:14px 18px;display:inline-block;margin-bottom:22px"><img src="inter-logo-white.png" alt="Inter Academy" style="height:44px;width:auto;display:block" /></div>
+          <h2 style="font-size:28px;font-weight:800;color:{{ themeHeading }};letter-spacing:-0.8px;margin:0 0 8px">Eğitmen &amp; Uzman Girişi</h2>
+          <p style="font-size:15px;color:{{ themeMuted }};margin:0 0 24px;line-height:1.5">Kullanıcı adınız ad-soyad birleşiminizdir, şifreniz T.C. kimlik numaranız.</p>
+          <div style="{{ loginErrorStyle }}">{{ loginError }}</div>
+          <label style="display:block;font-size:13px;font-weight:700;color:{{ themeMuted }};margin-bottom:8px">Kullanıcı Adı</label>
+          <input value="{{ loginUser }}" onChange="{{ onLoginUser }}" placeholder="adsoyad" style="width:100%;padding:16px;font-size:16px;background:{{ themeInputBg }};color:{{ themeHeading }};border:2px solid {{ themeInputBorder }};border-radius:16px;outline:none;font-family:inherit;margin-bottom:16px" style-focus="border-color:#010E80" />
+          <label style="display:block;font-size:13px;font-weight:700;color:{{ themeMuted }};margin-bottom:8px">Şifre (T.C. Kimlik No)</label>
+          <div style="display:flex;gap:8px;margin-bottom:18px">
+            <input type="{{ passType }}" value="{{ loginPass }}" onChange="{{ onLoginPass }}" onKeyDown="{{ onStaffLoginKeyDown }}" placeholder="11 haneli numara" style="flex:1;padding:16px;font-size:16px;letter-spacing:1.5px;background:{{ themeInputBg }};color:{{ themeHeading }};border:2px solid {{ themeInputBorder }};border-radius:16px;outline:none;font-family:inherit" style-focus="border-color:#010E80" />
+            <button onClick="{{ togglePass }}" style="width:56px;border:2px solid {{ themeInputBorder }};background:{{ themeInputBg }};border-radius:16px;font-size:18px;cursor:pointer">{{ eyeLabel }}</button>
+          </div>
+          <button onClick="{{ doStaffLogin }}" style="width:100%;padding:18px;background:#010E80;color:#fff;border:none;border-radius:16px;font-size:17px;font-weight:800;cursor:pointer" style-hover="background:#0057B8">Giriş Yap</button>
+          <div style="margin-top:16px;font-size:13px;color:#94a3b8;text-align:center">{{ loginHint }}</div>
+        </div>
+      </div>
+      </sc-if>
+
+      <!-- ===== STAFF ===== -->
+      <sc-if value="{{ isStaff }}" hint-placeholder-val="{{ false }}">
+      <div style="{{ staffScreenBg }}">
+        <div style="background:#000;padding:20px 28px;display:flex;align-items:center;gap:16px;flex-wrap:wrap">
+          <div style="{{ staffAvatarStyle }}">{{ staffInitials }}</div>
+          <div style="flex:1;min-width:150px">
+            <div style="color:#fff;font-size:17px;font-weight:800">{{ staffName }}</div>
+            <div style="display:flex;align-items:center;gap:7px;margin-top:3px"><span style="{{ staffDotStyle }}"></span><span style="color:#94a3b8;font-size:13px;font-weight:600">{{ staffRoleLine }}</span></div>
+          </div>
+          <select value="{{ staffRole }}" onChange="{{ onStaffRole }}" style="{{ staffSelectStyle }}">
+            <option value="Antrenör">Antrenör — Murat Kaya</option>
+            <option value="Diyetisyen">Diyetisyen — Elif Demir</option>
+            <option value="Psikolog">Psikolog — Can Aydın</option>
+          </select>
+          <button onClick="{{ staffLogoutTop }}" style="background:#111827;color:#fff;border:1px solid #334155;border-radius:12px;padding:10px 16px;font-size:12.5px;font-weight:700;cursor:pointer;white-space:nowrap">Çıkış Yap</button>
+        </div>
+
+        <div style="{{ staffTabsBg }}">
+          <button onClick="{{ staffTabAtt }}" style="{{ staffTabAttStyle }}">1. Yoklama Al</button>
+          <button onClick="{{ staffTabNote }}" style="{{ staffTabNoteStyle }}">2. Öğrenciye Not Ekle</button>
+        </div>
+
+        <sc-if value="{{ staffNoteTab }}" hint-placeholder-val="{{ false }}">
+        <div style="padding:18px 84px 28px 28px;max-width:560px">
+          <div style="display:flex;gap:8px;margin-bottom:20px">
+            <sc-for list="{{ noteSteps }}" as="st" hint-placeholder-count="3">
+              <div style="{{ st.style }}">{{ st.label }}</div>
+            </sc-for>
+          </div>
+
+          <sc-if value="{{ noteAtStep1 }}" hint-placeholder-val="{{ true }}">
+            <div style="{{ staffCardBg }}">
+              <div style="font-size:16px;font-weight:800;color:{{ staffTextPrimary }};margin-bottom:14px">1. Sınıf / Grup Seç</div>
+              <select value="{{ noteGroupSel }}" onChange="{{ onNoteGroup }}" style="width:100%;padding:14px;border:1px solid #e2e8f0;border-radius:13px;font-size:15px;font-family:inherit;background:#fff;margin-bottom:18px">
+                <option value="U-12">U-12 Grubu</option>
+                <option value="U-14">U-14 Grubu</option>
+              </select>
+              <button onClick="{{ noteGoto2 }}" style="{{ noteBtnStyle }}">Devam Et →</button>
+            </div>
+          </sc-if>
+
+          <sc-if value="{{ noteAtStep2 }}" hint-placeholder-val="{{ false }}">
+            <div style="{{ staffCardBg }}">
+              <div style="font-size:16px;font-weight:800;color:{{ staffTextPrimary }};margin-bottom:14px">2. Öğrenci Seç</div>
+              <input value="{{ noteSearch }}" onChange="{{ onNoteSearch }}" placeholder="İsim / soyisim ile ara…" style="width:100%;padding:13px;border:1px solid #e2e8f0;border-radius:13px;font-size:14px;font-family:inherit;outline:none;margin-bottom:12px" style-focus="border-color:#010E80" />
+              <div style="display:flex;flex-direction:column;gap:6px;max-height:220px;overflow:auto;margin-bottom:18px">
+                <sc-for list="{{ noteStudentOptions }}" as="nm" hint-placeholder-count="6">
+                  <button onClick="{{ nm.onClick }}" style="{{ nm.style }}">{{ nm.name }}</button>
+                </sc-for>
+              </div>
+              <div style="display:flex;gap:10px">
+                <button onClick="{{ noteGoto1 }}" style="background:#f1f5f9;color:#475569;border:none;border-radius:14px;padding:13px 20px;font-size:14px;font-weight:700;cursor:pointer">← Geri</button>
+                <button onClick="{{ noteGoto3 }}" style="{{ noteBtnStyle }}">Devam Et →</button>
+              </div>
+            </div>
+          </sc-if>
+
+          <sc-if value="{{ noteAtStep3 }}" hint-placeholder-val="{{ false }}">
+            <sc-if value="{{ noteSaved }}" hint-placeholder-val="{{ false }}">
+              <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:18px;padding:22px;text-align:center">
+                <div style="font-size:30px;margin-bottom:8px">✓</div>
+                <div style="font-size:16px;font-weight:800;color:#15803d;margin-bottom:6px">Not kaydedildi</div>
+                <div style="font-size:13.5px;color:#166534;margin-bottom:16px">{{ noteStudentSel }} için {{ noteMonth }} {{ noteYear }} raporuna işlendi.</div>
+                <button onClick="{{ newNote }}" style="{{ noteBtnStyle }}">Yeni Not Ekle</button>
+              </div>
+            </sc-if>
+            <sc-if value="{{ noteNotSaved }}" hint-placeholder-val="{{ true }}">
+              <div style="{{ staffCardBg }}">
+                <div style="font-size:16px;font-weight:800;color:{{ staffTextPrimary }};margin-bottom:14px">3. Tarih &amp; Not Girişi</div>
+                <div style="font-size:13px;color:{{ themeMuted }};margin-bottom:14px">{{ noteGroupSel }} · {{ noteStudentSel }}</div>
+                <label style="display:block;font-size:12.5px;font-weight:700;color:#475569;margin-bottom:6px">Ay / Yıl</label>
+                <div style="display:flex;gap:8px;margin-bottom:14px">
+                  <select value="{{ noteMonth }}" onChange="{{ onNoteMonth }}" style="flex:1;padding:13px;border:1px solid #e2e8f0;border-radius:13px;font-size:14px;font-family:inherit;background:#fff">
+                    <option>Ocak</option><option>Şubat</option><option>Mart</option><option>Nisan</option><option>Mayıs</option><option>Haziran</option>
+                    <option>Temmuz</option><option>Ağustos</option><option>Eylül</option><option>Ekim</option><option>Kasım</option><option>Aralık</option>
+                  </select>
+                  <select value="{{ noteYear }}" onChange="{{ onNoteYear }}" style="width:100px;padding:13px;border:1px solid #e2e8f0;border-radius:13px;font-size:14px;font-family:inherit;background:#fff">
+                    <option>2025</option><option>2026</option><option>2027</option>
+                  </select>
+                </div>
+                <label style="display:block;font-size:12.5px;font-weight:700;color:#475569;margin-bottom:6px">Not Kategorisi</label>
+                <select value="{{ noteCategory }}" onChange="{{ onNoteCategory }}" style="width:100%;padding:13px;border:1px solid #e2e8f0;border-radius:13px;font-size:14px;font-family:inherit;background:#fff;margin-bottom:14px">
+                  <option>Gelişim</option>
+                  <option>Antrenman Performansı</option>
+                  <option>Beslenme / Ruh Hali</option>
+                </select>
+                <label style="display:block;font-size:12.5px;font-weight:700;color:#475569;margin-bottom:6px">Açıklama</label>
+                <textarea value="{{ noteText }}" onChange="{{ onNoteText }}" rows="4" placeholder="Değerlendirmenizi yazın…" style="width:100%;padding:13px;border:1px solid #e2e8f0;border-radius:13px;font-size:14px;font-family:inherit;outline:none;resize:vertical;margin-bottom:18px" style-focus="border-color:#010E80"></textarea>
+                <div style="display:flex;gap:10px">
+                  <button onClick="{{ noteGoto2 }}" style="background:#f1f5f9;color:#475569;border:none;border-radius:14px;padding:13px 20px;font-size:14px;font-weight:700;cursor:pointer">← Geri</button>
+                  <button onClick="{{ saveNote }}" style="{{ noteBtnStyle }}">Notu Kaydet</button>
+                </div>
+              </div>
+            </sc-if>
+          </sc-if>
+        </div>
+        </sc-if>
+
+        <sc-if value="{{ staffAtt }}" hint-placeholder-val="{{ false }}">
+        <div style="padding:18px 84px 28px 28px">
+          <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:16px">
+            <span style="font-size:13px;font-weight:700;color:#475569">Grup:</span>
+            <button onClick="{{ pickU12 }}" style="{{ u12Style }}">U-12</button>
+            <button onClick="{{ pickU14 }}" style="{{ u14Style }}">U-14</button>
+            <span style="margin-left:auto;font-size:13px;font-weight:600;color:#64748b">1 Mart 2026 · 17:00 Antrenman</span>
+          </div>
+
+          <sc-if value="{{ showWhatsBanner }}" hint-placeholder-val="{{ false }}">
+            <div style="background:#fef2f2;border:1px solid #fecaca;border-left:6px solid #dc2626;border-radius:18px;padding:18px;margin-bottom:16px;display:flex;gap:14px;align-items:flex-start">
+              <div style="font-size:22px">💬</div>
+              <div style="flex:1">
+                <div style="font-size:14.5px;font-weight:800;color:#991b1b;margin-bottom:4px">WhatsApp bilgilendirmesi hazırlandı</div>
+                <div style="font-size:13.5px;color:#7f1d1d;line-height:1.5">“Veliye WhatsApp devamsızlık bildirim mesajı tetiklendi.” — {{ absentCount }} veliye gönderilmeye hazır.</div>
+              </div>
+              <button style="background:#dc2626;color:#fff;border:none;border-radius:12px;padding:11px 16px;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap">Gönder</button>
+            </div>
+          </sc-if>
+
+          <div style="{{ themeCardStyle }};border-radius:20px;overflow:hidden">
+            <sc-for list="{{ roster }}" as="s" hint-placeholder-count="6">
+              <div style="display:flex;align-items:center;gap:14px;padding:14px 18px;border-bottom:1px solid #f1f5f9">
+                <div style="width:42px;height:42px;border-radius:13px;background:#e8ecff;color:#010E80;font-weight:800;display:flex;align-items:center;justify-content:center;font-size:14px">{{ s.initials }}</div>
+                <div style="flex:1;min-width:0">
+                  <div style="font-size:15px;font-weight:700;color:{{ themeHeading }}">{{ s.name }}</div>
+                  <div style="font-size:12.5px;color:{{ themeMuted }};font-weight:500">{{ s.meta }}</div>
+                </div>
+                <div style="display:flex;gap:8px">
+                  <button onClick="{{ s.markVar }}" style="{{ s.varStyle }}">✓ Var</button>
+                  <button onClick="{{ s.markYok }}" style="{{ s.yokStyle }}">✕ Yok</button>
+                </div>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+        </sc-if>
+      </div>
+      </sc-if>
+
+      <sc-if value="{{ isAdminLogin }}" hint-placeholder-val="{{ false }}">
+      <div style="{{ themeScreenStyle }};display:flex;align-items:center;justify-content:center">
+        <div style="width:100%;max-width:420px">
+          <div style="background:#000;border-radius:16px;padding:14px 18px;display:inline-block;margin-bottom:22px"><img src="inter-logo-white.png" alt="Inter Academy" style="height:44px;width:auto;display:block" /></div>
+          <h2 style="font-size:28px;font-weight:800;color:{{ themeHeading }};letter-spacing:-0.8px;margin:0 0 8px">Yönetici Girişi</h2>
+          <p style="font-size:15px;color:{{ themeMuted }};margin:0 0 24px;line-height:1.5">Yönetici hesabınızla giriş yapın.</p>
+          <div style="{{ adminLoginErrorStyle }}">{{ adminLoginError }}</div>
+          <label style="display:block;font-size:13px;font-weight:700;color:{{ themeMuted }};margin-bottom:8px">Kullanıcı Adı</label>
+          <input value="{{ adminUser }}" onChange="{{ onAdminUser }}" placeholder="admin1" style="width:100%;padding:16px;font-size:16px;background:{{ themeInputBg }};color:{{ themeHeading }};border:2px solid {{ themeInputBorder }};border-radius:16px;outline:none;font-family:inherit;margin-bottom:16px" style-focus="border-color:#010E80" />
+          <label style="display:block;font-size:13px;font-weight:700;color:{{ themeMuted }};margin-bottom:8px">Şifre</label>
+          <input type="password" value="{{ adminPass }}" onChange="{{ onAdminPass }}" onKeyDown="{{ onAdminLoginKeyDown }}" placeholder="••••••••" style="width:100%;padding:16px;font-size:16px;background:{{ themeInputBg }};color:{{ themeHeading }};border:2px solid {{ themeInputBorder }};border-radius:16px;outline:none;font-family:inherit;margin-bottom:18px" style-focus="border-color:#010E80" />
+          <button onClick="{{ doAdminLogin }}" style="width:100%;padding:18px;background:#010E80;color:#fff;border:none;border-radius:16px;font-size:17px;font-weight:800;cursor:pointer" style-hover="background:#0057B8">Giriş Yap</button>
+          <div style="margin-top:16px;font-size:13px;color:#94a3b8;text-align:center">Demo: admin1 / inter_pass_10</div>
+        </div>
+      </div>
+      </sc-if>
+
+      <!-- ===== ADMIN ===== -->
+      <sc-if value="{{ isAdmin }}" hint-placeholder-val="{{ false }}">
+      <div style="{{ themeScreenStyle }}">
+        <div style="background:#000;padding:20px 28px;display:flex;align-items:center;gap:16px;flex-wrap:wrap">
+          <div style="flex:1;min-width:150px">
+            <div style="color:#fff;font-size:19px;font-weight:800;letter-spacing:-0.3px">Yönetici Paneli</div>
+            <div style="color:#94a3b8;font-size:13px;font-weight:500">Inter Academy · 128 öğrenci · 9 uzman</div>
+          </div>
+          <button onClick="{{ adminLogoutTop }}" style="background:#111827;color:#fff;border:1px solid #334155;border-radius:12px;padding:10px 16px;font-size:12.5px;font-weight:700;cursor:pointer;white-space:nowrap">Çıkış Yap</button>
+          <div style="display:flex;gap:10px;flex-wrap:wrap">
+            <div style="background:#111827;border-radius:14px;padding:10px 16px"><div style="color:#94a3b8;font-size:11px;font-weight:600">BU AY TAHSİLAT</div><div style="color:#22c55e;font-size:17px;font-weight:800">₺184.500</div></div>
+            <div style="background:#111827;border-radius:14px;padding:10px 16px"><div style="color:#94a3b8;font-size:11px;font-weight:600">BEKLEYEN</div><div style="color:#f59e0b;font-size:17px;font-weight:800">11</div></div>
+          </div>
+        </div>
+
+        <div style="position:sticky;top:0;z-index:20;background:#f1f5f9;padding:16px 28px 0;display:flex;gap:8px;flex-wrap:wrap">
+          <button onClick="{{ aTab1 }}" style="{{ aTab1Style }}">Öğrenci Yönetimi</button>
+          <button onClick="{{ aTab2 }}" style="{{ aTab2Style }}">Eğitmen &amp; Uzman</button>
+          <button onClick="{{ aTab3 }}" style="{{ aTab3Style }}">Ödeme &amp; WhatsApp</button>
+          <button onClick="{{ aTab4 }}" style="{{ aTab4Style }}">Site İçeriği</button>
+          <button onClick="{{ aTab5 }}" style="{{ aTab5Style }}">Antrenman Programı Yönetimi</button>
+        </div>
+
+        <sc-if value="{{ admin1 }}" hint-placeholder-val="{{ true }}">
+        <div style="padding:18px 84px 28px 28px">
+          <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:14px">
+            <input value="{{ studentSearch }}" onChange="{{ onStudentSearch }}" placeholder="Ad veya soyad ara…" style="flex:1;min-width:180px;padding:13px 16px;border:1px solid #e2e8f0;border-radius:14px;font-size:14px;font-family:inherit;outline:none" style-focus="border-color:#010E80" />
+            <select style="padding:13px 14px;border:1px solid #e2e8f0;border-radius:14px;font-size:14px;font-family:inherit;background:#fff"><option>Tüm gruplar</option><option>U-12</option><option>U-14</option></select>
+            <select style="padding:13px 14px;border:1px solid #e2e8f0;border-radius:14px;font-size:14px;font-family:inherit;background:#fff"><option>Tüm yaşlar</option><option>10—12</option><option>13—15</option></select>
+            <button onClick="{{ openNewStudent }}" style="background:#010E80;color:#fff;border:none;border-radius:14px;padding:13px 18px;font-size:14px;font-weight:700;cursor:pointer" style-hover="background:#0057B8">+ Yeni Öğrenci Kaydet</button>
+            <button onClick="{{ openGroupWizard }}" style="background:#FFE600;color:#0F172A;border:none;border-radius:14px;padding:13px 18px;font-size:14px;font-weight:800;cursor:pointer;white-space:nowrap">+ Yeni Grup Oluştur</button>
+            <button onClick="{{ openPreRegInbox }}" style="background:#FFE600;color:#0F172A;border:none;border-radius:14px;padding:13px 18px;font-size:14px;font-weight:800;cursor:pointer;white-space:nowrap">Ön Kayıt Talepleri ({{ preRegCount }})</button>
+          </div>
+          <div style="{{ themeCardStyle }};border-radius:20px;overflow:hidden">
+            <div style="{{ studentHeadStyle }}"><div>T.C. NO</div><div>AD SOYAD</div><div>YAŞ</div><div>GRUP</div><div>VELİ TELEFON</div></div>
+            <sc-for list="{{ studentRows }}" as="s" hint-placeholder-count="6">
+              <div style="{{ s.rowStyle }}">
+                <div onClick="{{ s.onClick }}" style="font-variant-numeric:tabular-nums;color:{{ themeMuted }}">{{ s.tc }}</div>
+                <div onClick="{{ s.onClick }}" style="font-weight:700;color:{{ themeHeading }}">{{ s.name }}</div>
+                <div onClick="{{ s.onClick }}" style="color:{{ themeBody }}">{{ s.age }}</div>
+                <div onClick="{{ s.onClick }}"><span style="background:#e8ecff;color:#010E80;font-size:12px;font-weight:700;padding:5px 10px;border-radius:8px">{{ s.group }}</span></div>
+                <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
+                  <span onClick="{{ s.onClick }}" style="color:{{ themeBody }};font-variant-numeric:tabular-nums">{{ s.phone }}</span>
+                  <button onClick="{{ s.onDelete }}" style="background:#fef2f2;color:#DC2626;border:none;border-radius:9px;padding:6px 10px;font-size:11.5px;font-weight:800;cursor:pointer">Sil</button>
+                </div>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+        </sc-if>
+
+        <sc-if value="{{ admin2 }}" hint-placeholder-val="{{ false }}">
+        <div style="padding:18px 84px 28px 28px">
+          <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:14px">
+            <div style="font-size:13.5px;font-weight:700;color:#475569">Kayıtlı eğitmen ve uzmanlar</div>
+            <button onClick="{{ openNewStaff }}" style="background:#010E80;color:#fff;border:none;border-radius:14px;padding:13px 18px;font-size:14px;font-weight:800;cursor:pointer;white-space:nowrap" style-hover="background:#0057B8">+ Yeni Eğitmen / Uzman Ekle</button>
+          </div>
+          <div style="{{ staffGridStyle }}">
+            <sc-for list="{{ staffMembers }}" as="p" hint-placeholder-count="4">
+              <div style="{{ p.cardStyle }}">
+                <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px">
+                  <div style="{{ p.avatarStyle }}">{{ p.initials }}</div>
+                  <div><div style="font-size:16px;font-weight:800;color:{{ themeHeading }}">{{ p.name }}</div><div style="{{ p.roleStyle }}">{{ p.role }}</div></div>
+                </div>
+                <div style="font-size:12.5px;color:{{ themeMuted }};line-height:1.6;margin-bottom:14px">
+                  <div>Kullanıcı adı: <strong style="color:{{ themeHeading }}">{{ p.username }}</strong></div>
+                  <div>Telefon: {{ p.phone }}</div>
+                  <div>{{ p.meta }}</div>
+                </div>
+                <div style="display:flex;gap:8px">
+                  <button onClick="{{ p.onEdit }}" style="flex:1;background:#f1f5f9;color:#0F172A;border:none;border-radius:11px;padding:11px;font-size:13px;font-weight:800;cursor:pointer" style-hover="background:#e8ecff">Düzenle</button>
+                  <button onClick="{{ p.onDelete }}" style="background:#DC2626;color:#fff;border:none;border-radius:11px;padding:11px 14px;font-size:13px;font-weight:800;cursor:pointer" style-hover="background:#b91c1c">Sil</button>
+                </div>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+        </sc-if>
+
+        <sc-if value="{{ admin3 }}" hint-placeholder-val="{{ false }}">
+        <div style="padding:18px 84px 28px 28px">
+          <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px">
+            <div style="background:#fff;border:1px solid #e2e8f0;border-radius:16px;padding:14px 18px"><div style="font-size:11px;font-weight:700;color:#94a3b8">15 MART DÖNEMİ</div><div style="font-size:16px;font-weight:800;color:#0f172a">64 / 70 ödendi</div></div>
+            <div style="background:#fff;border:1px solid #e2e8f0;border-radius:16px;padding:14px 18px"><div style="font-size:11px;font-weight:700;color:#94a3b8">30 MART DÖNEMİ</div><div style="font-size:16px;font-weight:800;color:#0f172a">53 / 58 ödendi</div></div>
+            <button style="margin-left:auto;background:#16a34a;color:#fff;border:none;border-radius:14px;padding:13px 18px;font-size:14px;font-weight:700;cursor:pointer" style-hover="background:#15803d">Tüm Ödemeyenlere WhatsApp Gönder ({{ unpaidCount }})</button>
+            <button onClick="{{ openFeeSettings }}" style="background:#f1f5f9;color:#0F172A;border:none;border-radius:14px;padding:13px 18px;font-size:14px;font-weight:700;cursor:pointer">Aidat Ayarları</button>
+          </div>
+          <div style="{{ themeCardStyle }};border-radius:20px;overflow:hidden">
+            <sc-for list="{{ payments }}" as="p" hint-placeholder-count="5">
+              <div style="display:flex;align-items:center;gap:14px;padding:15px 18px;border-bottom:1px solid #f1f5f9;flex-wrap:wrap">
+                <div style="flex:1;min-width:140px"><div style="font-size:15px;font-weight:700;color:{{ themeHeading }}">{{ p.name }}</div><div style="font-size:12.5px;color:{{ themeMuted }}">{{ p.due }} · {{ p.amount }}</div></div>
+                <button onClick="{{ p.onToggle }}" style="{{ p.badgeStyle }}">{{ p.status }}</button>
+                <a href="{{ p.waHref }}" target="_blank" style="{{ p.actionStyle }}">WhatsApp İle Hatırlat</a>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+        </sc-if>
+
+        <sc-if value="{{ admin4 }}" hint-placeholder-val="{{ false }}">
+        <div style="padding:18px 84px 28px 28px">
+          <div style="background:#fff;border:1px solid #e2e8f0;border-radius:20px;padding:26px;max-width:760px">
+            <div style="font-size:11.5px;font-weight:800;color:#010E80;letter-spacing:0.9px;margin-bottom:10px">GÖRSEL İÇERİK YÖNETİMİ</div>
+            <div style="font-size:22px;font-weight:800;color:#0F172A;letter-spacing:-0.5px;margin-bottom:10px">Sayfa üzerinde canlı düzenleyin</div>
+            <div style="font-size:14.5px;color:#475569;line-height:1.6;margin-bottom:20px;max-width:560px">Form doldurmanıza gerek yok. Ana sayfayı ziyaretçi gibi görün, düzenleme modunu açın; masaüstünde sağ tıklayarak, mobilde basılı tutarak metin ve görselleri değiştirin.</div>
+            <div style="display:grid;gap:10px;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));margin-bottom:22px">
+              <div style="background:#f1f5f9;border-radius:14px;padding:14px"><div style="font-size:13.5px;font-weight:800;color:#0F172A;margin-bottom:4px">Sağ tık menüsü</div><div style="font-size:12.5px;color:#64748b;line-height:1.5">Görseli değiştir, katman ekle, kaldır, metin düzenle.</div></div>
+              <div style="background:#f1f5f9;border-radius:14px;padding:14px"><div style="font-size:13.5px;font-weight:800;color:#0F172A;margin-bottom:4px">Basılı tutma</div><div style="font-size:12.5px;color:#64748b;line-height:1.5">Mobilde 500 ms basılı tutun, alt çekmece açılsın.</div></div>
+              <div style="background:#f1f5f9;border-radius:14px;padding:14px"><div style="font-size:13.5px;font-weight:800;color:#0F172A;margin-bottom:4px">Kesikli çerçeve</div><div style="font-size:12.5px;color:#64748b;line-height:1.5">Düzenlenebilir alanlar mavi kesikli çerçeve ile işaretlenir.</div></div>
+            </div>
+            <button onClick="{{ launchEditor }}" style="background:#FFE600;color:#0F172A;border:none;border-radius:14px;padding:15px 22px;font-size:15px;font-weight:800;cursor:pointer;transition:transform .15s ease" style-hover="transform:scale(1.04)" style-active="transform:scale(0.97)">✎ Ana Sayfayı Canlı Düzenle</button>
+          </div>
+        </div>
+        </sc-if>
+
+        <sc-if value="{{ admin5 }}" hint-placeholder-val="{{ false }}">
+        <div style="padding:18px 84px 28px 28px">
+          <div style="font-size:13.5px;font-weight:700;color:#475569;margin-bottom:14px">Ana sayfadaki sabit genel programı buradan yönetin — değişiklikler anında yansır.</div>
+          <div style="border:1px solid #e2e8f0;border-radius:18px;overflow:hidden;background:#fff">
+            <div style="display:{{ schedHeadDisplay }};grid-template-columns:0.7fr 1.2fr 1fr 1fr 1fr 1.3fr 0.4fr;gap:10px;padding:12px 16px;background:#f1f5f9;font-size:11px;font-weight:800;color:#94a3b8;letter-spacing:0.5px">
+              <div>YAŞ GRUBU</div><div>GÜN</div><div>SAAT</div><div>TÜR</div><div>LOKASYON</div><div>AÇIKLAMA</div><div></div>
+            </div>
+            <sc-for list="{{ schedRows }}" as="r" hint-placeholder-count="5">
+              <div style="{{ r.rowStyle }}">
+                <div contentEditable="true" suppressContentEditableWarning="{{ true }}" onBlur="{{ r.onG }}" style="{{ r.cellStyle }}">{{ r.g }}</div>
+                <div contentEditable="true" suppressContentEditableWarning="{{ true }}" onBlur="{{ r.onD }}" style="{{ r.cellStyle }}">{{ r.d }}</div>
+                <div contentEditable="true" suppressContentEditableWarning="{{ true }}" onBlur="{{ r.onT }}" style="{{ r.cellStyle }}">{{ r.t }}</div>
+                <select value="{{ r.br }}" onChange="{{ r.onBr }}" style="{{ r.selStyle }}"><option value="saha">Saha Antrenmanı</option><option value="diyet">Diyetisyen</option><option value="psikolog">Psikolog</option></select>
+                <div contentEditable="true" suppressContentEditableWarning="{{ true }}" onBlur="{{ r.onLoc }}" style="{{ r.cellStyle }}">{{ r.loc }}</div>
+                <div contentEditable="true" suppressContentEditableWarning="{{ true }}" onBlur="{{ r.onDesc }}" style="{{ r.cellStyle }}">{{ r.desc }}</div>
+                <button onClick="{{ r.onRemove }}" style="background:#fef2f2;color:#DC2626;border:none;border-radius:9px;padding:7px 10px;font-size:12px;font-weight:800;cursor:pointer">Sil</button>
+              </div>
+            </sc-for>
+            <button onClick="{{ addSchedRow }}" style="width:100%;background:#f1f5f9;border:none;padding:14px;font-size:13.5px;font-weight:800;color:#010E80;cursor:pointer;font-family:inherit" style-hover="background:#e8ecff">+ Program Satırı Ekle</button>
+          </div>
+        </div>
+        </sc-if>
+      </div>
+      </sc-if>
+
+    </div>
+  </div>
+
+  <sc-if value="{{ adminMode }}" hint-placeholder-val="{{ false }}">
+    <div style="{{ editorBarStyle }}">
+      <span style="color:#fff;font-size:13.5px;font-weight:800;white-space:nowrap">{{ editStateLabel }}</span>
+      <button onClick="{{ toggleEdit }}" style="{{ editSwitchStyle }}"><span style="{{ editKnobStyle }}"></span></button>
+      <span style="color:#c7d2fe;font-size:12.5px;font-weight:600">Sağ tık (masaüstü) veya basılı tut (mobil) ile düzenle</span>
+      <div style="margin-left:auto;display:flex;gap:8px">
+        <button onClick="{{ exitEditor }}" style="background:#0057B8;color:#fff;border:none;border-radius:12px;padding:11px 16px;font-size:13.5px;font-weight:700;cursor:pointer;white-space:nowrap">Panele Dön</button>
+        <button onClick="{{ saveChanges }}" style="{{ saveBtnStyle }}">{{ saveLabel }}</button>
+      </div>
+    </div>
+  </sc-if>
+
+
+  <sc-if value="{{ formOpen }}" hint-placeholder-val="{{ false }}">
+    <div onClick="{{ closeForm }}" style="position:fixed;inset:0;background:rgba(2,6,23,0.6);z-index:140;display:flex;align-items:center;justify-content:center;padding:20px">
+      <div onClick="{{ stop }}" style="{{ themeModalStyle }};border-radius:24px;padding:26px;width:100%;max-width:520px;max-height:86vh;overflow:auto">
+        <div style="font-size:21px;font-weight:800;color:#0F172A;letter-spacing:-0.4px;margin-bottom:18px">{{ formTitle }}</div>
+        <div style="{{ formErrorStyle }}">{{ formError }}</div>
+        <label style="display:block;font-size:12.5px;font-weight:700;color:#475569;margin-bottom:6px">Ad &amp; Soyad</label>
+        <input value="{{ form.name }}" onChange="{{ onFormName }}" placeholder="Ahmet Kaya" style="width:100%;padding:13px;border:1px solid #e2e8f0;border-radius:13px;font-size:14px;font-family:inherit;outline:none;margin-bottom:6px" style-focus="border-color:#010E80" />
+        <div style="font-size:12px;color:#64748b;margin-bottom:14px">Kullanıcı adı: <strong style="color:#010E80">{{ formUsername }}</strong></div>
+        <label style="display:block;font-size:12.5px;font-weight:700;color:#475569;margin-bottom:6px">T.C. Kimlik No (şifre olarak tanımlanır)</label>
+        <input value="{{ form.tc }}" onChange="{{ onFormTc }}" placeholder="11 haneli numara" style="width:100%;padding:13px;border:1px solid #e2e8f0;border-radius:13px;font-size:14px;font-family:inherit;outline:none;margin-bottom:14px" style-focus="border-color:#010E80" />
+        <label style="display:block;font-size:12.5px;font-weight:700;color:#475569;margin-bottom:6px">Telefon Numarası</label>
+        <input value="{{ form.phone }}" onChange="{{ onFormPhone }}" placeholder="0532 000 00 00" style="width:100%;padding:13px;border:1px solid #e2e8f0;border-radius:13px;font-size:14px;font-family:inherit;outline:none;margin-bottom:14px" style-focus="border-color:#010E80" />
+        <label style="display:block;font-size:12.5px;font-weight:700;color:#475569;margin-bottom:6px">Grup / Gün Bilgisi</label>
+        <input value="{{ form.meta }}" onChange="{{ onFormMeta }}" placeholder="U-12 / U-14 · Pzt, Çar" style="width:100%;padding:13px;border:1px solid #e2e8f0;border-radius:13px;font-size:14px;font-family:inherit;outline:none;margin-bottom:16px" style-focus="border-color:#010E80" />
+        <label style="display:block;font-size:12.5px;font-weight:700;color:#475569;margin-bottom:8px">Rol (zorunlu)</label>
+        <div style="display:grid;gap:8px;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));margin-bottom:20px">
+          <sc-for list="{{ roleOptions }}" as="r" hint-placeholder-count="3">
+            <button onClick="{{ r.onClick }}" style="{{ r.style }}">
+              <div style="{{ r.titleStyle }}">{{ r.label }}</div>
+              <div style="font-size:11.5px;color:#64748b;font-weight:600">{{ r.hint }}</div>
+            </button>
+          </sc-for>
+        </div>
+        <div style="display:flex;gap:10px">
+          <button onClick="{{ saveStaff }}" style="flex:1;background:#010E80;color:#fff;border:none;border-radius:14px;padding:14px;font-size:15px;font-weight:800;cursor:pointer" style-hover="background:#0057B8">Kaydet</button>
+          <button onClick="{{ closeForm }}" style="background:#f1f5f9;color:#475569;border:none;border-radius:14px;padding:14px 20px;font-size:15px;font-weight:700;cursor:pointer">Vazgeç</button>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ confirmOpen }}" hint-placeholder-val="{{ false }}">
+    <div onClick="{{ cancelDel }}" style="position:fixed;inset:0;background:rgba(2,6,23,0.6);z-index:145;display:flex;align-items:center;justify-content:center;padding:20px">
+      <div onClick="{{ stop }}" style="{{ themeModalStyle }};border-radius:22px;padding:24px;width:100%;max-width:400px">
+        <div style="font-size:19px;font-weight:800;color:#0F172A;margin-bottom:8px">Kaydı kaldır</div>
+        <div style="font-size:14px;color:#475569;line-height:1.6;margin-bottom:20px"><strong>{{ confirmName }}</strong> kaydı silinecek. Bu işlem geri alınamaz.</div>
+        <div style="display:flex;gap:10px">
+          <button onClick="{{ doDelete }}" style="flex:1;background:#DC2626;color:#fff;border:none;border-radius:13px;padding:13px;font-size:14.5px;font-weight:800;cursor:pointer">Evet, Sil</button>
+          <button onClick="{{ cancelDel }}" style="flex:1;background:#f1f5f9;color:#475569;border:none;border-radius:13px;padding:13px;font-size:14.5px;font-weight:700;cursor:pointer">Vazgeç</button>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ preRegOpen }}" hint-placeholder-val="{{ false }}">
+    <div onClick="{{ closePreReg }}" style="position:fixed;inset:0;background:rgba(2,6,23,0.6);z-index:150;display:flex;align-items:center;justify-content:center;padding:20px">
+      <div onClick="{{ stop }}" style="{{ themeModalStyle }};border-radius:24px;padding:26px;width:100%;max-width:560px;max-height:88vh;overflow:auto">
+        <sc-if value="{{ preRegSaved }}" hint-placeholder-val="{{ false }}">
+          <div style="text-align:center;padding:20px 0">
+            <div style="font-size:36px;margin-bottom:10px">✓</div>
+            <div style="font-size:19px;font-weight:800;color:#0F172A;margin-bottom:8px">Ön kayıt başvurunuz alındı</div>
+            <div style="font-size:13.5px;color:#64748b;margin-bottom:20px">Ön kayıt başvurunuz başarıyla alındı! Yöneticilerimiz en kısa sürede sizinle iletişime geçecektir. Veli ve akademi WhatsApp hattına özet bildirimi hazırlandı.</div>
+            <button onClick="{{ closePreReg }}" style="background:#010E80;color:#fff;border:none;border-radius:13px;padding:13px 22px;font-size:14px;font-weight:800;cursor:pointer">Kapat</button>
+          </div>
+        </sc-if>
+        <sc-if value="{{ preRegOpen }}" hint-placeholder-val="{{ true }}">
+        <div>
+          <div style="font-size:21px;font-weight:800;color:#0F172A;margin-bottom:16px">Ön Kayıt Başvurusu</div>
+          <div style="{{ preRegErrorStyle }}">{{ preRegError }}</div>
+          <div style="display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(220px,1fr))">
+            <div><label style="display:block;font-size:12px;font-weight:700;color:#475569;margin-bottom:5px">Ad / Soyad</label><input value="{{ preReg.name }}" onChange="{{ onPreReg.name }}" style="width:100%;padding:12px;border:1px solid #e2e8f0;border-radius:12px;font-family:inherit;font-size:14px;outline:none" style-focus="border-color:#010E80" /></div>
+            <div><label style="display:block;font-size:12px;font-weight:700;color:#475569;margin-bottom:5px">TCKN</label><input value="{{ preReg.tc }}" onChange="{{ onPreReg.tc }}" placeholder="11 hane" style="width:100%;padding:12px;border:1px solid #e2e8f0;border-radius:12px;font-family:inherit;font-size:14px;outline:none" style-focus="border-color:#010E80" /></div>
+            <div><label style="display:block;font-size:12px;font-weight:700;color:#475569;margin-bottom:5px">Cinsiyet *</label><div style="display:flex;gap:8px"><button onClick="{{ pickGenderE }}" style="{{ genderErkekStyle }}">Erkek</button><button onClick="{{ pickGenderK }}" style="{{ genderKizStyle }}">Kız</button></div></div>
+            <div><label style="display:block;font-size:12px;font-weight:700;color:#475569;margin-bottom:5px">Doğum Tarihi (GG.AA.YYYY) *</label><input type="date" value="{{ preReg.dob }}" onChange="{{ onPreReg.dob }}" style="width:100%;padding:12px;border:1px solid #e2e8f0;border-radius:12px;font-family:inherit;font-size:14px;outline:none" style-focus="border-color:#010E80" /></div>
+            <div><label style="display:block;font-size:12px;font-weight:700;color:#475569;margin-bottom:5px">Yaş Grubu *</label><select value="{{ preReg.ageGroup }}" onChange="{{ onPreReg.ageGroup }}" style="width:100%;padding:12px;border:1px solid #e2e8f0;border-radius:12px;font-family:inherit;font-size:14px;background:#fff"><option>U-7</option><option>U-8</option><option>U-9</option><option>U-10</option><option>U-11</option><option>U-12</option><option>U-13</option><option>U-14</option><option>U-15</option><option>U-16</option></select></div>
+            <div><label style="display:block;font-size:12px;font-weight:700;color:#475569;margin-bottom:5px">Veli Ad / Soyad *</label><input value="{{ preReg.parent }}" onChange="{{ onPreReg.parent }}" style="width:100%;padding:12px;border:1px solid #e2e8f0;border-radius:12px;font-family:inherit;font-size:14px;outline:none" style-focus="border-color:#010E80" /></div>
+            <div><label style="display:block;font-size:12px;font-weight:700;color:#475569;margin-bottom:5px">İletişim Tel *</label><input value="{{ preReg.phone }}" onChange="{{ onPreReg.phone }}" placeholder="05XX XXX XX XX" style="width:100%;padding:12px;border:1px solid #e2e8f0;border-radius:12px;font-family:inherit;font-size:14px;outline:none" style-focus="border-color:#010E80" /></div>
+            <div><label style="display:block;font-size:12px;font-weight:700;color:#475569;margin-bottom:5px">İl *</label><input value="{{ preReg.il }}" onChange="{{ onPreReg.il }}" style="width:100%;padding:12px;border:1px solid #e2e8f0;border-radius:12px;font-family:inherit;font-size:14px;outline:none" style-focus="border-color:#010E80" /></div>
+            <div><label style="display:block;font-size:12px;font-weight:700;color:#475569;margin-bottom:5px">İlçe *</label><input value="{{ preReg.ilce }}" onChange="{{ onPreReg.ilce }}" style="width:100%;padding:12px;border:1px solid #e2e8f0;border-radius:12px;font-family:inherit;font-size:14px;outline:none" style-focus="border-color:#010E80" /></div>
+          </div>
+          <div style="display:flex;gap:10px;margin-top:20px">
+            <button onClick="{{ submitPreReg }}" style="flex:1;background:#010E80;color:#fff;border:none;border-radius:14px;padding:14px;font-size:15px;font-weight:800;cursor:pointer" style-hover="background:#0057B8">Ön Kayıt Başvurusunu Tamamla</button>
+            <button onClick="{{ closePreReg }}" style="background:#f1f5f9;color:#475569;border:none;border-radius:14px;padding:14px 20px;font-size:15px;font-weight:700;cursor:pointer">Vazgeç</button>
+          </div>
+        </div>
+        </sc-if>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ preRegInboxOpen }}" hint-placeholder-val="{{ false }}">
+    <div onClick="{{ closePreRegInbox }}" style="position:fixed;inset:0;background:rgba(2,6,23,0.6);z-index:150;display:flex;align-items:center;justify-content:center;padding:20px">
+      <div onClick="{{ stop }}" style="background:#fff;border-radius:24px;padding:24px;width:100%;max-width:520px;max-height:80vh;overflow:auto">
+        <div style="font-size:20px;font-weight:800;color:#0F172A;margin-bottom:16px">Ön Kayıt Talepleri ({{ preRegCount }})</div>
+        <sc-for list="{{ preRegItems }}" as="p" hint-placeholder-count="1">
+          <div style="background:#f1f5f9;border-radius:14px;padding:14px;margin-bottom:10px">
+            <div style="font-size:14.5px;font-weight:800;color:#0F172A;margin-bottom:3px">{{ p.name }}</div>
+            <div style="font-size:12.5px;color:#64748b;margin-bottom:10px">{{ p.meta }}</div>
+            <div style="display:flex;gap:8px">
+              <button onClick="{{ p.onApprove }}" style="flex:1;background:#16A34A;color:#fff;border:none;border-radius:10px;padding:9px;font-size:12.5px;font-weight:800;cursor:pointer">Onayla &amp; Kayıt Yap</button>
+              <button onClick="{{ p.onReject }}" style="background:#fef2f2;color:#DC2626;border:none;border-radius:10px;padding:9px 12px;font-size:12.5px;font-weight:800;cursor:pointer">Reddet</button>
+            </div>
+          </div>
+        </sc-for>
+        <button onClick="{{ closePreRegInbox }}" style="width:100%;background:#f1f5f9;color:#475569;border:none;border-radius:12px;padding:12px;font-size:14px;font-weight:700;cursor:pointer;margin-top:6px">Kapat</button>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ studentFormOpen }}" hint-placeholder-val="{{ false }}">
+    <div onClick="{{ closeStudentForm }}" style="position:fixed;inset:0;background:rgba(2,6,23,0.6);z-index:150;display:flex;align-items:center;justify-content:center;padding:20px">
+      <div onClick="{{ stop }}" style="{{ themeModalStyle }};border-radius:24px;padding:26px;width:100%;max-width:640px;max-height:90vh;overflow:auto">
+        <div style="font-size:21px;font-weight:800;color:#0F172A;margin-bottom:16px">{{ studentFormTitle }}</div>
+        <div style="{{ studentFormErrorStyle }}">{{ studentFormError }}</div>
+
+        <div style="display:flex;align-items:center;gap:14px;margin-bottom:18px">
+          {{ studentPhotoEl }}
+          <label style="background:#f1f5f9;color:#0F172A;border-radius:12px;padding:10px 16px;font-size:13px;font-weight:700;cursor:pointer">
+            Fotoğraf Yükle
+            <input type="file" accept="image/*" onChange="{{ onStudentPhoto }}" style="display:none" />
+          </label>
+        </div>
+
+        <div style="font-size:12px;font-weight:800;color:#010E80;letter-spacing:0.8px;margin-bottom:10px">SPORCU BİLGİLERİ</div>
+        <div style="display:grid;gap:10px;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));margin-bottom:18px">
+          <input value="{{ studentForm.name }}" onChange="{{ onSF.name }}" placeholder="Adı Soyadı" style="padding:12px;border:1px solid #e2e8f0;border-radius:12px;font-size:13.5px;font-family:inherit;outline:none" style-focus="border-color:#010E80" />
+          <input value="{{ studentForm.tc }}" onChange="{{ onSF.tc }}" placeholder="TCKN" style="padding:12px;border:1px solid #e2e8f0;border-radius:12px;font-size:13.5px;font-family:inherit;outline:none" style-focus="border-color:#010E80" />
+          <input type="date" value="{{ studentForm.dob }}" onChange="{{ onSF.dob }}" style="padding:12px;border:1px solid #e2e8f0;border-radius:12px;font-size:13.5px;font-family:inherit;outline:none" style-focus="border-color:#010E80" />
+          <select value="{{ studentForm.gender }}" onChange="{{ onSF.gender }}" style="padding:12px;border:1px solid #e2e8f0;border-radius:12px;font-size:13.5px;font-family:inherit;background:#fff"><option value="">Cinsiyet</option><option>Erkek</option><option>Kız</option></select>
+          <select value="{{ studentForm.blood }}" onChange="{{ onSF.blood }}" style="padding:12px;border:1px solid #e2e8f0;border-radius:12px;font-size:13.5px;font-family:inherit;background:#fff"><option value="">Kan Grubu</option><option>A Rh+</option><option>A Rh-</option><option>B Rh+</option><option>B Rh-</option><option>AB Rh+</option><option>AB Rh-</option><option>0 Rh+</option><option>0 Rh-</option></select>
+          <select value="{{ studentForm.group }}" onChange="{{ onSF.group }}" style="padding:12px;border:1px solid #e2e8f0;border-radius:12px;font-size:13.5px;font-family:inherit;background:#fff"><option>U-10</option><option>U-12</option><option>U-14</option><option>U-16</option></select>
+          <input value="{{ studentForm.height }}" onChange="{{ onSF.height }}" placeholder="Boy (cm)" style="padding:12px;border:1px solid #e2e8f0;border-radius:12px;font-size:13.5px;font-family:inherit;outline:none" style-focus="border-color:#010E80" />
+          <input value="{{ studentForm.weight }}" onChange="{{ onSF.weight }}" placeholder="Kilo (kg)" style="padding:12px;border:1px solid #e2e8f0;border-radius:12px;font-size:13.5px;font-family:inherit;outline:none" style-focus="border-color:#010E80" />
+          <input value="{{ studentForm.email }}" onChange="{{ onSF.email }}" placeholder="E-Posta" style="padding:12px;border:1px solid #e2e8f0;border-radius:12px;font-size:13.5px;font-family:inherit;outline:none" style-focus="border-color:#010E80" />
+          <input value="{{ studentForm.address }}" onChange="{{ onSF.address }}" placeholder="İkametgah Adresi" style="grid-column:1/-1;padding:12px;border:1px solid #e2e8f0;border-radius:12px;font-size:13.5px;font-family:inherit;outline:none" style-focus="border-color:#010E80" />
+        </div>
+
+        <div style="font-size:12px;font-weight:800;color:#010E80;letter-spacing:0.8px;margin-bottom:10px">VELİ BİLGİLERİ</div>
+        <div style="display:grid;gap:10px;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));margin-bottom:18px">
+          <input value="{{ studentForm.motherName }}" onChange="{{ onSF.motherName }}" placeholder="Anne Ad-Soyad" style="padding:12px;border:1px solid #e2e8f0;border-radius:12px;font-size:13.5px;font-family:inherit;outline:none" style-focus="border-color:#010E80" />
+          <input value="{{ studentForm.motherPhone }}" onChange="{{ onSF.motherPhone }}" placeholder="Anne Telefon" style="padding:12px;border:1px solid #e2e8f0;border-radius:12px;font-size:13.5px;font-family:inherit;outline:none" style-focus="border-color:#010E80" />
+          <input value="{{ studentForm.motherJob }}" onChange="{{ onSF.motherJob }}" placeholder="Anne Meslek" style="padding:12px;border:1px solid #e2e8f0;border-radius:12px;font-size:13.5px;font-family:inherit;outline:none" style-focus="border-color:#010E80" />
+          <input value="{{ studentForm.fatherName }}" onChange="{{ onSF.fatherName }}" placeholder="Baba Ad-Soyad" style="padding:12px;border:1px solid #e2e8f0;border-radius:12px;font-size:13.5px;font-family:inherit;outline:none" style-focus="border-color:#010E80" />
+          <input value="{{ studentForm.fatherPhone }}" onChange="{{ onSF.fatherPhone }}" placeholder="Baba Telefon" style="padding:12px;border:1px solid #e2e8f0;border-radius:12px;font-size:13.5px;font-family:inherit;outline:none" style-focus="border-color:#010E80" />
+          <input value="{{ studentForm.fatherJob }}" onChange="{{ onSF.fatherJob }}" placeholder="Baba Meslek" style="padding:12px;border:1px solid #e2e8f0;border-radius:12px;font-size:13.5px;font-family:inherit;outline:none" style-focus="border-color:#010E80" />
+          <input value="{{ studentForm.emergencyName }}" onChange="{{ onSF.emergencyName }}" placeholder="Acil Durumda Aranacak Kişi" style="padding:12px;border:1px solid #e2e8f0;border-radius:12px;font-size:13.5px;font-family:inherit;outline:none" style-focus="border-color:#010E80" />
+          <input value="{{ studentForm.emergencyPhone }}" onChange="{{ onSF.emergencyPhone }}" placeholder="Acil Durum Telefonu" style="padding:12px;border:1px solid #e2e8f0;border-radius:12px;font-size:13.5px;font-family:inherit;outline:none" style-focus="border-color:#010E80" />
+        </div>
+
+        <div style="display:flex;gap:10px">
+          <button onClick="{{ saveStudent }}" style="flex:1;background:#010E80;color:#fff;border:none;border-radius:14px;padding:14px;font-size:15px;font-weight:800;cursor:pointer" style-hover="background:#0057B8">Kaydet</button>
+          <button onClick="{{ closeStudentForm }}" style="background:#f1f5f9;color:#475569;border:none;border-radius:14px;padding:14px 20px;font-size:15px;font-weight:700;cursor:pointer">Vazgeç</button>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ confirmDelStudentOpen }}" hint-placeholder-val="{{ false }}">
+    <div onClick="{{ cancelDelStudent }}" style="position:fixed;inset:0;background:rgba(2,6,23,0.6);z-index:155;display:flex;align-items:center;justify-content:center;padding:20px">
+      <div onClick="{{ stop }}" style="{{ themeModalStyle }};border-radius:22px;padding:24px;width:100%;max-width:400px">
+        <div style="font-size:19px;font-weight:800;color:#0F172A;margin-bottom:8px">Öğrenciyi sil</div>
+        <div style="font-size:14px;color:#475569;line-height:1.6;margin-bottom:20px"><strong>{{ confirmDelStudentName }}</strong> kaydı silinecek. Bu işlem geri alınamaz.</div>
+        <div style="display:flex;gap:10px">
+          <button onClick="{{ doDeleteStudent }}" style="flex:1;background:#DC2626;color:#fff;border:none;border-radius:13px;padding:13px;font-size:14.5px;font-weight:800;cursor:pointer">Evet, Sil</button>
+          <button onClick="{{ cancelDelStudent }}" style="flex:1;background:#f1f5f9;color:#475569;border:none;border-radius:13px;padding:13px;font-size:14.5px;font-weight:700;cursor:pointer">Vazgeç</button>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ groupWizardOpen }}" hint-placeholder-val="{{ false }}">
+    <div onClick="{{ closeGroupWizard }}" style="position:fixed;inset:0;background:rgba(2,6,23,0.6);z-index:150;display:flex;align-items:center;justify-content:center;padding:20px">
+      <div onClick="{{ stop }}" style="{{ themeModalStyle }};border-radius:24px;padding:26px;width:100%;max-width:520px;max-height:86vh;overflow:auto">
+        <div style="display:flex;gap:8px;margin-bottom:18px">
+          <div style="flex:1;text-align:center;padding:8px;border-radius:10px;font-size:11.5px;font-weight:800;background:{{ gwStep1Bg }};color:{{ gwStep1Fg }}">1. Grup Adı</div>
+          <div style="flex:1;text-align:center;padding:8px;border-radius:10px;font-size:11.5px;font-weight:800;background:{{ gwStep2Bg }};color:{{ gwStep2Fg }}">2. Öğrenci Ata</div>
+        </div>
+
+        <sc-if value="{{ gwAtStep1 }}" hint-placeholder-val="{{ true }}">
+          <div style="font-size:16px;font-weight:800;color:#0F172A;margin-bottom:12px">Yeni Grup Adı</div>
+          <input value="{{ gwName }}" onChange="{{ onGwName }}" placeholder="Örn: U-11 Akademi" style="width:100%;padding:14px;border:1px solid #e2e8f0;border-radius:13px;font-size:15px;font-family:inherit;outline:none" style-focus="border-color:#010E80" />
+          <div style="{{ gwErrorStyle }}">{{ gwError }}</div>
+          <button onClick="{{ gwNext }}" style="margin-top:18px;background:#010E80;color:#fff;border:none;border-radius:14px;padding:13px 20px;font-size:14px;font-weight:800;cursor:pointer" style-hover="background:#0057B8">İleri / Öğrenci Seçimine Geç →</button>
+        </sc-if>
+
+        <sc-if value="{{ gwAtStep2 }}" hint-placeholder-val="{{ false }}">
+          <div style="font-size:16px;font-weight:800;color:#0F172A;margin-bottom:12px">{{ gwName }} — Öğrenci Seç</div>
+          <input value="{{ gwSearch }}" onChange="{{ onGwSearch }}" placeholder="İsim, soyisim veya TCKN ile ara…" style="width:100%;padding:13px;border:1px solid #e2e8f0;border-radius:13px;font-size:14px;font-family:inherit;outline:none;margin-bottom:12px" style-focus="border-color:#010E80" />
+          <div style="font-size:12px;color:#94a3b8;font-weight:600;margin-bottom:8px">Varsayılan olarak henüz gruba atanmamış öğrenciler listelenir.</div>
+          <div style="display:flex;flex-direction:column;gap:6px;max-height:280px;overflow:auto;margin-bottom:16px">
+            <sc-for list="{{ gwStudents }}" as="st" hint-placeholder-count="6">
+              <div onClick="{{ st.toggle }}" style="{{ st.rowStyle }}">
+                <input type="checkbox" checked="{{ st.checked }}" readOnly="{{ true }}" style="width:18px;height:18px;pointer-events:none" />
+                <span style="flex:1;font-size:14px;font-weight:700;color:#0F172A">{{ st.name }}</span>
+                <span style="font-size:11px;font-weight:700;color:#94a3b8">{{ st.groupBadge }}</span>
+              </div>
+            </sc-for>
+          </div>
+          <div style="display:flex;gap:10px">
+            <button onClick="{{ gwBack }}" style="background:#f1f5f9;color:#475569;border:none;border-radius:14px;padding:13px 20px;font-size:14px;font-weight:700;cursor:pointer">← Geri</button>
+            <button onClick="{{ gwFinish }}" style="flex:1;background:#010E80;color:#fff;border:none;border-radius:14px;padding:13px;font-size:14px;font-weight:800;cursor:pointer" style-hover="background:#0057B8">Seçilenleri Ata ve Grubu Tamamla ({{ gwSelectedCount }})</button>
+          </div>
+        </sc-if>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ isDesktopContact }}" hint-placeholder-val="{{ true }}">
+  <sc-if value="{{ feeSettingsOpen }}" hint-placeholder-val="{{ false }}">
+    <div onClick="{{ closeFeeSettings }}" style="position:fixed;inset:0;background:rgba(2,6,23,0.6);z-index:150;display:flex;align-items:center;justify-content:center;padding:20px">
+      <div onClick="{{ stop }}" style="{{ themeModalStyle }};border-radius:22px;padding:24px;width:100%;max-width:400px">
+        <div style="font-size:19px;font-weight:800;color:{{ themeHeading }};margin-bottom:16px">Aidat Ayarları</div>
+        <label style="display:block;font-size:12.5px;font-weight:700;color:{{ themeMuted }};margin-bottom:6px">Aylık Standart Ücret (TL)</label>
+        <input type="number" value="{{ monthlyFee }}" onChange="{{ onMonthlyFee }}" style="width:100%;padding:13px;border:1px solid {{ themeInputBorder }};border-radius:13px;font-size:15px;font-family:inherit;outline:none;margin-bottom:18px" style-focus="border-color:#010E80" />
+        <div style="font-size:12.5px;color:{{ themeMuted }};margin-bottom:18px">Bu tutar tüm öğrenci kartlarında borç olarak görünür.</div>
+        <button onClick="{{ closeFeeSettings }}" style="width:100%;background:#010E80;color:#fff;border:none;border-radius:14px;padding:13px;font-size:15px;font-weight:800;cursor:pointer" style-hover="background:#0057B8">Kapat</button>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ reportModalOpen }}" hint-placeholder-val="{{ false }}">
+    <div onClick="{{ closeReportModal }}" style="position:fixed;inset:0;background:rgba(2,6,23,0.6);z-index:150;display:flex;align-items:center;justify-content:center;padding:20px">
+      <div onClick="{{ stop }}" style="{{ themeModalStyle }};border-radius:24px;padding:26px;width:100%;max-width:640px;max-height:86vh;overflow:auto">
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:18px">
+          <div style="font-size:21px;font-weight:800;color:{{ themeHeading }}">{{ reportTitle }}</div>
+          <button onClick="{{ closeReportModal }}" style="background:transparent;border:none;font-size:18px;color:{{ themeMuted }};cursor:pointer">✕</button>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:14px">
+          <sc-for list="{{ reportBlocksFull }}" as="rb" hint-placeholder-count="3">
+            <div style="{{ rb.cardStyle }}">
+              <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
+                <span style="{{ rb.dotStyle }}"></span>
+                <span style="{{ rb.titleStyle }}">{{ rb.title }}</span>
+              </div>
+              <div style="font-size:14px;color:{{ reportBodyColor }};line-height:1.7">{{ rb.body }}</div>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+  <div style="{{ contactBarStyle }}">
+    <a href="tel:+902121234567" title="Çağrı Merkezi" style="{{ contactItemStyle }}" style-hover="transform:scale(1.08)">
+      <span style="{{ telStyle }}">✆</span>
+      <span style="{{ contactLabelStyle }}">Çağrı Merkezi</span>
+    </a>
+    <a href="https://instagram.com" target="_blank" title="Instagram" style="{{ contactItemStyle }}" style-hover="transform:scale(1.08)">
+      <span style="{{ igStyle }}">IG</span>
+      <span style="{{ contactLabelStyle }}">Instagram</span>
+    </a>
+    <a href="https://wa.me/905321142208?text=Merhaba%2C%20Inter%20Academy%20kay%C4%B1t%20ve%20bilgi%20hatt%C4%B1%20ile%20ilgili%20bilgi%20almak%20istiyorum." target="_blank" title="WhatsApp" style="{{ contactItemStyle }}" style-hover="transform:scale(1.08)">
+      <span style="{{ waStyle }}">💬</span>
+      <span style="{{ contactLabelStyle }}">WhatsApp</span>
+    </a>
+  </div>
+  </sc-if>
+
+  <sc-if value="{{ isMobileContact }}" hint-placeholder-val="{{ false }}">
+    <button onClick="{{ toggleContactDrawer }}" style="{{ contactTabStyle }}">
+      <span style="{{ contactTabTextStyle }}">İletişim</span>
+      <span style="font-size:13px">‹</span>
+    </button>
+    <sc-if value="{{ contactDrawerOpen }}" hint-placeholder-val="{{ false }}">
+      <div onClick="{{ closeContactDrawer }}" style="position:fixed;inset:0;z-index:95;background:rgba(2,6,23,0.35)"></div>
+      <div style="{{ contactDrawerStyle }}">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+          <span style="font-size:14px;font-weight:800;color:{{ themeHeading }}">Hızlı İletişim</span>
+          <button onClick="{{ closeContactDrawer }}" style="background:transparent;border:none;font-size:16px;color:{{ themeMuted }};cursor:pointer">✕</button>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:10px">
+          <a href="https://wa.me/905321142208?text=Merhaba%2C%20Inter%20Academy%20kay%C4%B1t%20ve%20bilgi%20hatt%C4%B1%20ile%20ilgili%20bilgi%20almak%20istiyorum." target="_blank" style="{{ drawerRowStyle }}">
+            <span style="{{ waStyle }}">💬</span>
+            <span style="font-size:13px;font-weight:700;color:{{ themeHeading }}">WhatsApp Hattı</span>
+          </a>
+          <a href="tel:+902121234567" style="{{ drawerRowStyle }}">
+            <span style="{{ telStyle }}">✆</span>
+            <span style="font-size:13px;font-weight:700;color:{{ themeHeading }}">Bizi Arayın</span>
+          </a>
+          <a href="https://instagram.com" target="_blank" style="{{ drawerRowStyle }}">
+            <span style="{{ igStyle }}">IG</span>
+            <span style="font-size:13px;font-weight:700;color:{{ themeHeading }}">@interacademy</span>
+          </a>
+        </div>
+      </div>
+    </sc-if>
+  </sc-if>
+
+  <sc-if value="{{ ctxOpen }}" hint-placeholder-val="{{ false }}">
+    <div onClick="{{ closeCtx }}" style="position:fixed;inset:0;z-index:125;background:rgba(2,6,23,0.18)">
+      <div onClick="{{ stop }}" style="{{ ctxStyle }}">
+        <div style="font-size:11px;font-weight:800;color:#94a3b8;letter-spacing:0.8px;padding:8px 12px">{{ ctxLabel }}</div>
+        <sc-if value="{{ ctxIsImage }}" hint-placeholder-val="{{ false }}">
+          <button onClick="{{ actChangeImg }}" style="display:block;width:100%;text-align:left;background:transparent;border:none;padding:12px;border-radius:11px;font-size:14px;font-weight:700;color:#0F172A;cursor:pointer" style-hover="background:#f1f5f9">🖼 Görseli Değiştir</button>
+          <button onClick="{{ actAddLayer }}" style="display:block;width:100%;text-align:left;background:transparent;border:none;padding:12px;border-radius:11px;font-size:14px;font-weight:700;color:#0F172A;cursor:pointer" style-hover="background:#f1f5f9">➕ Yeni Görsel / Katman Ekle</button>
+          <button onClick="{{ actRemoveImg }}" style="display:block;width:100%;text-align:left;background:transparent;border:none;padding:12px;border-radius:11px;font-size:14px;font-weight:700;color:#DC2626;cursor:pointer" style-hover="background:#fef2f2">🗑 Görseli Kaldır</button>
+        </sc-if>
+        <button onClick="{{ actEditText }}" style="display:block;width:100%;text-align:left;background:transparent;border:none;padding:12px;border-radius:11px;font-size:14px;font-weight:700;color:#0F172A;cursor:pointer" style-hover="background:#f1f5f9">✎ Metin Düzenle</button>
+        <button onClick="{{ closeCtx }}" style="display:block;width:100%;text-align:left;background:transparent;border:none;padding:12px;border-radius:11px;font-size:14px;font-weight:700;color:#64748b;cursor:pointer" style-hover="background:#f1f5f9">Kapat</button>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ imgDialogOpen }}" hint-placeholder-val="{{ false }}">
+    <div onClick="{{ closeImgDialog }}" style="position:fixed;inset:0;background:rgba(2,6,23,0.6);z-index:135;display:flex;align-items:center;justify-content:center;padding:20px">
+      <div onClick="{{ stop }}" style="{{ themeModalStyle }};border-radius:22px;padding:24px;width:100%;max-width:440px">
+        <div style="font-size:19px;font-weight:800;color:#0F172A;margin-bottom:16px">{{ imgDialogTitle }}</div>
+        <label style="display:block;font-size:12.5px;font-weight:700;color:#475569;margin-bottom:6px">Görsel URL</label>
+        <input value="{{ imgUrl }}" onChange="{{ onImgUrl }}" placeholder="https://…" style="width:100%;padding:13px;border:1px solid #e2e8f0;border-radius:13px;font-size:14px;font-family:inherit;outline:none;margin-bottom:14px" style-focus="border-color:#010E80" />
+        <label style="display:block;font-size:12.5px;font-weight:700;color:#475569;margin-bottom:6px">veya cihazdan yükle</label>
+        <input type="file" accept="image/*" onChange="{{ onImgFile }}" style="width:100%;font-size:13px;margin-bottom:18px" />
+        <div style="display:flex;gap:10px">
+          <button onClick="{{ applyImg }}" style="flex:1;background:#010E80;color:#fff;border:none;border-radius:13px;padding:13px;font-size:14px;font-weight:800;cursor:pointer" style-hover="background:#0057B8">Uygula</button>
+          <button onClick="{{ closeImgDialog }}" style="background:#f1f5f9;color:#475569;border:none;border-radius:13px;padding:13px 18px;font-size:14px;font-weight:700;cursor:pointer">Vazgeç</button>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ modalOpen }}" hint-placeholder-val="{{ false }}">
+    <div onClick="{{ closeModal }}" style="position:fixed;inset:0;background:rgba(2,6,23,0.6);z-index:100;display:flex;align-items:center;justify-content:center;padding:20px">
+      <div onClick="{{ stop }}" style="{{ modalStyle }}">
+        <div style="display:flex;align-items:flex-start;gap:14px;margin-bottom:18px">
+          <div style="flex:1">
+            <div style="font-size:12px;font-weight:700;color:#94a3b8;letter-spacing:0.8px">{{ modalDate }}</div>
+            <div style="font-size:22px;font-weight:800;color:#0f172a;letter-spacing:-0.5px">{{ modalTitle }}</div>
+          </div>
+          <button onClick="{{ closeModal }}" style="background:#f1f5f9;border:none;width:36px;height:36px;border-radius:12px;font-size:16px;cursor:pointer;color:#475569">✕</button>
+        </div>
+        <sc-for list="{{ modalEntries }}" as="e" hint-placeholder-count="2">
+          <div style="{{ e.wrapStyle }}">
+            <div style="display:flex;align-items:center;gap:9px;margin-bottom:7px">
+              <span style="{{ e.dotStyle }}"></span>
+              <span style="font-size:14px;font-weight:800;color:#0f172a">{{ e.type }}</span>
+              <span style="margin-left:auto;font-size:12.5px;color:#64748b;font-weight:600">{{ e.time }}</span>
+            </div>
+            <div style="font-size:13.5px;color:#475569;line-height:1.6">{{ e.note }}</div>
+            <div style="font-size:12.5px;color:#94a3b8;font-weight:600;margin-top:7px">{{ e.author }}</div>
+          </div>
+        </sc-for>
+      </div>
+    </div>
+  </sc-if>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1520,&quot;height&quot;:1000}}">
+const uname = n => (n || '').toLowerCase()
+  .replace(/ı/g, 'i').replace(/ğ/g, 'g').replace(/ü/g, 'u').replace(/ş/g, 's').replace(/ö/g, 'o').replace(/ç/g, 'c')
+  .replace(/[^a-z0-9]/g, '');
+const BLUE = '#010E80', GREEN = '#16a34a', AMBER = '#eab308', RED = '#dc2626';
+
+class Component extends DCLogic {
+  state = {
+    screen: 'landing', view: 'desktop', tc: '', staffTab: 'att', adminTab: 1,
+    group: 'U-12', attendance: {}, modal: null, info: null, staffRole: 'Antrenör',
+    adminMode: false, editMode: false, ctx: null, inline: null, imgDialog: null, saved: false,
+    content: {
+      badge: '2025—2026 SEZONU KAYITLARI AÇIK',
+      title: 'Çocuğunuzun gelişimini tek ekrandan takip edin.',
+      body: 'Antrenman, diyet ve psikolojik destek süreçlerinin tamamı Inter Academy panellerinde. Girişinizi yapın, saniyeler içinde başlayın.',
+      heroImg: null, layers: [],
+      slides: [
+        { title: 'Sezon Kayıtları Açılmıştır', body: '2025—2026 sezonu için U-10 / U-16 kontenjanları sınırlıdır.', src: null },
+        { title: 'U-14 Turnuva Kadrosu Açıklandı', body: 'Kadro listesi veli panelinden görüntülenebilir.', src: null },
+        { title: 'Yeni Diyetisyen Kadromuzda', body: 'Elif Demir salı günleri bireysel seans veriyor.', src: null }
+      ]
+    },
+    slideIdx: 0, barVisible: true, scrolled: false,
+    loginUser: '', loginPass: '', showPass: false, loginError: '', currentStaff: null,
+    staff: [
+      { name: 'Murat Kaya', tc: '11122233344', phone: '0532 100 20 30', role: 'Antrenör', meta: 'U-12 / U-14 · Pzt, Çar, Cmt' },
+      { name: 'Elif Demir', tc: '22233344455', phone: '0542 210 44 12', role: 'Diyetisyen', meta: 'Tüm gruplar · Salı' },
+      { name: 'Can Aydın', tc: '33344455566', phone: '0505 330 77 88', role: 'Psikolog', meta: 'Tüm gruplar · Perşembe' },
+      { name: 'Serkan Ünal', tc: '44455566677', phone: '0533 909 11 22', role: 'Antrenör', meta: 'U-16 · Salı, Perşembe' }
+    ],
+    staffForm: null, confirmDel: null, navOpen: false, panelsOpen: false, progRole: 'Ziyaretçi',
+    studentSearch: '', studentForm: null, confirmDelStudent: null,
+    payments: [
+      { name: 'Arda Yılmaz', due: '15 Mart 2026', amount: '₺2.750', paid: true },
+      { name: 'Kerem Aksoy', due: '15 Mart 2026', amount: '₺2.750', paid: false },
+      { name: 'Berk Doğan', due: '30 Mart 2026', amount: '₺2.750', paid: true },
+      { name: 'Deniz Öztürk', due: '15 Mart 2026', amount: '₺2.750', paid: false },
+      { name: 'Mert Çelik', due: '30 Mart 2026', amount: '₺2.750', paid: true }
+    ],
+    students: [
+      { tc: '12345678901', name: 'Arda Yılmaz', age: '12', group: 'U-12', phone: '0532 114 22 08' },
+      { tc: '23456789012', name: 'Kerem Aksoy', age: '11', group: 'U-12', phone: '0555 902 41 77' },
+      { tc: '34567890123', name: 'Berk Doğan', age: '14', group: 'U-14', phone: '0542 331 08 19' },
+      { tc: '45678901234', name: 'Deniz Öztürk', age: '12', group: 'U-12', phone: '0533 776 55 41' },
+      { tc: '56789012345', name: 'Mert Çelik', age: '13', group: 'U-14', phone: '0505 218 90 63' },
+      { tc: '67890123456', name: 'Efe Şahin', age: '12', group: 'U-12', phone: '0546 400 17 25' }
+    ],
+    adminUser: '', adminPass: '', adminLoginError: '', currentAdmin: null,
+    noteStep: 1, noteGroup: 'U-12', noteStudent: '', noteDate: '', noteCategory: 'Antrenman Performansı', noteText: '', noteSaved: false,
+    darkMode: true, contactDrawerOpen: false,
+    preRegOpen: false, preRegSaved: false, preRegInboxOpen: false,
+    preReg: { name: '', tc: '', gender: '', dob: '', ageGroup: 'U-10', parent: '', phone: '', il: '', ilce: '' },
+    preRegList: [
+      { name: 'Ege Kara', tc: '19283746551', gender: 'Erkek', dob: '2015-04-12', ageGroup: 'U-12', parent: 'Serpil Kara', phone: '0533 210 44 90', il: 'İstanbul', ilce: 'Kadıköy' }
+    ],
+    program: [
+      { g: 'U-10', d: 'Salı & Perşembe', t: '16:00 — 17:00', br: 'saha', desc: 'Temel teknik ve koordinasyon', loc: 'Saha 1' },
+      { g: 'U-12', d: 'Pazartesi & Çarşamba', t: '17:00 — 18:30', br: 'saha', desc: 'Pas oyunu ve kondisyon', loc: 'Saha 1' },
+      { g: 'U-14', d: 'Çarşamba & Cuma', t: '18:30 — 20:00', br: 'saha', desc: 'Taktik diziliş çalışması', loc: 'Saha 2' },
+      { g: 'Tüm gruplar', d: 'Salı', t: '15:30 — 17:00', br: 'diyet', desc: 'Beslenme takibi ve ölçüm', loc: 'Klinik' },
+      { g: 'Tüm gruplar', d: 'Perşembe', t: '18:30 — 19:30', br: 'psikolog', desc: 'Zihinsel gelişim seansı', loc: 'Danışma Odası' }
+    ],
+    groups: ['U-10', 'U-12', 'U-14', 'U-16'],
+    monthlyFee: 3500, feeSettingsOpen: false, reportModalOpen: false,
+    studentFees: {},
+    groupWizard: null, progDayFilter: null,
+    cmsTitle: 'Çocuğunuzun gelişimini tek ekrandan takip edin.',
+    cmsBody: 'Antrenman, diyet ve psikolojik destek süreçlerinin tamamı Inter Academy panellerinde.'
+  };
+
+  componentDidMount() {
+    this._t = setInterval(() => {
+      const n = this.state.content.slides.length;
+      if (n > 1 && this.state.screen === 'landing' && !this.state.editMode) {
+        this.setState(st => ({ slideIdx: (st.slideIdx + 1) % n }));
+      }
+    }, 5000);
+    window.addEventListener('scroll', this.handleScroll, { passive: true });
+  }
+  componentWillUnmount() { clearInterval(this._t); clearTimeout(this._lp); window.removeEventListener('scroll', this.handleScroll); }
+
+  parentLoginCheck() {
+    const tc = (this.state.tc || '').trim();
+    const hit = this.state.students.find(st => st.tc === tc);
+    if (!hit) return this.setState({ tcError: 'Bu T.C. Kimlik Numaras\u0131na ait \u00f6\u011frenci kayd\u0131 bulunamad\u0131.' });
+    this.setState({ screen: 'parent', currentStudent: hit, tcError: '' });
+  }
+
+  handleScroll = () => {
+    const y = window.scrollY;
+    const last = this._lastY || 0;
+    const vis = y < 40 ? true : (last - y > 4 ? true : (y - last > 4 ? false : this.state.barVisible));
+    const sc = y > 140;
+    if (vis !== this.state.barVisible || sc !== this.state.scrolled) this.setState({ barVisible: vis, scrolled: sc });
+    this._lastY = y;
+  };
+
+  scrollTo(id) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    window.scrollTo({ top: el.getBoundingClientRect().top + window.scrollY - 72, behavior: 'smooth' });
+  }
+
+  tab(active, color) {
+    return `border:none;cursor:pointer;white-space:nowrap;line-height:1.1;padding:12px 18px;border-radius:13px;font-size:13.5px;font-weight:700;font-family:inherit;background:${active ? (color || '#010E80') : '#fff'};color:${active ? (color === '#eab308' || color === '#FFE600' ? '#1c1917' : '#fff') : '#475569'};box-shadow:${active ? 'none' : '0 1px 2px rgba(0,0,0,0.05)'};border:1px solid ${active ? 'transparent' : '#e2e8f0'}`;
+  }
+  navBtn(active) {
+    return `border:none;cursor:pointer;white-space:nowrap;line-height:1.1;padding:10px 15px;border-radius:10px;font-size:13px;font-weight:700;font-family:inherit;background:${active ? '#010E80' : 'transparent'};color:${active ? '#fff' : '#94a3b8'}`;
+  }
+
+  calendarData() {
+    // March 2026 starts Sunday; grid starts Monday -> 6 leading blanks
+    const sessions = {
+      2: [['t', 'Antrenman', '17:00', 'Pas ve kontrol çalışmasında belirgin gelişim. Sağ ayak vuruşlarına odaklanıyoruz.', 'Murat Kaya']],
+      3: [['d', 'Diyetisyen', '15:30', 'Kahvaltı düzeni oturdu. Antrenman öncesi karbonhidrat alımı artırıldı.', 'Elif Demir']],
+      4: [['t', 'Antrenman', '17:00', 'Dayanıklılık testinde grup ortalamasının üzerinde.', 'Murat Kaya']],
+      5: [['x', 'Gelmedi', '17:00', 'Derse katılım sağlanmadı. Veliye WhatsApp bilgilendirmesi iletildi.', 'Sistem']],
+      9: [['t', 'Antrenman', '17:00', 'Takım içi oyunda liderlik gösterdi.', 'Murat Kaya'], ['p', 'Psikolog', '18:30', 'Maç öncesi kaygı seviyesi düşüşte. Nefes egzersizleri sürüyor.', 'Can Aydın']],
+      11: [['t', 'Antrenman', '17:00', 'Savunma dizilişinde konum farkındalığı çalışıldı.', 'Murat Kaya']],
+      12: [['d', 'Diyetisyen', '15:30', 'Kilo takibi hedef aralıkta.', 'Elif Demir']],
+      16: [['t', 'Antrenman', '17:00', 'Şut isabet oranı %62.', 'Murat Kaya'], ['d', 'Diyetisyen', '19:00', 'Toparlanma içeceği protokolü başlatıldı.', 'Elif Demir']],
+      18: [['x', 'Gelmedi', '17:00', 'Sağlık raporu ile izinli.', 'Sistem']],
+      19: [['p', 'Psikolog', '18:30', 'Takım arkadaşlarıyla iletişimde belirgin iyileşme.', 'Can Aydın']],
+      23: [['t', 'Antrenman', '17:00', 'Kondisyon çalışması tamamlandı.', 'Murat Kaya']],
+      25: [['t', 'Antrenman', '17:00', 'Bireysel teknik seans.', 'Murat Kaya']],
+      26: [['d', 'Diyetisyen', '15:30', 'Aylık ölçüm alındı, gelişim olumlu.', 'Elif Demir']],
+      30: [['t', 'Antrenman', '17:00', 'Sezon sonu değerlendirme maçı hazırlığı.', 'Murat Kaya']]
+    };
+    return sessions;
+  }
+
+  colorOf(k) { return k === 't' ? BLUE : k === 'd' ? GREEN : k === 'p' ? AMBER : RED; }
+
+  renderVals() {
+    const s = this.state, mobile = s.view === 'mobile';
+    const sessions = this.calendarData();
+    const ROLES = {
+      'Antrenör': { c: BLUE, soft: '#e8ecff', line: '#b9c2f7', name: 'Murat Kaya', init: 'MK', meta: 'U-12 / U-14', key: 't' },
+      'Diyetisyen': { c: GREEN, soft: '#f0fdf4', line: '#bbf7d0', name: 'Elif Demir', init: 'ED', meta: 'Tüm gruplar · Salı', key: 'd' },
+      'Psikolog': { c: AMBER, soft: '#fffbdb', line: '#FFE600', name: 'Can Aydın', init: 'CA', meta: 'Tüm gruplar · Perşembe', key: 'p' }
+    };
+    const R = ROLES[s.staffRole] || ROLES['Antrenör'];
+
+    const edit = s.editMode && s.screen === 'landing';
+    const LABELS = { badge: 'Rozet metni', title: 'Hero başlığı', body: 'Hero açıklaması', hero: 'Hero görseli', ann: 'Duyurular' };
+    const openCtx = (key, x, y) => this.setState({ ctx: { key, x, y } });
+    const setContent = patch => this.setState({ content: { ...this.state.content, ...patch }, saved: false });
+    const mkEd = (key, base) => ({
+      style: `${base};position:relative;${edit ? 'outline:2px dashed #0057B8;outline-offset:6px;border-radius:8px;cursor:context-menu;' : ''}`,
+      badgeStyle: edit
+        ? 'position:absolute;top:-14px;right:-14px;background:#0057B8;color:#fff;font-size:10px;font-weight:800;padding:4px 7px;border-radius:7px;z-index:5;pointer-events:none'
+        : 'display:none',
+      onContextMenu: e => { if (!edit) return; e.preventDefault(); openCtx(key, e.clientX, e.clientY); },
+      onTouchStart: e => { if (!edit) return; const t = e.touches[0]; this._lp = setTimeout(() => openCtx(key, t.clientX, t.clientY), 500); },
+      onTouchEnd: () => clearTimeout(this._lp),
+      onBlur: e => setContent({ [key]: e.target.innerText }),
+      editable: edit && s.inline === key
+    });
+
+    const days = [];
+    for (let i = 0; i < 6; i++) days.push({ num: '', style: 'visibility:hidden;height:' + (mobile ? 42 : 62) + 'px', numStyle: '', onClick: () => {} });
+    for (let n = 1; n <= 31; n++) {
+      const ev = sessions[n];
+      let bg = '#fff', border = '1px solid #f1f5f9', numColor = '#334155';
+      if (ev) {
+        const cs = ev.map(e => this.colorOf(e[0]));
+        if (ev[0][0] === 'x') { bg = 'repeating-linear-gradient(45deg,#fee2e2,#fee2e2 5px,#fecaca 5px,#fecaca 10px)'; border = '1px solid #fca5a5'; numColor = '#991b1b'; }
+        else if (cs.length > 1) { bg = `linear-gradient(90deg, ${cs[0]} 0 50%, ${cs[1]} 50% 100%)`; border = 'none'; numColor = '#fff'; }
+        else { bg = cs[0]; border = 'none'; numColor = cs[0] === AMBER ? '#1c1917' : '#fff'; }
+      }
+      days.push({
+        num: String(n),
+        numStyle: `font-size:${mobile ? 12 : 13}px;font-weight:700;color:${numColor}`,
+        style: `height:${mobile ? 42 : 62}px;border-radius:${mobile ? 10 : 13}px;background:${bg};border:${border};cursor:pointer;display:flex;align-items:flex-start;justify-content:flex-start;padding:${mobile ? 5 : 8}px;font-family:inherit`,
+        onClick: () => this.setState({ modal: { n, ev: ev || null } })
+      });
+    }
+
+    const staffDays = days.map((d, i) => {
+      if (!d.num) return { num: '', label: '', style: d.style, numStyle: '', labelStyle: 'display:none' };
+      const n = Number(d.num), ev = (sessions[n] || []).filter(e => e[0] === R.key);
+      const has = ev.length > 0;
+      return {
+        num: d.num, label: has ? ev[0][1] : '',
+        style: `height:${mobile ? 46 : 68}px;border-radius:13px;background:${has ? R.soft : '#fff'};border:1px solid ${has ? R.line : '#f1f5f9'};padding:${mobile ? 5 : 8}px;display:flex;flex-direction:column;gap:3px`,
+        numStyle: `font-size:12px;font-weight:700;color:${has ? R.c : '#94a3b8'}`,
+        labelStyle: `font-size:${mobile ? 9 : 10.5}px;font-weight:700;color:${R.c};overflow:hidden`
+      };
+    });
+
+    const rosterBase12 = [['Arda Yılmaz', '12 yaş · Forvet'], ['Kerem Aksoy', '11 yaş · Orta saha'], ['Deniz Öztürk', '12 yaş · Defans'], ['Efe Şahin', '12 yaş · Kaleci'], ['Poyraz Ateş', '11 yaş · Kanat'], ['Ali Tunç', '12 yaş · Orta saha']];
+    const rosterBase14 = [['Berk Doğan', '14 yaş · Forvet'], ['Mert Çelik', '13 yaş · Defans'], ['Umut Kara', '14 yaş · Kaleci'], ['Yiğit Aslan', '14 yaş · Kanat'], ['Baran Koç', '13 yaş · Orta saha']];
+    const rosterBase = s.group === 'U-12' ? rosterBase12 : rosterBase14;
+
+    const roster = rosterBase.map(([name, meta]) => {
+      const key = s.group + '|' + name, st = s.attendance[key];
+      const btn = (on, color, bg) => `border:1px solid ${on ? 'transparent' : '#e2e8f0'};cursor:pointer;min-width:${mobile ? 62 : 78}px;height:46px;border-radius:13px;font-size:14px;font-weight:800;font-family:inherit;background:${on ? color : '#fff'};color:${on ? '#fff' : bg}`;
+      return {
+        name, meta, initials: name.split(' ').map(w => w[0]).join(''),
+        varStyle: btn(st === 'var', '#16a34a', '#475569'),
+        yokStyle: btn(st === 'yok', RED, '#475569'),
+        markVar: () => this.setState({ attendance: { ...s.attendance, [key]: 'var' } }),
+        markYok: () => this.setState({ attendance: { ...s.attendance, [key]: 'yok' } })
+      };
+    });
+    const absentCount = Object.entries(s.attendance).filter(([k, v]) => v === 'yok' && k.startsWith(s.group)).length;
+
+    const m = s.modal;
+    const modalEntries = m ? (m.ev || [['n', 'Seans yok', '—', 'Bu tarihte planlanmış bir seans bulunmuyor.', '']]).map(e => ({
+      type: e[1], time: e[2], note: e[3], author: e[4] ? e[4] : '',
+      dotStyle: `width:11px;height:11px;border-radius:4px;background:${e[0] === 'n' ? '#cbd5e1' : this.colorOf(e[0])};display:inline-block`,
+      wrapStyle: `background:#f1f5f9;border-radius:16px;padding:16px;margin-bottom:10px;border-left:5px solid ${e[0] === 'n' ? '#cbd5e1' : this.colorOf(e[0])}`
+    })) : [];
+
+    const tagStyle = c => `font-size:11.5px;font-weight:700;white-space:nowrap;padding:5px 10px;border-radius:8px;margin-left:auto;background:${c}1a;color:${c}`;
+
+    return {
+      shellStyle: `width:100%;max-width:${mobile ? 390 : 1440}px;background:#fff;border-radius:${mobile ? 34 : 22}px;overflow:hidden;box-shadow:0 24px 70px rgba(0,0,0,0.5);border:${mobile ? '10px solid #1e293b' : '1px solid #1e293b'}`,
+      isLanding: s.screen === 'landing',
+      isParentLogin: s.screen === 'parentLogin',
+      isParentDash: s.screen === 'parent',
+      isStaff: s.screen === 'staff',
+      staffLogout: () => this.setState({ screen: 'staffLogin', currentStaff: null, loginUser: '', loginPass: '' }),
+      isAdmin: s.screen === 'admin',
+      isAdminLogin: s.screen === 'adminLogin',
+      adminUser: s.adminUser, adminPass: s.adminPass, adminLoginError: s.adminLoginError,
+      onAdminUser: e => this.setState({ adminUser: e.target.value }),
+      onAdminPass: e => this.setState({ adminPass: e.target.value }),
+      adminLoginErrorStyle: s.adminLoginError ? 'background:#fef2f2;color:#991b1b;border-radius:12px;padding:12px 14px;font-size:13.5px;font-weight:700;margin-bottom:14px' : 'display:none',
+      doAdminLogin: () => {
+        const accounts = [['admin1', 'inter_pass_10'], ['admin2', 'inter_pass_20'], ['admin3', 'inter_pass_30']];
+        const hit = accounts.find(a => a[0] === (s.adminUser || '').trim() && a[1] === (s.adminPass || '').trim());
+        if (!hit) return this.setState({ adminLoginError: 'Kullanıcı adı veya şifre hatalı.' });
+        this.setState({ screen: 'admin', currentAdmin: hit[0], adminLoginError: '', adminPass: '' });
+      },
+      adminLogout: () => this.setState({ screen: 'adminLogin', currentAdmin: null, adminUser: '', adminPass: '' }),
+      goLanding: () => this.setState({ screen: 'landing' }),
+      goParent: () => this.setState({ screen: 'parentLogin' }),
+      goStaff: () => this.setState({ screen: s.currentStaff ? 'staff' : 'staffLogin', loginError: '' }),
+      goAdmin: () => this.setState({ screen: s.currentAdmin ? 'admin' : 'adminLogin', adminLoginError: '' }),
+      navLanding: this.navBtn(s.screen === 'landing'),
+      navParent: this.navBtn(s.screen === 'parent' || s.screen === 'parentLogin'),
+      navStaff: this.navBtn(s.screen === 'staff' || s.screen === 'staffLogin'),
+      navAdmin: this.navBtn(s.screen === 'admin' || s.screen === 'adminLogin'),
+      setDesktop: () => this.setState({ view: 'desktop' }),
+      setMobile: () => this.setState({ view: 'mobile' }),
+      viewDesktopBtn: this.navBtn(!mobile),
+      viewMobileBtn: this.navBtn(mobile),
+
+      landingNavStyle: `display:flex;flex-wrap:wrap;gap:10px;${mobile ? 'width:100%' : 'margin-left:auto'}`,
+      heroTitleStyle: `font-size:${mobile ? 32 : 52}px;line-height:1.08;font-weight:800;letter-spacing:-1.6px;color:${s.darkMode ? '#FFFFFF' : '#0F172A'};margin:18px 0 14px;text-wrap:pretty;position:relative;${edit ? 'outline:2px dashed #0057B8;outline-offset:6px;border-radius:8px;' : ''}`,
+      noHeroImg: !s.content.heroImg,
+      brandBoxStyle: `display:flex;align-items:center;gap:12px;padding:${mobile ? '8px 8px' : '12px 24px'};flex:1 1 auto;flex-shrink:0;min-width:0`,
+      reservedBtnStyle: `background:#000;color:#fff;border:none;padding:${mobile ? '10px 10px' : '0 30px'};font-size:${mobile ? 11 : 14}px;font-weight:800;letter-spacing:0.3px;cursor:pointer;font-family:inherit;white-space:nowrap`,
+      portalBtnStyle: `${mobile ? 'display:none;' : ''}background:transparent;color:#fff;border:1px solid rgba(255,255,255,0.35);border-radius:10px;margin:8px 0;padding:${mobile ? '8px 9px' : '10px 16px'};font-size:${mobile ? 10 : 13}px;font-weight:800;letter-spacing:0.3px;cursor:pointer;font-family:inherit;white-space:nowrap;transition:background .15s ease`,
+      headerWrapStyle: s.scrolled
+        ? `position:fixed;top:0;left:50%;width:min(calc(100vw - 32px), ${mobile ? 390 : 1440}px);transform:translateX(-50%) translateY(${s.barVisible ? '0' : '-100%'});z-index:80;transition:transform .3s cubic-bezier(.4,0,.2,1);box-shadow:0 10px 30px rgba(0,0,0,0.45)`
+        : 'position:relative;z-index:80',
+      headerSpacerStyle: s.scrolled ? `height:${mobile ? 76 : 106}px` : 'display:none',
+      isStaffLogin: s.screen === 'staffLogin',
+      loginUser: s.loginUser, loginPass: s.loginPass, loginError: s.loginError,
+      passType: s.showPass ? 'text' : 'password',
+      eyeLabel: s.showPass ? '🙈' : '👁',
+      togglePass: () => this.setState({ showPass: !s.showPass }),
+      onLoginUser: e => this.setState({ loginUser: e.target.value }),
+      onLoginPass: e => this.setState({ loginPass: e.target.value }),
+      loginErrorStyle: s.loginError ? 'background:#fef2f2;color:#991b1b;border-radius:12px;padding:12px 14px;font-size:13.5px;font-weight:700;margin-bottom:14px' : 'display:none',
+      doStaffLogin: () => {
+        const u = (s.loginUser || '').trim().toLowerCase();
+        const hit = s.staff.find(m => uname(m.name) === u && m.tc === (s.loginPass || '').trim());
+        if (!hit) return this.setState({ loginError: 'Kullanıcı adı veya T.C. şifresi hatalı.' });
+        this.setState({ screen: 'staff', staffRole: hit.role, currentStaff: hit, loginError: '', loginPass: '' });
+      },
+      onStaffLoginKeyDown: e => { if (e.key === 'Enter') this.renderVals().doStaffLogin(); },
+      onAdminLoginKeyDown: e => { if (e.key === 'Enter') this.renderVals().doAdminLogin(); },
+      parentLogout: () => this.setState({ screen: 'landing', currentStudent: null, tc: '' }),
+      staffLogoutTop: () => this.setState({ screen: 'landing', currentStaff: null, loginUser: '', loginPass: '' }),
+      adminLogoutTop: () => this.setState({ screen: 'landing', currentAdmin: null, adminUser: '', adminPass: '' }),
+      loginHint: 'Demo: muratkaya / 11122233344',
+
+      staffMembers: s.staff.map((p, i) => {
+        const c = p.role === 'Antrenör' ? BLUE : p.role === 'Diyetisyen' ? GREEN : AMBER;
+        return {
+          name: p.name, role: p.role, meta: p.meta || '', phone: p.phone, username: uname(p.name),
+          initials: p.name.split(' ').map(w => w[0]).join(''),
+          cardStyle: `background:#fff;border:1px solid #e2e8f0;border-top:5px solid ${c};border-radius:20px;padding:20px`,
+          avatarStyle: `width:44px;height:44px;border-radius:14px;background:${c}1a;color:${c === AMBER ? '#a16207' : c};font-weight:800;display:flex;align-items:center;justify-content:center;font-size:14px`,
+          roleStyle: `font-size:12.5px;font-weight:800;color:${c === AMBER ? '#a16207' : c}`,
+          onEdit: () => this.setState({ staffForm: { ...p, idx: i } }),
+          onDelete: () => this.setState({ confirmDel: i })
+        };
+      }),
+      openNewStaff: () => this.setState({ staffForm: { name: '', tc: '', phone: '', role: 'Antrenör', meta: '', idx: -1 } }),
+      formOpen: !!s.staffForm,
+      form: s.staffForm || { name: '', tc: '', phone: '', role: 'Antrenör', meta: '' },
+      formTitle: s.staffForm && s.staffForm.idx >= 0 ? 'Uzman Bilgilerini Düzenle' : 'Yeni Eğitmen / Uzman Ekle',
+      formUsername: s.staffForm ? (uname(s.staffForm.name) || '—') : '—',
+      onFormName: e => this.setState({ staffForm: { ...s.staffForm, name: e.target.value } }),
+      onFormTc: e => this.setState({ staffForm: { ...s.staffForm, tc: e.target.value } }),
+      onFormPhone: e => this.setState({ staffForm: { ...s.staffForm, phone: e.target.value } }),
+      onFormMeta: e => this.setState({ staffForm: { ...s.staffForm, meta: e.target.value } }),
+      roleOptions: ['Antrenör', 'Diyetisyen', 'Psikolog'].map(r => {
+        const c = r === 'Antrenör' ? BLUE : r === 'Diyetisyen' ? GREEN : AMBER;
+        const on = s.staffForm && s.staffForm.role === r;
+        return {
+          label: r === 'Antrenör' ? 'Antrenör / Hoca' : r,
+          hint: r === 'Antrenör' ? 'Saha yetkisi' : r === 'Diyetisyen' ? 'Beslenme takip yetkisi' : 'Zihinsel gelişim yetkisi',
+          style: `text-align:left;cursor:pointer;border:2px solid ${on ? c : '#e2e8f0'};background:${on ? c + '14' : '#fff'};border-radius:14px;padding:13px;font-family:inherit`,
+          titleStyle: `font-size:13.5px;font-weight:800;color:${c === AMBER ? '#a16207' : c};margin-bottom:3px`,
+          onClick: () => this.setState({ staffForm: { ...s.staffForm, role: r } })
+        };
+      }),
+      saveStaff: () => {
+        const fm = s.staffForm;
+        if (!fm || !fm.name.trim() || fm.tc.trim().length !== 11) return this.setState({ formError: 'Ad soyad ve 11 haneli T.C. zorunludur.' });
+        const list = fm.idx >= 0 ? s.staff.map((m, j) => j === fm.idx ? { ...fm } : m) : [...s.staff, { ...fm }];
+        this.setState({ staff: list, staffForm: null, formError: '' });
+      },
+      formError: s.formError || '',
+      formErrorStyle: s.formError ? 'background:#fef2f2;color:#991b1b;border-radius:12px;padding:11px 13px;font-size:13px;font-weight:700;margin-bottom:12px' : 'display:none',
+      closeForm: () => this.setState({ staffForm: null, formError: '' }),
+      confirmOpen: s.confirmDel !== null && s.confirmDel !== undefined,
+      confirmName: s.confirmDel != null && s.staff[s.confirmDel] ? s.staff[s.confirmDel].name : '',
+      cancelDel: () => this.setState({ confirmDel: null }),
+      doDelete: () => this.setState({ staff: s.staff.filter((_, j) => j !== s.confirmDel), confirmDel: null }),
+
+      isMobileView: mobile,
+      panelsLabel: mobile ? 'PANELLER ▾' : 'GİRİŞ YAP / PANELLER ▾',
+      panelsOpen: s.panelsOpen,
+      togglePanels: () => this.setState({ panelsOpen: !s.panelsOpen }),
+      panelMenuStyle: 'position:absolute;top:100%;right:0;min-width:230px;background:#fff;border-radius:0 0 14px 14px;box-shadow:0 18px 44px rgba(0,0,0,0.28);z-index:40;overflow:hidden',
+      applyBtnStyle: `${mobile ? 'display:none;' : ''}background:#0431d4;color:#fff;border:none;border-radius:10px;padding:11px 24px;font-size:14px;font-weight:800;letter-spacing:0.4px;cursor:pointer;font-family:inherit;white-space:nowrap`,
+      burgerStyle: mobile
+        ? 'background:#000;color:#fff;border:none;padding:0 16px;font-size:19px;cursor:pointer;font-family:inherit'
+        : 'display:none',
+      toggleNav: () => this.setState({ navOpen: !s.navOpen }),
+      goPortals: () => this.scrollTo('portallar'),
+      darkMode: s.darkMode,
+      toggleTheme: () => this.setState({ darkMode: !s.darkMode }),
+      themeIcon: s.darkMode ? '☀️' : '🌙',
+
+      preRegOpenBtn: () => this.setState({ preRegOpen: true, preRegSaved: false }),
+      preRegOpen: s.preRegOpen,
+      closePreReg: () => this.setState({ preRegOpen: false }),
+      preReg: s.preReg,
+      onPreReg: field => e => this.setState({ preReg: { ...s.preReg, [field]: e.target.value } }),
+      pickGenderE: () => this.setState({ preReg: { ...s.preReg, gender: 'Erkek' } }),
+      pickGenderK: () => this.setState({ preReg: { ...s.preReg, gender: 'Kız' } }),
+      genderErkekStyle: `flex:1;padding:11px;border-radius:11px;font-size:13.5px;font-weight:800;cursor:pointer;font-family:inherit;border:2px solid ${s.preReg.gender === 'Erkek' ? '#010E80' : '#e2e8f0'};background:${s.preReg.gender === 'Erkek' ? '#e8ecff' : '#fff'};color:#0F172A`,
+      genderKizStyle: `flex:1;padding:11px;border-radius:11px;font-size:13.5px;font-weight:800;cursor:pointer;font-family:inherit;border:2px solid ${s.preReg.gender === 'Kız' ? '#010E80' : '#e2e8f0'};background:${s.preReg.gender === 'Kız' ? '#e8ecff' : '#fff'};color:#0F172A`,
+      preRegSaved: s.preRegSaved,
+      submitPreReg: () => {
+        const p = s.preReg;
+        if (!p.name.trim() || p.tc.trim().length !== 11 || !p.il.trim() || !p.ilce.trim()) return this.setState({ preRegError: 'Ad Soyad, 11 haneli TCKN, İl ve İlçe zorunludur.' });
+        this.setState({ preRegList: [...s.preRegList, p], preRegSaved: true, preRegError: '', preReg: { name: '', tc: '', gender: '', dob: '', ageGroup: 'U-10', parent: '', phone: '', il: '', ilce: '' } });
+      },
+      preRegError: s.preRegError || '',
+      preRegErrorStyle: s.preRegError ? 'background:#fef2f2;color:#991b1b;border-radius:12px;padding:11px 13px;font-size:13px;font-weight:700;margin-bottom:12px' : 'display:none',
+
+      preRegInboxOpen: s.preRegInboxOpen,
+      openPreRegInbox: () => this.setState({ preRegInboxOpen: true }),
+      closePreRegInbox: () => this.setState({ preRegInboxOpen: false }),
+      preRegCount: s.preRegList.length,
+      preRegItems: s.preRegList.map((p, i) => ({
+        name: p.name, meta: `${p.ageGroup} · ${p.il}/${p.ilce} · Veli: ${p.parent} · ${p.phone}`,
+        onApprove: () => this.setState({
+          preRegList: s.preRegList.filter((_, j) => j !== i),
+          preRegInboxOpen: false,
+          studentForm: {
+            name: p.name, tc: p.tc, dob: p.dob, gender: p.gender, group: p.ageGroup,
+            motherName: p.parent, motherPhone: p.phone, blood: '', height: '', weight: '', email: '', address: '',
+            fatherName: '', fatherPhone: '', fatherJob: '', motherJob: '', emergencyName: '', emergencyPhone: '',
+            idx: -1
+          }
+        }),
+        onReject: () => this.setState({ preRegList: s.preRegList.filter((_, j) => j !== i) })
+      })),
+      mainNavStyle: mobile
+        ? `background:#000;padding:${s.navOpen ? '10px 14px' : '0'};display:${s.navOpen ? 'flex' : 'none'};flex-direction:column;gap:2px`
+        : 'background:#000;padding:0 28px 0 24px;display:flex;align-items:center;gap:44px;flex-wrap:nowrap;overflow:hidden',
+      mainNav: [
+        ['ANA SAYFA', 'top'], ['HAKKIMIZDA', 'hakkimizda'],
+        ['ANTRENMAN PROGRAMI', 'antrenman-programi'], ['DUYURULAR / HABERLER', 'haberler']
+      ].map(([label, id], i) => ({
+        label,
+        style: `background:transparent;border:none;cursor:pointer;font-family:inherit;white-space:nowrap;text-align:left;padding:${mobile ? '12px 4px' : '16px 2px'};font-size:${mobile ? 13.5 : 14}px;font-weight:800;letter-spacing:0.3px;color:${i === 0 ? '#fff' : '#cbd5e1'};transition:color .15s ease`,
+        onClick: () => {
+          this.setState({ navOpen: false });
+          if (id === 'top') window.scrollTo({ top: 0, behavior: 'smooth' });
+          else setTimeout(() => this.scrollTo(id), 30);
+        }
+      })),
+
+      editorBarStyle: `position:fixed;top:0;left:0;right:0;z-index:120;background:#010E80;padding:12px 82px 12px 24px;display:flex;align-items:center;gap:14px;flex-wrap:wrap;transition:transform .3s cubic-bezier(.4,0,.2,1);transform:translateY(${s.barVisible ? '0' : '-140%'})`,
+
+      schedHeadDisplay: mobile ? 'none' : 'grid',
+      schedRows: s.program.map((r, i) => {
+        const set = (field, v) => this.setState({ program: s.program.map((row, j) => j === i ? { ...row, [field]: v } : row) });
+        return {
+          g: r.g, d: r.d, t: r.t, br: r.br, loc: r.loc || '', desc: r.desc,
+          rowStyle: `display:grid;grid-template-columns:0.7fr 1.2fr 1fr 1fr 1fr 1.3fr 0.4fr;gap:10px;padding:12px 16px;border-top:1px solid #f1f5f9;align-items:center;font-size:13px`,
+          cellStyle: 'padding:6px 8px;border-radius:8px;outline:1px dashed #cbd5e1;cursor:text;color:#0F172A;font-weight:600',
+          selStyle: 'padding:7px;border:1px solid #e2e8f0;border-radius:8px;font-size:12.5px;font-family:inherit;background:#fff',
+          onG: e => set('g', e.target.innerText), onD: e => set('d', e.target.innerText),
+          onT: e => set('t', e.target.innerText), onLoc: e => set('loc', e.target.innerText),
+          onDesc: e => set('desc', e.target.innerText), onBr: e => set('br', e.target.value),
+          onRemove: () => this.setState({ program: s.program.filter((_, j) => j !== i) })
+        };
+      }),
+      addSchedRow: () => this.setState({ program: [...s.program, { g: 'U-12', d: 'Gün seçin', t: '00:00 — 00:00', br: 'saha', loc: 'Saha 1', desc: 'Açıklama' }] }),
+
+      groupWizardOpen: !!s.groupWizard,
+      openGroupWizard: () => this.setState({ groupWizard: { step: 1, name: '', error: '', search: '', selected: [] } }),
+      closeGroupWizard: () => this.setState({ groupWizard: null }),
+      gwAtStep1: s.groupWizard && s.groupWizard.step === 1,
+      gwAtStep2: s.groupWizard && s.groupWizard.step === 2,
+      gwName: s.groupWizard ? s.groupWizard.name : '',
+      gwError: s.groupWizard ? s.groupWizard.error : '',
+      gwErrorStyle: (s.groupWizard && s.groupWizard.error) ? 'background:#fef2f2;color:#991b1b;border-radius:11px;padding:10px 13px;font-size:13px;font-weight:700;margin-top:8px' : 'display:none',
+      onGwName: e => this.setState({ groupWizard: { ...s.groupWizard, name: e.target.value, error: '' } }),
+      gwNext: () => {
+        const nm = (s.groupWizard.name || '').trim();
+        if (!nm) return this.setState({ groupWizard: { ...s.groupWizard, error: 'Grup adı boş olamaz.' } });
+        if (s.groups.some(g => g.toLowerCase() === nm.toLowerCase())) return this.setState({ groupWizard: { ...s.groupWizard, error: 'Bu grup adı zaten mevcut!' } });
+        this.setState({ groupWizard: { ...s.groupWizard, step: 2, name: nm, error: '' } });
+      },
+      gwBack: () => this.setState({ groupWizard: { ...s.groupWizard, step: 1 } }),
+      gwSearch: s.groupWizard ? s.groupWizard.search : '',
+      onGwSearch: e => this.setState({ groupWizard: { ...s.groupWizard, search: e.target.value } }),
+      gwStudents: !s.groupWizard ? [] : s.students
+        .filter(st => !s.groupWizard.search || st.name.toLowerCase().includes(s.groupWizard.search.toLowerCase()) || (st.tc || '').includes(s.groupWizard.search))
+        .filter(st => s.groupWizard.search ? true : !st.group)
+        .map(st => {
+          const checked = s.groupWizard.selected.includes(st.tc);
+          return {
+            tc: st.tc, name: st.name, groupBadge: st.group || '',
+            rowStyle: `display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:11px;background:${checked ? '#e8ecff' : '#f8fafc'};cursor:pointer`,
+            checked,
+            toggle: () => this.setState({ groupWizard: { ...s.groupWizard, selected: checked ? s.groupWizard.selected.filter(t => t !== st.tc) : [...s.groupWizard.selected, st.tc] } })
+          };
+        }),
+      gwSelectedCount: s.groupWizard ? s.groupWizard.selected.length : 0,
+      gwStep1Bg: s.groupWizard && s.groupWizard.step === 1 ? '#010E80' : '#f1f5f9',
+      gwStep1Fg: s.groupWizard && s.groupWizard.step === 1 ? '#fff' : '#94a3b8',
+      gwStep2Bg: s.groupWizard && s.groupWizard.step === 2 ? '#010E80' : '#f1f5f9',
+      gwStep2Fg: s.groupWizard && s.groupWizard.step === 2 ? '#fff' : '#94a3b8',
+      gwFinish: () => {
+        const gw = s.groupWizard;
+        this.setState({
+          groups: [...s.groups, gw.name],
+          students: s.students.map(st => gw.selected.includes(st.tc) ? { ...st, group: gw.name } : st),
+          groupWizard: null
+        });
+      },
+
+      isProgMobile: mobile,
+      isProgDesktop: !mobile,
+      dayPills: ['Pazartesi', 'Salı', 'Çarşamba', 'Perşembe', 'Cuma', 'Cumartesi', 'Pazar'].map((day, i) => {
+        const short = ['Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt', 'Paz'][i];
+        const active = s.progDayFilter === day;
+        return {
+          label: short,
+          style: `border:none;cursor:pointer;white-space:nowrap;padding:9px 16px;border-radius:999px;font-size:13px;font-weight:800;font-family:inherit;background:${active ? '#010E80' : '#f1f5f9'};color:${active ? '#fff' : '#475569'}`,
+          onClick: () => this.setState({ progDayFilter: active ? null : day })
+        };
+      }),
+      dayCards: ['Pazartesi', 'Salı', 'Çarşamba', 'Perşembe', 'Cuma', 'Cumartesi', 'Pazar']
+        .filter(day => !s.progDayFilter || s.progDayFilter === day)
+        .map(day => {
+          const sessions = s.program.filter(r => r.d.includes(day)).map(r => {
+            const c = r.br === 'saha' ? BLUE : r.br === 'diyet' ? GREEN : AMBER;
+            const typeLabel = r.br === 'saha' ? 'Saha Antrenmanı' : r.br === 'diyet' ? 'Diyetisyen Seansı' : 'Psikolog Seansı';
+            return {
+              t: r.t, g: r.g, desc: (r.loc ? r.loc + ' - ' : '') + typeLabel,
+              timeStyle: `background:${c};color:${c === AMBER ? '#1c1917' : '#fff'};font-size:12.5px;font-weight:800;padding:6px 11px;border-radius:9px;white-space:nowrap`,
+              groupStyle: `background:${c}1a;color:${c === AMBER ? '#a16207' : c};font-size:11.5px;font-weight:800;padding:4px 9px;border-radius:7px`
+            };
+          });
+          return { day, hasSessions: sessions.length > 0, noSessions: sessions.length === 0, sessions };
+        }),
+      progReadOnlyNote: s.currentAdmin ? 'Yönetici modundasınız — programı doğrudan düzenleyebilirsiniz.' : 'Bu program tüm ziyaretçi, veli ve eğitmenler için sabittir; yalnızca yönetici düzenleyebilir.',
+      progReadOnlyNoteStyle: 'font-size:12.5px;color:#64748b;font-weight:600;margin-top:18px',
+      canAddRow: !!s.currentAdmin,
+      addRow: () => this.setState({ program: [...s.program, { g: 'U-12', d: 'Gün seçin', t: '00:00 — 00:00', br: 'saha', desc: 'Seans açıklaması' }] }),
+      programRows2: s.program.map((r, i) => {
+        const allow = !!s.currentAdmin;
+        const c = r.br === 'saha' ? BLUE : r.br === 'diyet' ? GREEN : AMBER;
+        const cell = extra => `${extra};padding:4px 6px;border-radius:8px;${allow ? 'outline:1px dashed #0057B8;outline-offset:2px;cursor:text;background:#f8fbff;' : ''}`;
+        const set = (field, v) => this.setState({ program: s.program.map((row, j) => j === i ? { ...row, [field]: v } : row) });
+        return {
+          g: r.g, d: r.d, t: r.t, desc: r.desc, editable: allow,
+          rowStyle: `display:flex;align-items:center;gap:12px;padding:14px 18px;border-bottom:1px solid #f1f5f9;flex-wrap:wrap;border-left:5px solid ${c}`,
+          gStyle: cell(`width:96px;font-size:15px;font-weight:800;color:${c}`),
+          dStyle: cell('min-width:150px;font-size:13.5px;font-weight:700;color:#0F172A'),
+          descStyle: cell('flex:1;min-width:170px;font-size:13px;color:#475569'),
+          tStyle: cell(`font-size:12px;font-weight:800;white-space:nowrap;color:${c};background:${allow ? '#f8fbff' : c + '1a'}`),
+          onG: e => set('g', e.target.innerText),
+          onD: e => set('d', e.target.innerText),
+          onT: e => set('t', e.target.innerText),
+          onDesc: e => set('desc', e.target.innerText),
+          removeStyle: allow ? 'background:#fef2f2;color:#DC2626;border:none;border-radius:9px;padding:7px 10px;font-size:12px;font-weight:800;cursor:pointer' : 'display:none',
+          onRemove: () => this.setState({ program: s.program.filter((_, j) => j !== i) })
+        };
+      }),
+
+      landingWrapStyle: `background:${s.darkMode ? '#050814' : '#fff'}`,
+      themeBodyBg: s.darkMode ? '#050814' : '#F8FAFC',
+      themeCardBg: s.darkMode ? '#0B112C' : '#FFFFFF',
+      themeModalBg: s.darkMode ? '#111A42' : '#FFFFFF',
+      themeBorder: s.darkMode ? '#1E293B' : '#E2E8F0',
+      themeHeading: s.darkMode ? '#FFFFFF' : '#0F172A',
+      themeBody: s.darkMode ? '#F1F5F9' : '#1E293B',
+      themeMuted: s.darkMode ? '#94A3B8' : '#64748B',
+      reportBodyColor: s.darkMode ? '#F1F5F9' : '#1E293B',
+      themeInputBg: s.darkMode ? '#0B112C' : '#FFFFFF',
+      themeInputBorder: s.darkMode ? '#475569' : '#CBD5E1',
+      themeScreenStyle: `background:${s.darkMode ? '#050814' : '#F8FAFC'};min-height:640px`,
+      themeCardStyle: `background:${s.darkMode ? '#0B112C' : '#FFFFFF'};border:1px solid ${s.darkMode ? '#1E293B' : '#E2E8F0'}`,
+      themeModalStyle: `background:${s.darkMode ? '#111A42' : '#FFFFFF'};color:${s.darkMode ? '#F1F5F9' : '#1E293B'}`,
+      themeInputStyle: `background:${s.darkMode ? '#0B112C' : '#FFFFFF'};border:1px solid ${s.darkMode ? '#475569' : '#CBD5E1'};color:${s.darkMode ? '#FFFFFF' : '#0F172A'}`,
+      heroWrapStyle: `padding:56px 32px 40px;background:${s.darkMode ? 'linear-gradient(180deg,#0B112C,#050814)' : 'linear-gradient(180deg,#f1f5f9,#fff)'}`,
+      aboutSectionStyle: `padding:${mobile ? '32px 20px' : '48px 32px'};background:${s.darkMode ? '#0B112C' : '#f1f5f9'};scroll-margin-top:80px`,
+      programSectionStyle: `padding:${mobile ? '32px 20px' : '48px 32px'};background:${s.darkMode ? '#050814' : '#fff'};scroll-margin-top:80px`,
+      cardSurfaceStyle: `background:${s.darkMode ? '#111A42' : '#fff'};border:1px solid ${s.darkMode ? '#1E293B' : '#e2e8f0'}`,
+      textPrimaryStyle: s.darkMode ? '#FFFFFF' : '#0F172A',
+      textMutedStyle: s.darkMode ? '#94A3B8' : '#475569',
+      landingBottomBg: s.darkMode ? '#050814' : '#fff',
+      kickerStyle: `font-size:13px;font-weight:800;color:${s.darkMode ? '#7dd3fc' : '#010E80'};letter-spacing:1px;margin-bottom:14px`,
+      rowDividerColor: s.darkMode ? '#1E293B' : '#f1f5f9',
+      announceCardStyle: `background:${s.darkMode ? '#111A42' : '#f1f5f9'};border-radius:16px;padding:18px;margin-bottom:12px`,
+      noteCardBg: s.darkMode ? '#111A42' : '#f1f5f9',
+      staffScreenBg: `background:${s.darkMode ? '#050814' : '#f1f5f9'};min-height:640px`,
+      staffTabsBg: `position:sticky;top:0;z-index:20;background:${s.darkMode ? '#050814' : '#f1f5f9'};padding:16px 28px 0;display:flex;gap:8px;flex-wrap:wrap`,
+      staffCardBg: `background:${s.darkMode ? '#0B112C' : '#fff'};border:1px solid ${s.darkMode ? '#1E293B' : '#e2e8f0'};border-radius:18px;padding:22px`,
+      staffTextPrimary: s.darkMode ? '#FFFFFF' : '#0F172A',
+      contactSectionStyle: `padding:${mobile ? '32px 20px 40px' : '48px 32px 56px'};background:#000;scroll-margin-top:80px`,
+      sectionTitleStyle: `font-size:${mobile ? 24 : 34}px;font-weight:800;letter-spacing:-1px;color:#0F172A;text-wrap:pretty;margin:0`,
+      contactTitleStyle: `font-size:${mobile ? 24 : 34}px;font-weight:800;letter-spacing:-1px;color:#fff;margin:0`,
+      slideTrackStyle: `display:flex;height:100%;transition:transform .6s cubic-bezier(.4,0,.2,1);transform:translateX(-${s.slideIdx * 100}%)`,
+      slides: s.content.slides.map((sl, i) => ({
+        style: 'flex:0 0 100%;height:100%;position:relative;overflow:hidden;background:repeating-linear-gradient(45deg,#0b1030,#0b1030 10px,#0e1440 10px,#0e1440 20px)',
+        img: sl.src ? React.createElement('img', { src: sl.src, alt: '', style: { position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' } }) : null,
+        overlayStyle: `position:absolute;inset:0;display:flex;flex-direction:column;justify-content:flex-end;gap:6px;padding:${mobile ? 16 : 28}px;background:linear-gradient(180deg,rgba(1,14,128,0) 30%,rgba(1,14,128,0.88))`,
+        title: sl.title, body: sl.body,
+        titleStyle: `color:#fff;font-size:${mobile ? 17 : 26}px;font-weight:800;letter-spacing:-0.5px;text-wrap:pretty`,
+        bodyStyle: `color:#c7d2fe;font-size:${mobile ? 12.5 : 14.5}px;font-weight:500;max-width:520px;line-height:1.5`,
+        placeholderStyle: sl.src ? 'display:none' : `position:absolute;top:${mobile ? 12 : 18}px;left:${mobile ? 16 : 28}px;font-family:ui-monospace,monospace;font-size:11px;color:#64748b`
+      })),
+      dots: s.content.slides.map((_, i) => ({
+        style: `width:${i === s.slideIdx ? 26 : 9}px;height:9px;border-radius:999px;border:none;cursor:pointer;padding:0;transition:width .3s ease;background:${i === s.slideIdx ? '#fff' : 'rgba(255,255,255,0.45)'}`,
+        onClick: () => this.setState({ slideIdx: i })
+      })),
+      prevSlide: () => this.setState(st => ({ slideIdx: (st.slideIdx - 1 + st.content.slides.length) % st.content.slides.length })),
+      nextSlide: () => this.setState(st => ({ slideIdx: (st.slideIdx + 1) % st.content.slides.length })),
+      arrowStyle: `position:absolute;top:50%;transform:translateY(-50%);width:${mobile ? 32 : 40}px;height:${mobile ? 32 : 40}px;border-radius:50%;border:1px solid rgba(255,255,255,0.3);background:rgba(1,14,128,0.55);color:#fff;font-size:15px;cursor:pointer;display:flex;align-items:center;justify-content:center;z-index:3`,
+      goAbout: () => this.scrollTo('hakkimizda'),
+      goProgram: () => this.scrollTo('antrenman-programi'),
+      goContact: () => this.scrollTo('iletisim'),
+      contactBarStyle: (() => {
+        const shellW = mobile ? 390 : 1440;
+        const barW = mobile ? 44 : 38;
+        const margin = mobile ? 10 : 16;
+        const offset = Math.round(shellW / 2 - barW - margin);
+        return `position:fixed;left:calc(50% + ${offset}px);top:50%;transform:translateY(-50%);z-index:${mobile ? 40 : 90};display:flex;flex-direction:column;gap:${mobile ? 10 : 8}px;padding:${mobile ? '6px' : '10px 6px'};border-radius:${mobile ? 16 : 999}px;background:rgba(2,6,23,0.7);backdrop-filter:blur(10px);border:1px solid rgba(255,255,255,0.1);box-shadow:0 8px 24px rgba(0,0,0,0.35)`;
+      })(),
+      isDesktopContact: s.screen === 'landing' && !mobile,
+      isMobileContact: s.screen === 'landing' && mobile,
+      contactDrawerOpen: s.contactDrawerOpen,
+      toggleContactDrawer: () => this.setState({ contactDrawerOpen: !s.contactDrawerOpen }),
+      closeContactDrawer: () => this.setState({ contactDrawerOpen: false }),
+      contactTabStyle: `position:fixed;left:calc(50% + 150px);top:50%;transform:translateY(-50%) rotate(180deg);z-index:96;writing-mode:vertical-rl;display:flex;align-items:center;gap:6px;padding:12px 7px;border-radius:16px 0 0 16px;background:rgba(1,14,128,0.92);backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,0.2);color:#fff;cursor:pointer;box-shadow:-4px 0 20px rgba(0,0,0,0.3)`,
+      contactTabTextStyle: 'font-size:12.5px;font-weight:800;letter-spacing:0.5px',
+      contactDrawerStyle: `position:fixed;left:calc(50% + 195px - 190px);top:50%;transform:translateY(-50%);z-index:97;width:190px;background:${s.darkMode ? 'rgba(11,17,44,0.95)' : 'rgba(255,255,255,0.95)'};backdrop-filter:blur(20px);border:1px solid rgba(255,255,255,0.1);border-radius:22px 0 0 22px;box-shadow:-8px 0 30px rgba(0,0,0,0.35);padding:16px`,
+      drawerRowStyle: `display:flex;align-items:center;gap:10px;text-decoration:none;padding:8px;border-radius:14px`,
+      contactBtn: c => c,
+      contactSize: mobile ? 34 : 40,
+      igStyle: `width:${mobile ? 44 : 38}px;height:${mobile ? 44 : 38}px;border-radius:50%;background:linear-gradient(135deg,#f58529,#dd2a7b,#8134af);color:#fff;display:flex;align-items:center;justify-content:center;font-size:${mobile ? 10 : 11}px;font-weight:800`,
+      waStyle: `width:${mobile ? 44 : 38}px;height:${mobile ? 44 : 38}px;border-radius:50%;background:#25D366;color:#fff;display:flex;align-items:center;justify-content:center;font-size:${mobile ? 15 : 16}px`,
+      telStyle: `width:${mobile ? 44 : 38}px;height:${mobile ? 44 : 38}px;border-radius:50%;background:#0057B8;color:#fff;display:flex;align-items:center;justify-content:center;font-size:${mobile ? 15 : 16}px`,
+      contactItemStyle: `display:flex;flex-direction:column;align-items:center;gap:3px;transition:transform .15s ease;text-decoration:none`,
+      contactLabelStyle: `font-size:${mobile ? 9 : 9.5}px;font-weight:600;color:#fff;white-space:nowrap;text-align:center`,
+      landingHeaderStyle: `background:#000;padding:${mobile ? '12px 16px' : '20px 32px'};display:flex;align-items:center;gap:${mobile ? 10 : 20}px;flex-wrap:wrap`,
+      logoImgStyle: `height:${mobile ? 28 : 54}px;max-width:${mobile ? 120 : 260}px;object-fit:contain;width:auto;display:block;image-rendering:auto`,
+      logoBoxStyle: `width:${mobile ? 28 : 38}px;height:${mobile ? 28 : 38}px;border-radius:${mobile ? 9 : 11}px;background:#010E80;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:800;font-size:${mobile ? 13 : 16}px`,
+      wordmarkStyle: `color:#fff;font-weight:800;font-size:${mobile ? 14 : 19}px;letter-spacing:-0.4px`,
+      navBtnLanding: `background:#111827;border:1px solid #1e293b;color:#e2e8f0;font-size:${mobile ? 12.5 : 14}px;font-weight:700;padding:${mobile ? '9px 12px' : '11px 18px'};border-radius:12px;cursor:pointer;white-space:nowrap;transition:transform .15s ease,background .15s ease`,
+      heroBodyStyle: `font-size:17px;color:${s.darkMode ? '#E2E8F0' : '#475569'};max-width:600px;line-height:1.6;margin:0 0 28px;position:relative;${edit ? 'outline:2px dashed #0057B8;outline-offset:6px;border-radius:8px;' : ''}`,
+      heroBannerStyle: `position:relative;height:${mobile ? 200 : 330}px;border-radius:20px;overflow:hidden;margin:0 0 32px;background:#f1f5f9;${edit ? 'outline:2px dashed #0057B8;outline-offset:6px;cursor:context-menu;' : ''}`,
+      portalGridStyle: `display:grid;gap:16px;grid-template-columns:repeat(${mobile ? 1 : 3},1fr);margin-top:8px`,
+      landingBottomStyle: `padding:12px 32px 48px;display:grid;gap:28px;grid-template-columns:${mobile ? '1fr' : '1.2fr 1fr'}`,
+
+      schedule: [
+        { day: 'Pazartesi', time: '17:00 — 18:30', group: 'U-12 Antrenman', tagStyle: tagStyle(BLUE) },
+        { day: 'Salı', time: '15:30 — 16:15', group: 'Diyetisyen Seansı', tagStyle: tagStyle(GREEN) },
+        { day: 'Çarşamba', time: '17:00 — 18:30', group: 'U-14 Antrenman', tagStyle: tagStyle(BLUE) },
+        { day: 'Perşembe', time: '18:30 — 19:15', group: 'Psikolog Görüşmesi', tagStyle: tagStyle(AMBER) },
+        { day: 'Cumartesi', time: '10:00 — 12:00', group: 'Karma Maç', tagStyle: tagStyle(BLUE) }
+      ],
+      announcements: [
+        { date: '28 ŞUBAT 2026', title: 'Mart ayı ödeme dönemleri', body: '15 ve 30 Mart tarihlerinde tahsilat yapılacaktır.' },
+        { date: '24 ŞUBAT 2026', title: 'U-14 turnuva kadrosu açıklandı', body: 'Kadro listesi veli panelinden görüntülenebilir.' },
+        { date: '19 ŞUBAT 2026', title: 'Yeni diyetisyen kadromuza katıldı', body: 'Elif Demir salı günleri seans verecektir.' }
+      ],
+
+      tcInput: s.tc,
+      onTc: e => this.setState({ tc: e.target.value, tcError: '' }),
+      tcError: s.tcError,
+      tcErrorStyle: s.tcError ? 'background:#fef2f2;color:#991b1b;border-radius:12px;padding:12px 14px;font-size:13.5px;font-weight:700;margin-bottom:14px' : 'display:none',
+      onTcKeyDown: e => { if (e.key === 'Enter') this.parentLoginCheck(); },
+      parentLogin: () => this.parentLoginCheck(),
+
+      calMonth: s.calMonth || 'Mart',
+      calYear: s.calYear || '2026',
+      onCalMonth: e => this.setState({ calMonth: e.target.value }),
+      onCalYear: e => this.setState({ calYear: e.target.value }),
+      reportTitle: `${s.calMonth || 'Mart'} ${s.calYear || '2026'} Raporu · Aylık Toplu Değerlendirme`,
+      reportModalOpen: s.reportModalOpen,
+      openReportModal: () => this.setState({ reportModalOpen: true }),
+      closeReportModal: () => this.setState({ reportModalOpen: false }),
+      reportBlocksFull: [
+        { title: 'Antrenör Notları', c: BLUE, body: 'Pas ve kontrol çalışmasında belirgin gelişim gösterdi. Dayanıklılık testinde grup ortalamasının üzerinde performans sergiledi. Savunma dizilişinde konum farkındalığı üzerine çalıştık; şut isabet oranı ay boyunca %62 seviyesinde seyretti. Takım içi oyunlarda liderlik özellikleri ön plana çıkıyor.' },
+        { title: 'Psikolog Gözlemleri', c: AMBER, body: 'Maç öncesi kaygı seviyesinde düşüş, takım arkadaşlarıyla iletişimde belirgin iyileşme kaydedildi. Nefes egzersizleri rutin hale geldi; odaklanma süresi antrenman başına ortalama 10 dakika arttı.' },
+        { title: 'Diyetisyen Takip Notları', c: GREEN, body: 'Kahvaltı düzeni oturdu, aylık kilo takibi hedef aralıkta. Toparlanma içeceği protokolü başlatıldı, hidrasyon takibi antrenman günlerinde düzenli yapılıyor.' }
+      ].map(r => ({
+        title: r.title, body: r.body,
+        cardStyle: `background:${s.darkMode ? '#0B112C' : '#fff'};border:1px solid ${s.darkMode ? '#1E293B' : '#e2e8f0'};border-top:4px solid ${r.c};border-radius:16px;padding:18px`,
+        dotStyle: `width:9px;height:9px;border-radius:50%;background:${r.c}`,
+        titleStyle: `font-size:14px;font-weight:800;color:${r.c === AMBER ? '#a16207' : r.c}`
+      })),
+      reportBlocks: [
+        { title: 'Antrenör Notları', c: BLUE, body: 'Pas ve kontrol çalışmasında belirgin gelişim gösterdi. Dayanıklılık testinde grup ortalamasının üzerinde performans sergiledi.' },
+        { title: 'Psikolog Gözlemleri', c: AMBER, body: 'Maç öncesi kaygı seviyesinde düşüş, takım arkadaşlarıyla iletişimde belirgin iyileşme kaydedildi.' },
+        { title: 'Diyetisyen Takip Notları', c: GREEN, body: 'Kahvaltı düzeni oturdu, aylık kilo takibi hedef aralıkta. Toparlanma içeceği protokolü başlatıldı.' }
+      ].map(r => ({
+        title: r.title, body: r.body,
+        cardStyle: `background:${s.darkMode ? '#0B112C' : '#fff'};border:1px solid ${s.darkMode ? '#1E293B' : '#e2e8f0'};border-top:4px solid ${r.c};border-radius:16px;padding:16px`,
+        dotStyle: `width:9px;height:9px;border-radius:50%;background:${r.c}`,
+        titleStyle: `font-size:13.5px;font-weight:800;color:${r.c === AMBER ? '#a16207' : r.c}`
+      })),
+      weekdays: ['PZT', 'SAL', 'ÇAR', 'PER', 'CUM', 'CMT', 'PAZ'],
+      days, staffDays,
+      recentNotes: [
+        { title: 'Antrenman · 30 Mart', body: 'Sezon sonu değerlendirme maçı hazırlığı tamamlandı.', date: '30 Mar', dotStyle: `width:10px;height:10px;border-radius:4px;background:${BLUE};margin-top:6px` },
+        { title: 'Diyetisyen · 26 Mart', body: 'Aylık ölçüm alındı, gelişim olumlu.', date: '26 Mar', dotStyle: `width:10px;height:10px;border-radius:4px;background:${GREEN};margin-top:6px` },
+        { title: 'Psikolog · 19 Mart', body: 'Takım arkadaşlarıyla iletişimde belirgin iyileşme.', date: '19 Mar', dotStyle: `width:10px;height:10px;border-radius:4px;background:${AMBER};margin-top:6px` }
+      ],
+
+      staffAtt: s.staffTab === 'att' || !s.staffTab,
+      staffNoteTab: s.staffTab === 'note',
+      staffTabAtt: () => this.setState({ staffTab: 'att' }),
+      staffTabNote: () => this.setState({ staffTab: 'note', noteStep: 1 }),
+      staffTabAttStyle: this.tab(s.staffTab === 'att' || !s.staffTab, R.c),
+      staffTabNoteStyle: this.tab(s.staffTab === 'note', R.c),
+
+      noteStep: s.noteStep,
+      noteGroupSel: s.noteGroup,
+      onNoteGroup: e => this.setState({ noteGroup: e.target.value, noteStudent: '' }),
+      noteSearch: s.noteSearch || '',
+      onNoteSearch: e => this.setState({ noteSearch: e.target.value }),
+      noteStudentOptions: (s.noteGroup === 'U-12' ? rosterBase12 : rosterBase14)
+        .map(([name]) => name)
+        .filter(nm => nm.toLowerCase().includes((s.noteSearch || '').toLowerCase()))
+        .map(nm => ({
+          name: nm,
+          onClick: () => this.setState({ noteStudent: nm }),
+          style: `text-align:left;cursor:pointer;border:1px solid ${s.noteStudent === nm ? R.c : '#e2e8f0'};background:${s.noteStudent === nm ? R.c + '14' : '#fff'};border-radius:11px;padding:12px 14px;font-size:14px;font-weight:700;color:#0F172A;font-family:inherit`
+        })),
+      noteStudentSel: s.noteStudent,
+      noteMonth: s.noteMonth || 'Mart',
+      noteYear: s.noteYear || '2026',
+      onNoteMonth: e => this.setState({ noteMonth: e.target.value }),
+      onNoteYear: e => this.setState({ noteYear: e.target.value }),
+      noteCategory: s.noteCategory,
+      onNoteCategory: e => this.setState({ noteCategory: e.target.value }),
+      noteText: s.noteText,
+      onNoteText: e => this.setState({ noteText: e.target.value }),
+      noteCanNext1: !!s.noteGroup,
+      noteCanNext2: !!s.noteStudent,
+      noteAtStep1: s.noteStep === 1,
+      noteAtStep2: s.noteStep === 2,
+      noteAtStep3: s.noteStep === 3,
+      noteNotSaved: !s.noteSaved,
+      noteGoto1: () => this.setState({ noteStep: 1 }),
+      noteGoto2: () => this.setState({ noteStep: 2 }),
+      noteGoto3: () => this.setState({ noteStep: 3 }),
+      noteSteps: ['Grup', 'Öğrenci', 'Tarih & Not'].map((label, i) => ({
+        label: (i + 1) + '. ' + label,
+        style: `flex:1;text-align:center;padding:9px 6px;border-radius:11px;font-size:11.5px;font-weight:800;background:${s.noteStep === i + 1 ? R.c : '#fff'};color:${s.noteStep === i + 1 ? (R.c === AMBER ? '#1c1917' : '#fff') : '#94a3b8'};border:1px solid ${s.noteStep === i + 1 ? 'transparent' : '#e2e8f0'}`
+      })),
+      noteSaved: s.noteSaved,
+      saveNote: () => this.setState({ noteSaved: true }),
+      newNote: () => this.setState({ noteStep: 1, noteStudent: '', noteText: '', noteSaved: false }),
+      staffRole: s.staffRole,
+      onStaffRole: e => this.setState({ staffRole: e.target.value }),
+      staffName: s.currentStaff ? s.currentStaff.name : R.name,
+      staffInitials: s.currentStaff ? s.currentStaff.name.split(' ').map(w => w[0]).join('') : R.init,
+      staffMeta: R.role || (R.name + ' · ' + R.meta),
+      staffRoleLine: s.staffRole + ' · ' + (s.currentStaff && s.currentStaff.meta ? s.currentStaff.meta : R.meta),
+      staffAvatarStyle: `width:48px;height:48px;border-radius:15px;background:${R.c};display:flex;align-items:center;justify-content:center;color:${R.c === AMBER ? '#1c1917' : '#fff'};font-weight:800`,
+      staffDotStyle: `width:9px;height:9px;border-radius:50%;background:${R.c}`,
+      staffSelectStyle: `background:#111827;color:#fff;border:1px solid ${R.c};border-radius:12px;padding:11px 14px;font-size:13px;font-weight:600;font-family:inherit;outline:none`,
+      noteBtnStyle: `background:${R.c};color:${R.c === AMBER ? '#1c1917' : '#fff'};border:none;border-radius:14px;padding:13px 20px;font-size:14px;font-weight:700;cursor:pointer;white-space:nowrap`,
+      openNote: () => this.setState({ modal: { n: 1, ev: [[R.key, 'Yeni Not', 'Bugün', 'Öğrenci seçin, tarih belirleyin ve performans notunu yazın. Not anında veli paneline yansır.', 'Taslak']] } }),
+      pickU12: () => this.setState({ group: 'U-12' }),
+      pickU14: () => this.setState({ group: 'U-14' }),
+      u12Style: this.tab(s.group === 'U-12', R.c),
+      u14Style: this.tab(s.group === 'U-14', R.c),
+      roster, absentCount, showWhatsBanner: absentCount > 0,
+
+      admin1: s.adminTab === 1, admin2: s.adminTab === 2, admin3: s.adminTab === 3, admin4: s.adminTab === 4, admin5: s.adminTab === 5,
+      aTab1: () => this.setState({ adminTab: 1 }), aTab2: () => this.setState({ adminTab: 2 }),
+      aTab3: () => this.setState({ adminTab: 3 }), aTab4: () => this.setState({ adminTab: 4 }), aTab5: () => this.setState({ adminTab: 5 }),
+      aTab1Style: this.tab(s.adminTab === 1), aTab2Style: this.tab(s.adminTab === 2),
+      aTab3Style: this.tab(s.adminTab === 3), aTab4Style: this.tab(s.adminTab === 4), aTab5Style: this.tab(s.adminTab === 5),
+
+      studentSearch: s.studentSearch,
+      onStudentSearch: e => this.setState({ studentSearch: e.target.value }),
+      openNewStudent: () => this.setState({ studentForm: { name: '', tc: '', dob: '', gender: '', blood: '', height: '', weight: '', email: '', address: '', motherName: '', motherPhone: '', motherJob: '', fatherName: '', fatherPhone: '', fatherJob: '', emergencyName: '', emergencyPhone: '', group: 'U-12', idx: -1 } }),
+      studentFormOpen: !!s.studentForm,
+      studentForm: s.studentForm || {},
+      studentFormTitle: s.studentForm && s.studentForm.idx >= 0 ? 'Öğrenci Kaydını Düzenle' : 'Yeni Öğrenci Kayıt Formu',
+      onSF: field => e => this.setState({ studentForm: { ...s.studentForm, [field]: e.target.value } }),
+      onStudentPhoto: e => {
+        const file = e.target.files && e.target.files[0];
+        if (!file) return;
+        this.setState({ studentForm: { ...s.studentForm, photo: URL.createObjectURL(file) } });
+      },
+      studentPhotoEl: (s.studentForm && s.studentForm.photo) ? React.createElement('img', { src: s.studentForm.photo, alt: '', style: { width: 64, height: 64, borderRadius: 16, objectFit: 'cover' } }) : null,
+      closeStudentForm: () => this.setState({ studentForm: null, studentFormError: '' }),
+      studentFormError: s.studentFormError || '',
+      studentFormErrorStyle: s.studentFormError ? 'background:#fef2f2;color:#991b1b;border-radius:12px;padding:11px 13px;font-size:13px;font-weight:700;margin-bottom:12px' : 'display:none',
+      saveStudent: () => {
+        const fm = s.studentForm;
+        if (!fm.name || !fm.name.trim() || (fm.tc || '').trim().length !== 11) return this.setState({ studentFormError: 'Ad Soyad ve 11 haneli TCKN zorunludur.' });
+        const dob = fm.dob ? fm.dob : '';
+        const age = dob ? String(2026 - Number(dob.slice(0, 4))) : '—';
+        const rec = { tc: fm.tc, name: fm.name, age, group: fm.group || 'U-12', phone: fm.motherPhone || fm.fatherPhone || '' , ...fm };
+        const list = fm.idx >= 0 ? s.students.map((r, j) => j === fm.idx ? rec : r) : [...s.students, rec];
+        this.setState({ students: list, studentForm: null, studentFormError: '' });
+      },
+      openStudentDossier: i => () => this.setState({ studentForm: { ...s.students[i], idx: i } }),
+      deleteStudentPrompt: i => () => this.setState({ confirmDelStudent: i }),
+      confirmDelStudentOpen: s.confirmDelStudent !== null && s.confirmDelStudent !== undefined,
+      confirmDelStudentName: s.confirmDelStudent != null && s.students[s.confirmDelStudent] ? s.students[s.confirmDelStudent].name : '',
+      cancelDelStudent: () => this.setState({ confirmDelStudent: null }),
+      doDeleteStudent: () => this.setState({ students: s.students.filter((_, j) => j !== s.confirmDelStudent), confirmDelStudent: null }),
+      studentHeadStyle: `display:${mobile ? 'none' : 'grid'};grid-template-columns:1.2fr 1.4fr 0.5fr 0.7fr 1.1fr;gap:12px;padding:13px 18px;background:#f1f5f9;font-size:11px;font-weight:800;color:#94a3b8;letter-spacing:0.6px`,
+      studentRows: s.students
+        .filter(r => r.name.toLowerCase().includes((s.studentSearch || '').toLowerCase()))
+        .map((r, idxVisible) => {
+          const i = s.students.indexOf(r);
+          return {
+            tc: r.tc, name: r.name, age: r.age, group: r.group, phone: r.phone,
+            rowStyle: `display:grid;grid-template-columns:${mobile ? '1fr 1fr' : '1.2fr 1.4fr 0.5fr 0.7fr 1.1fr'};gap:${mobile ? 6 : 12}px;padding:14px 18px;border-top:1px solid #f1f5f9;font-size:13.5px;align-items:center;cursor:pointer` ,
+            onClick: this.openStudentDossier ? (() => this.setState({ studentForm: { ...r, idx: i } })) : (() => {}),
+            onDelete: () => this.setState({ confirmDelStudent: i })
+          };
+        }),
+
+      staffGridStyle: `display:grid;gap:14px;grid-template-columns:repeat(${mobile ? 1 : 3},1fr)`,
+      staffList: [
+        ['Murat Kaya', 'Antrenör', BLUE, 'U-12 / U-14 · Pzt, Çar, Cmt'],
+        ['Elif Demir', 'Diyetisyen', GREEN, 'Tüm gruplar · Salı'],
+        ['Can Aydın', 'Psikolog', AMBER, 'Tüm gruplar · Perşembe'],
+        ['Serkan Ünal', 'Antrenör', '#0057B8', 'U-16 · Salı, Perşembe']
+      ].map(p => ({
+        name: p[0], role: p[1], meta: p[3], initials: p[0].split(' ').map(w => w[0]).join(''),
+        cardStyle: `background:#fff;border:1px solid #e2e8f0;border-top:5px solid ${p[2]};border-radius:20px;padding:20px`,
+        avatarStyle: `width:44px;height:44px;border-radius:14px;background:${p[2]}1a;color:${p[2]};font-weight:800;display:flex;align-items:center;justify-content:center;font-size:14px`,
+        roleStyle: `font-size:12.5px;font-weight:700;color:${p[2]}`
+      })),
+
+      payments: s.payments.map((p, i) => {
+        const amt = s.monthlyFee;
+        const monthName = p.due.split(' ')[1] || 'bu ay';
+        const msg = encodeURIComponent(`Sayın ${p.name} velisi, sporcumuz ${p.name}'nın ${monthName} dönemi aidat ödemesi (Tutar: ${amt} TL) henüz tamamlanmamıştır. Bilgilerinize sunarız.`);
+        return {
+          name: p.name, due: p.due, amount: amt + ' TL',
+          status: p.paid ? 'Ödendi' : 'Ödenmedi',
+          badgeStyle: `border:none;cursor:pointer;font-size:12.5px;font-weight:800;padding:7px 13px;border-radius:999px;background:${p.paid ? '#f0fdf4' : '#fef2f2'};color:${p.paid ? '#15803d' : '#DC2626'};font-family:inherit`,
+          onToggle: () => this.setState({ payments: s.payments.map((row, j) => j === i ? { ...row, paid: !row.paid } : row) }),
+          waHref: p.paid ? null : `https://wa.me/?text=${msg}`,
+          actionStyle: `border:none;border-radius:12px;padding:10px 15px;font-size:13px;font-weight:700;font-family:inherit;text-decoration:none;cursor:${p.paid ? 'default' : 'pointer'};background:${p.paid ? '#f1f5f9' : '#16a34a'};color:${p.paid ? '#cbd5e1' : '#fff'}`
+        };
+      }),
+      unpaidCount: s.payments.filter(p => !p.paid).length,
+      monthlyFee: s.monthlyFee,
+      openFeeSettings: () => this.setState({ feeSettingsOpen: true }),
+      closeFeeSettings: () => this.setState({ feeSettingsOpen: false }),
+      feeSettingsOpen: s.feeSettingsOpen,
+      onMonthlyFee: e => this.setState({ monthlyFee: Number(e.target.value) || 0 }),
+
+      cmsGridStyle: `display:grid;gap:14px;grid-template-columns:${mobile ? '1fr' : '1fr 1fr'}`,
+      cmsTitle: s.cmsTitle, cmsBody: s.cmsBody,
+      onCmsTitle: e => this.setState({ cmsTitle: e.target.value }),
+      onCmsBody: e => this.setState({ cmsBody: e.target.value }),
+
+      adminMode: s.adminMode,
+      editMode: s.editMode,
+      toggleEdit: () => this.setState({ editMode: !s.editMode, ctx: null, inline: null }),
+      editSwitchStyle: `width:52px;height:30px;border-radius:999px;border:none;cursor:pointer;padding:3px;display:flex;justify-content:${s.editMode ? 'flex-end' : 'flex-start'};background:${s.editMode ? '#FFE600' : '#334155'}`,
+      editKnobStyle: 'width:24px;height:24px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,0.3)',
+      editStateLabel: s.editMode ? 'Düzenleme Modu: Açık' : 'Düzenleme Modu: Kapalı',
+      saveChanges: () => this.setState({ saved: true, ctx: null, inline: null }),
+      saveLabel: s.saved ? '✓ Kaydedildi' : 'Değişiklikleri Kaydet',
+      saveBtnStyle: `border:none;border-radius:12px;padding:11px 18px;font-size:13.5px;font-weight:800;font-family:inherit;cursor:pointer;white-space:nowrap;background:${s.saved ? '#16A34A' : '#FFE600'};color:${s.saved ? '#fff' : '#0F172A'}`,
+      exitEditor: () => this.setState({ screen: 'admin', adminMode: false, editMode: false, ctx: null }),
+      launchEditor: () => this.setState({ screen: 'landing', adminMode: true, editMode: true }),
+
+      content: s.content,
+      edBadge: mkEd('badge', 'display:inline-block'),
+      edTitle: mkEd('title', 'display:block'),
+      edBody: mkEd('body', 'display:block'),
+      edHero: mkEd('hero', 'display:block'),
+      heroImgEl: s.content.heroImg ? React.createElement('img', { src: s.content.heroImg, alt: 'Hero', style: { width: '100%', height: '100%', objectFit: 'cover', display: 'block' } }) : null,
+      hasHeroImg: !!s.content.heroImg,
+      layers: s.content.layers.map((l, i) => ({
+        el: React.createElement('img', {
+          src: l.src, alt: 'Katman',
+          onClick: () => setContent({ layers: s.content.layers.filter((_, j) => j !== i) }),
+          style: { position: 'absolute', left: l.x + '%', top: l.y + '%', width: l.w + 'px', borderRadius: '12px', cursor: 'pointer', boxShadow: '0 8px 24px rgba(0,0,0,0.25)' }
+        })
+      })),
+
+      ctxOpen: !!s.ctx,
+      ctxLabel: s.ctx ? LABELS[s.ctx.key] : '',
+      ctxIsImage: !!s.ctx && s.ctx.key === 'hero',
+      ctxStyle: s.ctx
+        ? (mobile
+          ? `position:fixed;left:0;right:0;bottom:0;background:${s.darkMode ? '#111A42' : '#fff'};border-radius:24px 24px 0 0;padding:18px;z-index:130;box-shadow:0 -12px 40px rgba(0,0,0,0.3)`
+          : `position:fixed;left:${Math.min(s.ctx.x, 1100)}px;top:${s.ctx.y}px;background:${s.darkMode ? '#111A42' : '#fff'};border-radius:16px;padding:8px;z-index:130;min-width:230px;box-shadow:0 16px 44px rgba(0,0,0,0.28);border:1px solid ${s.darkMode ? '#1E293B' : '#e2e8f0'}`)
+        : 'display:none',
+      closeCtx: () => this.setState({ ctx: null }),
+      actEditText: () => this.setState({ inline: s.ctx ? s.ctx.key : null, ctx: null }),
+      actChangeImg: () => this.setState({ imgDialog: { mode: 'replace' }, ctx: null }),
+      actAddLayer: () => this.setState({ imgDialog: { mode: 'layer' }, ctx: null }),
+      actRemoveImg: () => { setContent({ heroImg: null }); this.setState({ ctx: null }); },
+
+      imgDialogOpen: !!s.imgDialog,
+      imgDialogTitle: s.imgDialog && s.imgDialog.mode === 'layer' ? 'Yeni Görsel / Katman Ekle' : 'Görseli Değiştir',
+      imgUrl: s.imgUrl || '',
+      onImgUrl: e => this.setState({ imgUrl: e.target.value }),
+      onImgFile: e => {
+        const f = e.target.files && e.target.files[0];
+        if (!f) return;
+        const url = URL.createObjectURL(f);
+        this.setState({ imgUrl: url });
+      },
+      applyImg: () => {
+        const url = s.imgUrl;
+        if (!url) return this.setState({ imgDialog: null });
+        if (s.imgDialog.mode === 'layer') setContent({ layers: [...s.content.layers, { src: url, x: 8, y: 12, w: 120 }] });
+        else setContent({ heroImg: url });
+        this.setState({ imgDialog: null, imgUrl: '' });
+      },
+      closeImgDialog: () => this.setState({ imgDialog: null }),
+
+      infoOpen: !!s.info,
+      openAbout: () => this.setState({ info: 'about' }),
+      openProgram: () => this.setState({ info: 'program' }),
+      closeInfo: () => this.setState({ info: null }),
+      infoTitle: s.info === 'about' ? 'Hakkımızda' : 'Antrenman Programı',
+      infoKicker: s.info === 'about' ? 'INTER ACADEMY TÜRKİYE' : 'YAŞ GRUPLARINA GÖRE HAFTALIK PLAN',
+      isAbout: s.info === 'about',
+      isProgram: s.info === 'program',
+      infoStyle: `background:${s.darkMode ? '#111A42' : '#fff'};color:${s.darkMode ? '#F1F5F9' : '#1E293B'};border-radius:24px;padding:26px;width:100%;max-width:${mobile ? 370 : 620}px;max-height:82vh;overflow:auto;${mobile ? 'align-self:flex-end;' : ''}`,
+      aboutBlocks: [
+        { h: 'Vizyonumuz', b: 'Sporcu gelişimini yalnızca sahada değil; beslenme ve psikolojik destekle bütüncül olarak ele alan bir akademi modeli.' },
+        { h: 'Antrenör Kadrosu', b: 'UEFA lisanslı 6 antrenör, 1 diyetisyen ve 1 spor psikoloğu. Her grup için sabit sorumlu antrenör.' },
+        { h: 'Tesis', b: '2 adet FIFA standart suni çim saha, kapalı kondisyon salonu, fizyoterapi odası ve veli bekleme alanı.' }
+      ],
+      programRows: [
+        { g: 'U-10', d: 'Salı & Perşembe', t: '16:00 — 17:00', tagStyle: tagStyle(BLUE) },
+        { g: 'U-12', d: 'Pazartesi & Çarşamba', t: '17:00 — 18:30', tagStyle: tagStyle(BLUE) },
+        { g: 'U-14', d: 'Çarşamba & Cuma', t: '18:30 — 20:00', tagStyle: tagStyle(BLUE) },
+        { g: 'U-16', d: 'Salı & Perşembe', t: '19:00 — 20:30', tagStyle: tagStyle(BLUE) },
+        { g: 'Karma', d: 'Cumartesi', t: '10:00 — 12:00', tagStyle: tagStyle(GREEN) }
+      ],
+
+      modalOpen: !!m,
+      modalDate: m ? `${m.n} MART 2026` : '',
+      modalTitle: m && m.ev ? (m.ev[0][0] === 'x' ? 'Gelmedi' : m.ev.length + ' seans kaydı') : 'Kayıt yok',
+      modalEntries,
+      modalStyle: `background:${s.darkMode ? '#111A42' : '#fff'};color:${s.darkMode ? '#F1F5F9' : '#1E293B'};border-radius:${mobile ? '24px' : '24px'};padding:24px;width:100%;max-width:${mobile ? 370 : 520}px;max-height:80vh;overflow:auto;${mobile ? 'align-self:flex-end;' : ''}`,
+      closeModal: () => this.setState({ modal: null }),
+      stop: e => e.stopPropagation()
+    };
+  }
+}
+</script>
+</body>
+</html>

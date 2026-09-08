@@ -1,0 +1,28 @@
+node_modules/
+dist/
+build/
+
+# Env / secrets
+.env
+.env.*
+!.env.example
+
+# Logs
+*.log
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Test / build artifacts
+coverage/
+test-results/
+playwright-report/
+*.tsbuildinfo
+
+# Uploads / runtime data
+uploads/
+storage/
+backend/tokens/

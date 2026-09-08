@@ -1,0 +1,346 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  yonetici
+  egitmen
+  veli
+}
+
+enum StaffSpecialty {
+  antrenor
+  diyetisyen
+  psikolog
+}
+
+enum NoteCategory {
+  psikolog_gorusu
+  diyetisyen_gorusu
+  antrenor_gorusu
+}
+
+enum SessionType {
+  saha
+  diyet
+  psikolog
+}
+
+enum AttendanceStatus {
+  var
+  yok
+}
+
+enum PaymentStatus {
+  odenmedi
+  odendi
+}
+
+enum PreRegStatus {
+  beklemede
+  onaylandi
+  reddedildi
+}
+
+enum ContentType {
+  text
+  image
+}
+
+enum Gender {
+  erkek
+  kiz
+}
+
+model Branch {
+  id        String   @id @default(uuid())
+  name      String
+  code      String   @unique
+  createdAt DateTime @default(now()) @map("created_at")
+
+  students        Student[]
+  staffProfiles   StaffProfile[]
+  groups          Group[]
+  preRegistrations PreRegistration[]
+
+  @@map("branches")
+}
+
+model User {
+  id           String   @id @default(uuid())
+  username     String   @unique
+  passwordHash String   @map("password_hash")
+  role         UserRole
+  isActive     Boolean  @default(true) @map("is_active")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  staffProfile         StaffProfile?
+  studentAsParent      Student?              @relation("ParentUser")
+  instructorStudents   InstructorStudent[]
+  markedAttendance     AttendanceRecord[]    @relation("MarkedBy")
+  authoredNotes        StudentNote[]         @relation("AuthorUser")
+  confirmedPayments    Payment[]             @relation("ConfirmedBy")
+  reviewedPreRegs      PreRegistration[]     @relation("ReviewedBy")
+  createdAnnouncements Announcement[]
+  updatedContentBlocks SiteContentBlock[]
+  updatedFeeSettings   FeeSettings[]
+
+  @@map("users")
+}
+
+model StaffProfile {
+  id            String         @id @default(uuid())
+  userId        String         @unique @map("user_id")
+  branchId      String         @map("branch_id")
+  fullName      String         @map("full_name")
+  phone         String?
+  specialty     StaffSpecialty
+  metaNote      String?        @map("meta_note")
+  tcNoEncrypted Bytes?         @map("tc_no_encrypted")
+  tcNoHash      String?        @unique @map("tc_no_hash")
+  createdAt     DateTime       @default(now()) @map("created_at")
+  updatedAt     DateTime       @updatedAt @map("updated_at")
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  branch Branch @relation(fields: [branchId], references: [id])
+
+  @@index([specialty])
+  @@index([branchId])
+  @@map("staff_profiles")
+}
+
+model Group {
+  id        String   @id @default(uuid())
+  branchId  String   @map("branch_id")
+  name      String
+  ageRange  String?  @map("age_range")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  branch           Branch            @relation(fields: [branchId], references: [id])
+  students         Student[]
+  trainingSessions TrainingSession[]
+
+  @@unique([branchId, name])
+  @@index([branchId])
+  @@map("groups")
+}
+
+model Student {
+  id               String   @id @default(uuid())
+  branchId         String   @map("branch_id")
+  tcNoEncrypted    Bytes    @map("tc_no_encrypted")
+  tcNoHash         String   @unique @map("tc_no_hash")
+  fullName         String   @map("full_name")
+  dob              DateTime @db.Date
+  gender           Gender?
+  bloodType        String?  @map("blood_type")
+  heightCm         Int?     @map("height_cm")
+  weightKg         Int?     @map("weight_kg")
+  email            String?
+  address          String?
+  photoUrl         String?  @map("photo_url")
+  registrationPdfUrl String? @map("registration_pdf_url")
+  motherName       String?  @map("mother_name")
+  motherPhone      String?  @map("mother_phone")
+  motherJob        String?  @map("mother_job")
+  fatherName       String?  @map("father_name")
+  fatherPhone      String?  @map("father_phone")
+  fatherJob        String?  @map("father_job")
+  emergencyName    String?  @map("emergency_name")
+  emergencyPhone   String?  @map("emergency_phone")
+  groupId          String?  @map("group_id")
+  parentUserId     String?  @unique @map("parent_user_id")
+  paymentDueDay    Int      @map("payment_due_day")
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
+
+  branch             Branch               @relation(fields: [branchId], references: [id])
+  group              Group?               @relation(fields: [groupId], references: [id], onDelete: SetNull)
+  parentUser         User?                @relation("ParentUser", fields: [parentUserId], references: [id], onDelete: SetNull)
+  instructorStudents InstructorStudent[]
+  attendanceRecords  AttendanceRecord[]
+  notes              StudentNote[]
+  payments           Payment[]
+  preRegistration    PreRegistration?
+
+  @@index([groupId])
+  @@index([branchId])
+  @@map("students")
+}
+
+model InstructorStudent {
+  instructorUserId String   @map("instructor_user_id")
+  studentId        String   @map("student_id")
+  assignedAt       DateTime @default(now()) @map("assigned_at")
+
+  instructor User    @relation(fields: [instructorUserId], references: [id], onDelete: Cascade)
+  student    Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@id([instructorUserId, studentId])
+  @@index([studentId])
+  @@map("instructor_students")
+}
+
+model TrainingSession {
+  id          String      @id @default(uuid())
+  groupId     String      @map("group_id")
+  dayOfWeek   Int         @map("day_of_week")
+  startTime   DateTime    @map("start_time") @db.Time()
+  endTime     DateTime?   @map("end_time") @db.Time()
+  sessionType SessionType @map("session_type")
+  location    String?
+  description String?
+  createdAt   DateTime    @default(now()) @map("created_at")
+
+  group             Group              @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  attendanceRecords AttendanceRecord[]
+
+  @@index([groupId])
+  @@map("training_sessions")
+}
+
+model AttendanceRecord {
+  id            String            @id @default(uuid())
+  studentId     String            @map("student_id")
+  sessionId     String?           @map("session_id")
+  sessionDate   DateTime          @map("session_date") @db.Date
+  status        AttendanceStatus
+  markedBy      String?           @map("marked_by")
+  notifiedAt    DateTime?         @map("notified_at")
+  createdAt     DateTime          @default(now()) @map("created_at")
+
+  student Student          @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  session TrainingSession? @relation(fields: [sessionId], references: [id], onDelete: SetNull)
+  marker  User?            @relation("MarkedBy", fields: [markedBy], references: [id], onDelete: SetNull)
+
+  @@unique([studentId, sessionDate, sessionId])
+  @@index([studentId, sessionDate])
+  @@map("attendance_records")
+}
+
+model StudentNote {
+  id          String       @id @default(uuid())
+  studentId   String       @map("student_id")
+  authorId    String?      @map("author_id")
+  category    NoteCategory
+  periodMonth Int          @map("period_month")
+  periodYear  Int          @map("period_year")
+  body        String
+  createdAt   DateTime     @default(now()) @map("created_at")
+
+  student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  author  User?   @relation("AuthorUser", fields: [authorId], references: [id], onDelete: SetNull)
+
+  @@index([studentId, periodYear, periodMonth])
+  @@index([category])
+  @@map("student_notes")
+}
+
+model Payment {
+  id                String        @id @default(uuid())
+  studentId         String        @map("student_id")
+  periodYear        Int           @map("period_year")
+  periodMonth       Int           @map("period_month")
+  dueDay            Int           @map("due_day")
+  dueDate           DateTime      @map("due_date") @db.Date
+  amount            Decimal       @default(3500.00) @db.Decimal(10, 2)
+  status            PaymentStatus @default(odenmedi)
+  paidAt            DateTime?     @map("paid_at")
+  confirmedBy       String?       @map("confirmed_by")
+  overdueNotifiedAt DateTime?     @map("overdue_notified_at")
+  autoReminderSent  Boolean       @default(false) @map("auto_reminder_sent")
+  lastReminderDate  DateTime?     @map("last_reminder_date")
+  createdAt         DateTime      @default(now()) @map("created_at")
+  updatedAt         DateTime      @updatedAt @map("updated_at")
+
+  student  Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  confirmer User?  @relation("ConfirmedBy", fields: [confirmedBy], references: [id])
+
+  @@unique([studentId, periodYear, periodMonth])
+  @@index([periodYear, periodMonth, dueDay])
+  @@index([status])
+  @@map("payments")
+}
+
+model FeeSettings {
+  id         Int      @id @default(1)
+  monthlyFee Decimal  @default(3500.00) @map("monthly_fee") @db.Decimal(10, 2)
+  updatedAt  DateTime @updatedAt @map("updated_at")
+  updatedBy  String?  @map("updated_by")
+
+  updater User? @relation(fields: [updatedBy], references: [id])
+
+  @@map("fee_settings")
+}
+
+model PreRegistration {
+  id                  String       @id @default(uuid())
+  branchId            String       @map("branch_id")
+  fullName            String       @map("full_name")
+  tcNoEncrypted       Bytes        @map("tc_no_encrypted")
+  tcNoHash            String       @map("tc_no_hash")
+  gender              Gender?
+  dob                 DateTime?    @db.Date
+  ageGroup            String?      @map("age_group")
+  parentName          String       @map("parent_name")
+  phone               String
+  il                  String?
+  ilce                String?
+  status              PreRegStatus @default(beklemede)
+  createdAt           DateTime     @default(now()) @map("created_at")
+  reviewedAt          DateTime?    @map("reviewed_at")
+  reviewedBy          String?      @map("reviewed_by")
+  convertedStudentId  String?      @unique @map("converted_student_id")
+
+  reviewer          User?    @relation("ReviewedBy", fields: [reviewedBy], references: [id])
+  convertedStudent  Student? @relation(fields: [convertedStudentId], references: [id])
+  branch            Branch   @relation(fields: [branchId], references: [id])
+
+  @@index([status])
+  @@index([branchId])
+  @@map("pre_registrations")
+}
+
+model Announcement {
+  id          String   @id @default(uuid())
+  title       String
+  body        String
+  publishDate DateTime @default(now()) @map("publish_date") @db.Date
+  createdBy   String?  @map("created_by")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  creator User? @relation(fields: [createdBy], references: [id])
+
+  @@map("announcements")
+}
+
+model SiteContentBlock {
+  id          String      @id @default(uuid())
+  blockKey    String      @unique @map("block_key")
+  contentType ContentType @map("content_type")
+  value       String?
+  sortOrder   Int         @default(0) @map("sort_order")
+  updatedAt   DateTime    @updatedAt @map("updated_at")
+  updatedBy   String?     @map("updated_by")
+
+  updater User? @relation(fields: [updatedBy], references: [id])
+
+  @@map("site_content_blocks")
+}
+
+model HeroSlide {
+  id        String   @id @default(uuid())
+  imageUrl  String   @map("image_url")
+  title     String?
+  body      String?
+  sortOrder Int      @default(0) @map("sort_order")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("hero_slides")
+}
