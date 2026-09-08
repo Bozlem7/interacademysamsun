@@ -23,6 +23,7 @@ playwright-report/
 *.tsbuildinfo
 
 # Uploads / runtime data
-uploads/
-storage/
-backend/tokens/
+/demo_inter/uploads/
+/demo_inter/backend/uploads/
+/demo_inter/backend/storage/
+/demo_inter/backend/tokens/
