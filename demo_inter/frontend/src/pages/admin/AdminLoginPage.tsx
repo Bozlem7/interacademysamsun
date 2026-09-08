@@ -57,6 +57,7 @@ export function AdminLoginPage() {
           onChange={(e) => setUsername(e.target.value)}
           placeholder="Kullanıcı adı"
           disabled={otherSessionOpen}
+          autoComplete="off"
           className="mb-3 w-full rounded-2xl border-2 border-slate-200 bg-paper2 p-4 text-sm text-slate-900 outline-none focus:border-brand disabled:opacity-50 dark:border-slate-700 dark:bg-surface dark:text-white"
         />
         <input
@@ -66,6 +67,7 @@ export function AdminLoginPage() {
           onKeyDown={(e) => e.key === "Enter" && submit()}
           placeholder="••••••••"
           disabled={otherSessionOpen}
+          autoComplete="new-password"
           className="mb-5 w-full rounded-2xl border-2 border-slate-200 bg-paper2 p-4 text-sm text-slate-900 outline-none focus:border-brand disabled:opacity-50 dark:border-slate-700 dark:bg-surface dark:text-white"
         />
         <button
