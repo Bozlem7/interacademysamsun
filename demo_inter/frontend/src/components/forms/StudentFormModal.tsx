@@ -111,6 +111,10 @@ export function StudentFormModal({
       setError(ageError);
       return;
     }
+    if (!form.motherPhone.trim() && !form.fatherPhone.trim()) {
+      setError("Anne veya baba telefon numarasından en az biri girilmelidir.");
+      return;
+    }
     setSaving(true);
     try {
       const { data: created } = await apiClient.post("/students", {
@@ -207,12 +211,14 @@ export function StudentFormModal({
         <input className={`${inputCls} col-span-2`} placeholder="Adres" value={form.address} onChange={(e) => set("address", e.target.value)} />
       </div>
 
-      <div className="mb-2 text-xs font-extrabold tracking-wide text-brand dark:text-[#93c5fd]">VELİ BİLGİLERİ</div>
+      <div className="mb-2 text-xs font-extrabold tracking-wide text-brand dark:text-[#93c5fd]">
+        VELİ BİLGİLERİ <span className="font-normal normal-case text-slate-400">(anne veya baba telefonundan en az biri zorunlu)</span>
+      </div>
       <div className="mb-4 grid grid-cols-2 gap-2.5">
         <input className={inputCls} placeholder="Anne Ad Soyad" value={form.motherName} onChange={(e) => set("motherName", e.target.value)} />
-        <input className={inputCls} placeholder="Anne Telefon" value={form.motherPhone} onChange={(e) => set("motherPhone", e.target.value)} />
+        <input className={inputCls} placeholder="Anne Telefon *" value={form.motherPhone} onChange={(e) => set("motherPhone", e.target.value)} />
         <input className={inputCls} placeholder="Baba Ad Soyad" value={form.fatherName} onChange={(e) => set("fatherName", e.target.value)} />
-        <input className={inputCls} placeholder="Baba Telefon" value={form.fatherPhone} onChange={(e) => set("fatherPhone", e.target.value)} />
+        <input className={inputCls} placeholder="Baba Telefon *" value={form.fatherPhone} onChange={(e) => set("fatherPhone", e.target.value)} />
         <input className={inputCls} placeholder="Acil Durum Kişisi" value={form.emergencyName} onChange={(e) => set("emergencyName", e.target.value)} />
         <input className={inputCls} placeholder="Acil Durum Telefonu" value={form.emergencyPhone} onChange={(e) => set("emergencyPhone", e.target.value)} />
       </div>
