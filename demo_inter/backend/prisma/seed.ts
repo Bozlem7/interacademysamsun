@@ -219,7 +219,9 @@ async function main() {
   });
   console.log("Seeded fee_settings: monthlyFee=3500");
 
-  await seedMockData();
+  // Sahte/demo öğrenci-eğitmen verisi production'da istenmediği için kapalı.
+  // Yerelde test verisi lazımsa bu satırı geçici olarak aç.
+  // await seedMockData();
 }
 
 main()
