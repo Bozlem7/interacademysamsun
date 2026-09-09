@@ -12,10 +12,12 @@ export function BranchEntryButton({
   code,
   name,
   variant = "compact",
+  onNavigate,
 }: {
   code: string;
   name: string;
-  variant?: "compact" | "card";
+  variant?: "compact" | "card" | "list";
+  onNavigate?: () => void;
 }) {
   const [open, setOpen] = useState(false);
   const setActiveBranch = useBranchStore((s) => s.setActiveBranch);
@@ -25,6 +27,7 @@ export function BranchEntryButton({
     setActiveBranch({ code, name });
     setOpen(false);
     navigate(to);
+    onNavigate?.();
   }
 
   if (variant === "card") {
@@ -32,17 +35,19 @@ export function BranchEntryButton({
       <div className="relative">
         <button
           onClick={() => setOpen((v) => !v)}
-          className="w-full rounded-[20px] border border-slate-200 bg-paper2 p-6 text-left transition-all hover:-translate-y-0.5 hover:shadow-lg dark:border-slate-800 dark:bg-surface"
-          style={{ borderLeft: "6px solid #010E80" }}
+          className="flex w-full items-center gap-3 rounded-2xl border border-slate-200 bg-paper2 px-4 py-3.5 text-left transition-all hover:-translate-y-0.5 hover:shadow-md dark:border-slate-800 dark:bg-surface"
+          style={{ borderLeft: "4px solid #010E80" }}
         >
-          <div className="mb-4 flex h-[46px] w-[46px] items-center justify-center rounded-2xl bg-[#e8ecff] text-[22px] font-bold text-[#010E80] dark:bg-[#010E80]/30">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#e8ecff] text-base font-bold text-[#010E80] dark:bg-[#010E80]/30">
             🏢
           </div>
-          <div className="mb-1.5 text-[19px] font-extrabold text-slate-900 dark:text-white">{name} Şubesi</div>
-          <div className="mb-4 text-sm leading-relaxed text-slate-500 dark:text-slate-400">
-            Samsun — {name} şubesindeki panellere giriş yapın.
+          <div className="min-w-0 flex-1">
+            <div className="truncate text-sm font-extrabold text-slate-900 dark:text-white">{name} Şubesi</div>
+            <div className="truncate text-[11px] font-semibold text-slate-500 dark:text-slate-400">
+              Panellere giriş yapın
+            </div>
           </div>
-          <div className="text-sm font-bold text-[#010E80] dark:text-[#93c5fd]">Giriş Yap →</div>
+          <span className="shrink-0 text-xs font-bold text-[#010E80] dark:text-[#93c5fd]">→</span>
         </button>
 
         {open && (
@@ -60,6 +65,33 @@ export function BranchEntryButton({
               ))}
             </div>
           </>
+        )}
+      </div>
+    );
+  }
+
+  if (variant === "list") {
+    return (
+      <div>
+        <button
+          onClick={() => setOpen((v) => !v)}
+          className="flex w-full items-center justify-between rounded-[11px] px-3.5 py-3 text-left text-sm font-bold text-white hover:bg-white/5"
+        >
+          <span>{name}</span>
+          <span className={`text-[10px] text-slate-300 transition-transform ${open ? "rotate-180" : ""}`}>▾</span>
+        </button>
+        {open && (
+          <div className="mb-1 ml-2 flex flex-col gap-1 rounded-[11px] bg-white/5 p-1.5">
+            {ROLE_LINKS.map((r) => (
+              <button
+                key={r.to}
+                onClick={() => goTo(r.to)}
+                className="rounded-lg px-3.5 py-2.5 text-left text-xs font-semibold text-slate-200 hover:bg-white/10"
+              >
+                {r.label}
+              </button>
+            ))}
+          </div>
         )}
       </div>
     );

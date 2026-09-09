@@ -1,18 +1,18 @@
 import { useEffect, useState } from "react";
-import { fetchBranches, Branch } from "../../../features/branch/branchApi";
+import { fetchBranches, sortBranches, Branch } from "../../../features/branch/branchApi";
 import { BranchEntryButton } from "../../../app/BranchEntryButton";
 
-const FALLBACK_BRANCHES: Branch[] = [
+const FALLBACK_BRANCHES: Branch[] = sortBranches([
   { id: "atakum", name: "Atakum", code: "atakum" },
   { id: "vezirkopru", name: "Vezirköprü", code: "vezirkopru" },
-];
+]);
 
 export function PortalGrid() {
   const [branches, setBranches] = useState<Branch[]>(FALLBACK_BRANCHES);
 
   useEffect(() => {
     fetchBranches()
-      .then((b) => b.length && setBranches(b))
+      .then((b) => b.length && setBranches(sortBranches(b)))
       .catch(() => {});
   }, []);
 
