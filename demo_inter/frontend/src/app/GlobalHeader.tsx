@@ -154,7 +154,7 @@ export function GlobalHeader() {
 
       {/* Mobile: tek sıralı menü listesi — Ana Sayfa, Antrenman Programı, Haberler, İletişim, Vezirköprü, Atakum */}
       <div className={`relative z-[70] bg-[#0B112C] px-5 ${navOpen ? "block" : "hidden"} md:hidden`}>
-        <nav className="flex flex-col gap-1 py-3">
+        <nav className="flex flex-col gap-2 py-3">
           <Link
             to="/"
             onClick={() => setNavOpen(false)}
