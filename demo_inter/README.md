@@ -43,15 +43,29 @@ npm install
 npm run dev   # http://localhost:5173 (proxy ile backend'e bağlanır)
 ```
 
-## Seed admin hesapları
-
-| Kullanıcı adı | Şifre |
-|---|---|
-| admin1 | inter_pass_10 |
-| admin2 | inter_pass_20 |
-| admin3 | inter_pass_30 |
-
 Şifreler `.env` içindeki `SEED_ADMIN*_PASSWORD` değerlerinden argon2 ile hash'lenerek seed edilir; DB'de asla düz metin tutulmaz.
+
+## Ortamı lokale eşitleme / servisleri yeniden başlatma
+
+Bu proje ayrı bir build/cache katmanı kullanmaz (Docker/PM2/Nginx yok) — frontend Vite dev server, backend `tsx` ile doğrudan kaynak koddan çalışır. Görünüm lokaldeki güncel koddan farklı görünüyorsa:
+
+1. **Frontend'i yeniden başlat** (asıl gereken adım — kod/UI değişikliklerinin devreye girmesi için):
+   ```powershell
+   Stop-Process -Id <vite-pid> -Force
+   cd frontend
+   npm run dev
+   ```
+2. **Backend** — sadece backend kodu (API, WhatsApp, cron vb.) değiştiyse gerekir, frontend değişikliklerinde şart değil:
+   ```powershell
+   Stop-Process -Id <backend-pid> -Force
+   cd backend
+   npm run dev
+   ```
+   WhatsApp oturumu (`backend/tokens/inter-academy-session/`) diskte kalıcıdır ve `.gitignore`'dadır — backend'i yeniden başlatmak QR'ı bozmaz. Sadece `tokens/` klasörünü silersen oturum gider ve tekrar QR okutman gerekir.
+3. **Tarayıcıda hard refresh** — en kritik adım, aksi halde eski JS/CSS cache'den gösterilebilir:
+   `Ctrl+Shift+R`, veya DevTools > Network > "Disable cache" işaretliyken sayfayı yenile.
+
+Çalışan process PID'lerini bulmak için: `netstat -ano | findstr "5173 4000"`.
 
 ## Cron işleri
 
