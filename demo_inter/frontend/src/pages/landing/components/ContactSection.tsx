@@ -36,7 +36,7 @@ export function ContactSection() {
         <div className="rounded-[18px] border border-slate-200 bg-paper2 p-5 dark:border-slate-800 dark:bg-surface2">
           <div className="mb-1.5 text-xs font-bold text-slate-400">ADRES</div>
           <div className="text-[14.5px] font-semibold leading-relaxed text-slate-700 dark:text-slate-200">
-            Inter Academy Tesisleri, Ataşehir / İstanbul
+            Samsun, Türkiye
           </div>
         </div>
       </div>
