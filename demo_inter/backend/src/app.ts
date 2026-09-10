@@ -12,7 +12,17 @@ export function createApp() {
 
   app.use(helmet());
   app.use(cors({ origin: env.corsOrigin, credentials: true }));
-  app.use(express.json({ limit: "5mb" }));
+  // rawBody: WhatsApp webhook imza doğrulaması (X-Hub-Signature-256) ham byte'lar üzerinden
+  // hesaplanır — JSON.stringify(req.body) ile yeniden üretilen metin orijinal body ile birebir
+  // eşleşmeyebileceğinden (key sırası/boşluk), gelen body'yi ayrıştırılmadan önce saklıyoruz.
+  app.use(
+    express.json({
+      limit: "5mb",
+      verify: (req, _res, buf) => {
+        (req as any).rawBody = buf;
+      },
+    })
+  );
 
   app.get("/health", (_req, res) => res.json({ status: "ok" }));
 

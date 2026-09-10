@@ -5,8 +5,7 @@ import { requireAuth, requireRole } from "../../common/middleware/auth";
 import { validateBody } from "../../common/middleware/validate";
 import { ForbiddenError } from "../../common/errors/AppError";
 import { stripSeedTag } from "../../common/text/displayName";
-// WPPConnect tabanlı gercek gonderim servisi (proje kokunde duz JS, src/ disinda).
-const { sendTextMessage } = require("../../../services/whatsappService");
+import { sendWhatsAppMessage } from "../../common/whatsapp/whatsapp.client";
 
 function formatTrDate(d: Date): string {
   const day = String(d.getUTCDate()).padStart(2, "0");
@@ -94,7 +93,7 @@ attendanceRouter.post("/bulk", requireRole("yonetici", "egitmen"), validateBody(
     const message = `Sayın Velimiz, sporcumuz ${stripSeedTag(student.fullName)}, ${formatTrDate(
       rec.sessionDate
     )} tarihli ${student.group?.name ?? "antrenman"} antrenmanına katılmamıştır. Bilgilerinize sunarız. - Inter Academy Samsun`;
-    const result = await sendTextMessage(phone, message);
+    const result = await sendWhatsAppMessage(phone, message);
     if (result.success) {
       notifiedCount++;
     } else {

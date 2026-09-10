@@ -46,6 +46,11 @@ paymentsRouter.post("/run-overdue-check", requireRole("yonetici"), async (_req, 
   res.json(await service.runOverdueNotificationCheck());
 });
 
+paymentsRouter.post("/:id/remind", requireRole("yonetici"), async (req, res) => {
+  const payment = await service.sendManualPaymentReminder(req.params.id);
+  res.json({ success: true, message: "Hatırlatma mesajı başarıyla gönderildi.", lastReminderDate: payment.lastReminderDate });
+});
+
 export const feeSettingsRouter = Router();
 feeSettingsRouter.use(requireAuth);
 

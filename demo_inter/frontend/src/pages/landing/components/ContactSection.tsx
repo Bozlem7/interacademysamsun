@@ -9,20 +9,20 @@ export function ContactSection() {
       </div>
       <div className="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <a
-          href="tel:+902121234567"
+          href="tel:+905336007455"
           className="rounded-[18px] border border-slate-200 bg-paper2 p-5 transition-all hover:scale-[1.03] hover:border-[#010E80] hover:bg-[#010E80] dark:border-slate-800 dark:bg-surface2"
         >
           <div className="mb-1.5 text-xs font-bold text-slate-400 group-hover:text-white">TELEFON</div>
-          <div className="text-[17px] font-extrabold text-slate-900 dark:text-white">0212 123 45 67</div>
+          <div className="text-[17px] font-extrabold text-slate-900 dark:text-white">+90 533 600 74 55</div>
         </a>
         <a
-          href="https://wa.me/905321142208"
+          href="https://wa.me/905336007455"
           target="_blank"
           rel="noreferrer"
           className="rounded-[18px] border border-slate-200 bg-paper2 p-5 transition-all hover:scale-[1.03] hover:border-[#16A34A] hover:bg-[#16A34A] dark:border-slate-800 dark:bg-surface2"
         >
           <div className="mb-1.5 text-xs font-bold text-slate-400">WHATSAPP</div>
-          <div className="text-[17px] font-extrabold text-slate-900 dark:text-white">0532 114 22 08</div>
+          <div className="text-[17px] font-extrabold text-slate-900 dark:text-white">+90 533 600 74 55</div>
         </a>
         <a
           href={INSTAGRAM_HREF}

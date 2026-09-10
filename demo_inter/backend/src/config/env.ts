@@ -17,6 +17,11 @@ export const env = {
   whatsapp: {
     apiToken: process.env.WHATSAPP_API_TOKEN ?? "",
     phoneNumberId: process.env.WHATSAPP_PHONE_NUMBER_ID ?? "",
+    apiVersion: process.env.WHATSAPP_API_VERSION ?? "v19.0",
+    // Meta webhook doğrulaması (hub.verify_token) için — panelde webhook kurarken bununla aynı değeri gireceksin.
+    verifyToken: process.env.WHATSAPP_VERIFY_TOKEN ?? "",
+    // Webhook imza doğrulaması (X-Hub-Signature-256) için opsiyonel App Secret. Tanımlıysa imza kontrolü zorunlu olur.
+    appSecret: process.env.WHATSAPP_APP_SECRET ?? "",
   },
   seedAdminPasswords: {
     admin1: process.env.SEED_ADMIN1_PASSWORD ?? "inter_pass_10",

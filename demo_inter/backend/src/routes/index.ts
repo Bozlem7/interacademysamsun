@@ -14,12 +14,7 @@ import { scheduleRouter } from "../modules/schedule/schedule.controller";
 import { contentRouter } from "../modules/content/content.controller";
 import { announcementsRouter } from "../modules/announcements/announcements.controller";
 import { uploadsRouter } from "../modules/uploads/uploads.controller";
-
-// WPPConnect ile anlık "Hatırlat" ucu (bkz. controllers/paymentController.js) — TS
-// derlemesinin (rootDir: src) dışındaki düz JS router'ı require() ile ekleniyor.
-const paymentReminderRoutes = require("../../routes/paymentRoutes");
-// WPPConnect ile yoklama kaydet + devamsiz veli bildirimi (bkz. controllers/attendanceController.js)
-const attendanceWppRoutes = require("../../routes/attendanceRoutes");
+import { whatsappWebhookRouter } from "../modules/whatsapp/whatsapp.controller";
 
 export const apiRouter = Router();
 
@@ -31,13 +26,13 @@ apiRouter.use("/staff", staffRouter);
 apiRouter.use("/admin/instructors", adminInstructorsRouter);
 apiRouter.use("/instructor-students", instructorStudentsRouter);
 apiRouter.use("/attendance", attendanceRouter);
-apiRouter.use("/attendance", attendanceWppRoutes);
 apiRouter.use("/notes", notesRouter);
 apiRouter.use("/payments", paymentsRouter);
-apiRouter.use("/payments", paymentReminderRoutes);
 apiRouter.use("/fee-settings", feeSettingsRouter);
 apiRouter.use("/pre-registrations", preRegistrationsRouter);
 apiRouter.use("/schedule", scheduleRouter);
 apiRouter.use("/content", contentRouter);
 apiRouter.use("/announcements", announcementsRouter);
 apiRouter.use("/uploads", uploadsRouter);
+// Meta webhook doğrulaması auth gerektirmez — bilinçli olarak requireAuth'suz bırakıldı.
+apiRouter.use("/webhooks/whatsapp", whatsappWebhookRouter);
