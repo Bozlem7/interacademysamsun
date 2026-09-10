@@ -1,13 +1,8 @@
 import { prisma } from "../../config/prisma";
-import { AppError, ConflictError, NotFoundError, ValidationError } from "../../common/errors/AppError";
+import { ConflictError, NotFoundError, ValidationError } from "../../common/errors/AppError";
 import { sendWhatsAppMessage } from "../../common/whatsapp/whatsapp.client";
 import { stripSeedTag } from "../../common/text/displayName";
 import { decryptTc, maskTc } from "../../common/security/tc";
-
-const TURKISH_MONTHS = [
-  "Ocak", "Şubat", "Mart", "Nisan", "Mayıs", "Haziran",
-  "Temmuz", "Ağustos", "Eylül", "Ekim", "Kasım", "Aralık",
-];
 
 function lastDayOfMonth(year: number, month: number): number {
   return new Date(year, month, 0).getDate(); // month is 1-12, Date() rolls to last day of previous month index
@@ -164,21 +159,4 @@ export async function runOverdueNotificationCheck(referenceDate: Date = new Date
   }
 
   return { triggered: true, notified: overdue.length };
-}
-
-/** Yöneticinin panelden tek bir ödeme kaydı için anında hatırlatma göndermesini sağlar. */
-export async function sendManualPaymentReminder(paymentId: string) {
-  const payment = await prisma.payment.findUnique({ where: { id: paymentId }, include: { student: true } });
-  if (!payment) throw new NotFoundError("Ödeme kaydı bulunamadı");
-
-  const phone = payment.student.motherPhone || payment.student.fatherPhone;
-  if (!phone) throw new ValidationError("Veli telefonu bulunamadı");
-
-  const monthName = TURKISH_MONTHS[payment.periodMonth - 1];
-  const message = `Sayın Velimiz, sporcumuz ${stripSeedTag(payment.student.fullName)} adına ait ${monthName} ${payment.periodYear} dönemi aidat ödemesi henüz tamamlanmamıştır. En kısa sürede tamamlamanızı rica ederiz. - Inter Academy Samsun`;
-
-  const result = await sendWhatsAppMessage(phone, message);
-  if (!result.success) throw new AppError(502, result.error ?? "Mesaj gönderilemedi", "WHATSAPP_SEND_FAILED");
-
-  return prisma.payment.update({ where: { id: payment.id }, data: { lastReminderDate: new Date() } });
 }

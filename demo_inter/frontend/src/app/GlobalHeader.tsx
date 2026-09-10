@@ -138,7 +138,7 @@ export function GlobalHeader() {
             onClick={openPreReg}
             className="whitespace-nowrap rounded-full border-none bg-white px-3 py-1.5 text-[11px] font-bold text-[#010E80] shadow-sm sm:px-3.5 sm:py-2 sm:text-xs"
           >
-            <span className="sm:hidden">KAYIT</span>
+            <span className="sm:hidden">ÖN KAYIT</span>
             <span className="hidden sm:inline">ÖN KAYIT BAŞVURU</span>
           </button>
 

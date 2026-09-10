@@ -9,14 +9,22 @@ export function Modal({
   if (!open) return null;
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 p-5"
+      className="fixed inset-0 z-[9999] flex items-center justify-center overflow-y-auto bg-black/75 p-4 backdrop-blur-sm sm:p-5"
       onClick={onClose}
     >
       <div
-        className="w-full max-w-lg max-h-[86vh] overflow-auto rounded-3xl bg-paper2 p-6 dark:bg-surface"
+        className="relative flex max-h-[90vh] w-full max-w-lg flex-col overflow-y-auto rounded-3xl bg-paper2 p-6 pr-14 dark:bg-surface"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="mb-4 text-xl font-extrabold text-slate-900 dark:text-white">{title}</div>
+        <button
+          type="button"
+          onClick={onClose}
+          aria-label="Kapat"
+          className="absolute right-3 top-3 flex h-11 w-11 items-center justify-center rounded-full text-2xl font-bold text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700 dark:text-slate-500 dark:hover:bg-surface2 dark:hover:text-white"
+        >
+          ✕
+        </button>
+        {title && <div className="mb-4 text-xl font-extrabold text-slate-900 dark:text-white">{title}</div>}
         {children}
       </div>
     </div>
