@@ -10,6 +10,8 @@ export interface AuthTokenPayload {
   /** Active branch for this session — always present after login (admin picks it at login too). */
   branchId: string;
   branchCode: string;
+  /** Diyetisyen/psikolog için true: şube bağımsız çalışır, veri erişimi tek bir branchId ile sınırlanmaz. */
+  isGlobalStaff?: boolean;
 }
 
 export function signToken(payload: AuthTokenPayload): string {

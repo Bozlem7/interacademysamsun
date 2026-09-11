@@ -17,16 +17,17 @@ const SPECIALTY_TO_CATEGORY: Record<string, string> = {
 
 // Eğitmen, bireysel atama şartı aranmaksızın kendi şubesindeki her öğrencinin
 // notlarını görüp not ekleyebilir — yoklamadaki (Bölüm 3) aynı erişim mantığı.
-async function assertSameBranchAsInstructor(studentId: string, instructorBranchId: string) {
+// Diyetisyen/psikolog (isGlobalStaff) şube bağımsız çalıştığından bu kontrol tamamen atlanır.
+async function assertSameBranchAsInstructor(studentId: string, instructorBranchId: string, isGlobalStaff?: boolean) {
   const student = await prisma.student.findUnique({ where: { id: studentId }, select: { branchId: true } });
   if (!student) throw new NotFoundError("Öğrenci bulunamadı");
-  if (student.branchId !== instructorBranchId) throw new ForbiddenError("Bu öğrenci farklı bir şubeye ait");
+  if (!isGlobalStaff && student.branchId !== instructorBranchId) throw new ForbiddenError("Bu öğrenci farklı bir şubeye ait");
 }
 
 notesRouter.get("/student/:studentId", async (req, res) => {
-  const { role, sub, studentId, branchId } = req.auth!;
+  const { role, sub, studentId, branchId, isGlobalStaff } = req.auth!;
   if (role === "egitmen") {
-    await assertSameBranchAsInstructor(req.params.studentId, branchId);
+    await assertSameBranchAsInstructor(req.params.studentId, branchId, isGlobalStaff);
   } else if (role === "veli" && studentId !== req.params.studentId) {
     throw new ForbiddenError("Sadece kendi öğrencinizin notlarını görebilirsiniz");
   }
@@ -45,8 +46,8 @@ const noteSchema = z.object({
 });
 
 notesRouter.post("/", requireRole("egitmen"), validateBody(noteSchema), async (req, res) => {
-  const { sub, branchId } = req.auth!;
-  await assertSameBranchAsInstructor(req.body.studentId, branchId);
+  const { sub, branchId, isGlobalStaff } = req.auth!;
+  await assertSameBranchAsInstructor(req.body.studentId, branchId, isGlobalStaff);
 
   const staffProfile = await prisma.staffProfile.findUnique({ where: { userId: sub } });
   if (!staffProfile) throw new ForbiddenError("Eğitmen profili bulunamadı");

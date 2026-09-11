@@ -21,12 +21,14 @@ attendanceRouter.use(requireAuth);
 
 // GET roster for a group: yonetici and egitmen both see every student registered
 // in that branch + group (attendance needs the whole class roster, not just the
-// instructor's individually assigned students).
+// instructor's individually assigned students). Diyetisyen/psikolog (isGlobalStaff)
+// şube bağımsız çalıştığından branchId filtresi uygulanmaz, tüm şubeler döner.
 attendanceRouter.get("/", requireRole("yonetici", "egitmen"), async (req, res) => {
   const { groupId, date } = req.query as { groupId?: string; date?: string };
-  const where: any = { branchId: req.auth!.branchId };
+  const { branchId, isGlobalStaff } = req.auth!;
+  const where: any = isGlobalStaff ? {} : { branchId };
   if (groupId) where.groupId = groupId;
-  const students = await prisma.student.findMany({ where, include: { group: true } });
+  const students = await prisma.student.findMany({ where, include: { group: true, branch: true } });
 
   const sessionDate = date ? new Date(date) : new Date();
   const records = await prisma.attendanceRecord.findMany({
@@ -39,6 +41,7 @@ attendanceRouter.get("/", requireRole("yonetici", "egitmen"), async (req, res) =
       studentId: s.id,
       fullName: stripSeedTag(s.fullName),
       group: s.group?.name,
+      branch: isGlobalStaff ? s.branch.name : undefined,
       status: byStudent.get(s.id)?.status ?? null,
     }))
   );
@@ -54,13 +57,13 @@ const markSchema = z.object({
 const bulkSchema = z.object({ records: z.array(markSchema).min(1) });
 
 attendanceRouter.post("/bulk", requireRole("yonetici", "egitmen"), validateBody(bulkSchema), async (req, res) => {
-  const { sub, branchId } = req.auth!;
+  const { sub, branchId, isGlobalStaff } = req.auth!;
   const results = [];
   const absentStudentIds = new Set<string>();
 
   for (const rec of req.body.records) {
     const student = await prisma.student.findUnique({ where: { id: rec.studentId } });
-    if (!student || student.branchId !== branchId) {
+    if (!student || (!isGlobalStaff && student.branchId !== branchId)) {
       throw new ForbiddenError(`Öğrenci ${rec.studentId} bu şubeye ait değil`);
     }
     // Yoklama, eğitmenin kendisine bireysel atanmış öğrencilerle sınırlı değildir —

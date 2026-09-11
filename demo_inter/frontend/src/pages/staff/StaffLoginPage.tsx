@@ -40,6 +40,7 @@ export function StaffLoginPage() {
         roleLabel: (user.specialty && SPECIALTY_LABEL[user.specialty]) || "Eğitmen Oturumu",
         branch,
         specialty: user.specialty ?? null,
+        isGlobalStaff: user.isGlobalStaff ?? false,
       });
       navigate("/egitmen/panel");
     } catch (e: any) {

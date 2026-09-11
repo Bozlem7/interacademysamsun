@@ -19,6 +19,8 @@ interface AuthState {
   branch: SessionBranch | null;
   /** Yalnızca egitmen oturumları için — panel temalandırmasında kullanılır. */
   specialty: Specialty | null;
+  /** Diyetisyen/psikolog için true: şube bağımsız çalışır, panelde tüm şubelerin verisini görür. */
+  isGlobalStaff: boolean;
   login: (data: {
     token: string;
     role: Role;
@@ -27,6 +29,7 @@ interface AuthState {
     studentId?: string;
     branch: SessionBranch;
     specialty?: Specialty | null;
+    isGlobalStaff?: boolean;
   }) => void;
   logout: () => void;
 }
@@ -41,9 +44,29 @@ export const useAuthStore = create<AuthState>()(
       studentId: null,
       branch: null,
       specialty: null,
-      login: ({ token, role, displayName, roleLabel, studentId, branch, specialty }) =>
-        set({ token, role, displayName, roleLabel, studentId: studentId ?? null, branch, specialty: specialty ?? null }),
-      logout: () => set({ token: null, role: null, displayName: null, roleLabel: null, studentId: null, branch: null, specialty: null }),
+      isGlobalStaff: false,
+      login: ({ token, role, displayName, roleLabel, studentId, branch, specialty, isGlobalStaff }) =>
+        set({
+          token,
+          role,
+          displayName,
+          roleLabel,
+          studentId: studentId ?? null,
+          branch,
+          specialty: specialty ?? null,
+          isGlobalStaff: isGlobalStaff ?? false,
+        }),
+      logout: () =>
+        set({
+          token: null,
+          role: null,
+          displayName: null,
+          roleLabel: null,
+          studentId: null,
+          branch: null,
+          specialty: null,
+          isGlobalStaff: false,
+        }),
     }),
     { name: "inter-academy-auth" }
   )

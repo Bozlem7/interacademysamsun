@@ -9,12 +9,22 @@ export const groupsRouter = Router();
 
 groupsRouter.use(requireAuth);
 
-// yonetici ve egitmen her ikisi de sadece aktif oturum şubesinin gruplarını görür.
+// yonetici ve egitmen normalde sadece aktif oturum şubesinin gruplarını görür.
 // egitmen, o şubedeki TÜM grupları görür — yoklama alacağı sınıfı seçebilmesi için
-// gruba atanmış öğrencisi olması şartı aranmaz.
+// gruba atanmış öğrencisi olması şartı aranmaz. Diyetisyen/psikolog (isGlobalStaff)
+// şube bağımsız çalıştığından tüm şubelerin gruplarını görür.
 groupsRouter.get("/", async (req, res) => {
-  const { branchId } = req.auth!;
-  res.json(await prisma.group.findMany({ where: { branchId }, orderBy: { name: "asc" } }));
+  const { branchId, isGlobalStaff } = req.auth!;
+  const where = isGlobalStaff ? {} : { branchId };
+  const groups = await prisma.group.findMany({ where, include: { branch: true }, orderBy: { name: "asc" } });
+  res.json(
+    groups.map((g) => ({
+      id: g.id,
+      name: isGlobalStaff ? `${g.name} (${g.branch.name})` : g.name,
+      ageRange: g.ageRange,
+      branchId: g.branchId,
+    }))
+  );
 });
 
 const groupSchema = z.object({

@@ -23,8 +23,15 @@ export async function loginStaffOrAdmin(username: string, password: string, bran
   if (!ok) throw new UnauthorizedError("Kullanıcı adı veya şifre hatalı");
 
   // Yonetici global bir hesaptır — herhangi bir şube kodundan giriş yapıp o şubeyi
-  // "aktif" olarak seçebilir. Eğitmen ise sadece kendi kayıtlı olduğu şubeden girebilir.
-  if (user.role === "egitmen") {
+  // "aktif" olarak seçebilir. Diyetisyen ve psikolog da şube bağımsız çalışır: hangi
+  // bayinin giriş ekranından gelirse gelsin kabul edilir (danışanları/randevuları tüm
+  // şubeler için ortak takip eder). Diğer eğitmenler (antrenör vb.) yalnızca kayıtlı
+  // oldukları şubeden girebilir.
+  const isGlobalStaff =
+    user.role === "egitmen" &&
+    (user.staffProfile?.specialty === "diyetisyen" || user.staffProfile?.specialty === "psikolog");
+
+  if (user.role === "egitmen" && !isGlobalStaff) {
     if (!user.staffProfile || user.staffProfile.branchId !== branch.id) {
       throw new ForbiddenError(WRONG_BRANCH_MESSAGE);
     }
@@ -36,6 +43,7 @@ export async function loginStaffOrAdmin(username: string, password: string, bran
     staffId: user.staffProfile?.id,
     branchId: branch.id,
     branchCode: branch.code,
+    isGlobalStaff,
   });
 
   return {
@@ -46,6 +54,7 @@ export async function loginStaffOrAdmin(username: string, password: string, bran
       role: user.role,
       fullName: user.staffProfile?.fullName ?? user.username,
       specialty: user.staffProfile?.specialty ?? null,
+      isGlobalStaff,
     },
     branch: { id: branch.id, name: branch.name, code: branch.code },
   };
