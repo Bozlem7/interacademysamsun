@@ -1,6 +1,7 @@
 const cron = require("node-cron");
 const { PrismaClient } = require("@prisma/client");
 const { sendTextMessage } = require("../services/whatsappService");
+const { getNotifyRecipients } = require("../services/notifyRecipients");
 
 const prisma = new PrismaClient();
 
@@ -45,23 +46,26 @@ async function checkOverduePaymentsAndNotify() {
   let notifiedCount = 0;
 
   for (const payment of overduePayments) {
-    const phone = payment.student.motherPhone || payment.student.fatherPhone;
-    if (!phone) {
-      console.warn(`[payment-reminder] ${payment.student.fullName} icin veli telefonu bulunamadi, atlandi.`);
+    const recipients = getNotifyRecipients(payment.student);
+    if (recipients.length === 0) {
+      console.warn(`[payment-reminder] ${payment.student.fullName} icin bildirim isaretli/telefonlu veli bulunamadi, atlandi.`);
       continue;
     }
 
     const message = buildReminderMessage(payment);
-    const result = await sendTextMessage(phone, message);
+    let anySent = false;
+    for (const { phone } of recipients) {
+      const result = await sendTextMessage(phone, message);
+      if (result.success) anySent = true;
+      else console.error(`[payment-reminder] ${payment.student.fullName} icin mesaj gonderilemedi:`, result.error);
+    }
 
-    if (result.success) {
+    if (anySent) {
       await prisma.payment.update({
         where: { id: payment.id },
         data: { autoReminderSent: true, lastReminderDate: new Date() },
       });
       notifiedCount++;
-    } else {
-      console.error(`[payment-reminder] ${payment.student.fullName} icin mesaj gonderilemedi:`, result.error);
     }
   }
 

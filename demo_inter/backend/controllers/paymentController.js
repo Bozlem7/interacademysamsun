@@ -1,6 +1,7 @@
 const { PrismaClient } = require("@prisma/client");
 const { sendTextMessage } = require("../services/whatsappService");
 const { buildReminderMessage } = require("../jobs/paymentReminderCron");
+const { getNotifyRecipients } = require("../services/notifyRecipients");
 
 const prisma = new PrismaClient();
 
@@ -19,16 +20,22 @@ async function remindPayment(req, res) {
       return res.status(404).json({ success: false, error: "Odeme kaydi bulunamadi." });
     }
 
-    const phone = payment.student.motherPhone || payment.student.fatherPhone;
-    if (!phone) {
-      return res.status(400).json({ success: false, error: "Veli telefonu bulunamadi." });
+    const recipients = getNotifyRecipients(payment.student);
+    if (recipients.length === 0) {
+      return res.status(400).json({ success: false, error: "Bildirim icin isaretli ve telefonu olan bir veli/yakin bulunamadi." });
     }
 
     const message = buildReminderMessage(payment);
-    const result = await sendTextMessage(phone, message);
+    let anySent = false;
+    let lastError;
+    for (const { phone } of recipients) {
+      const result = await sendTextMessage(phone, message);
+      if (result.success) anySent = true;
+      else lastError = result.error;
+    }
 
-    if (!result.success) {
-      return res.status(502).json({ success: false, error: result.error || "Mesaj gonderilemedi." });
+    if (!anySent) {
+      return res.status(502).json({ success: false, error: lastError || "Mesaj gonderilemedi." });
     }
 
     const updated = await prisma.payment.update({

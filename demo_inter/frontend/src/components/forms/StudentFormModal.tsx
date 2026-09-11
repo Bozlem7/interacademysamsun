@@ -30,6 +30,9 @@ const emptyForm = {
   fatherJob: "",
   emergencyName: "",
   emergencyPhone: "",
+  notifyMother: false,
+  notifyFather: false,
+  notifyGuardian: false,
   groupId: "",
   paymentDueDay: 15 as 15 | 30,
 };
@@ -111,8 +114,16 @@ export function StudentFormModal({
       setError(ageError);
       return;
     }
-    if (!form.motherPhone.trim() && !form.fatherPhone.trim()) {
-      setError("Anne veya baba telefon numarasından en az biri girilmelidir.");
+    const hasMother = form.motherPhone.trim().length > 0;
+    const hasFather = form.fatherPhone.trim().length > 0;
+    const hasGuardian = form.emergencyPhone.trim().length > 0;
+    if (!hasMother && !hasFather && !hasGuardian) {
+      setError("En az bir iletişim numarası girilmelidir");
+      return;
+    }
+    const notifyAny = (form.notifyMother && hasMother) || (form.notifyFather && hasFather) || (form.notifyGuardian && hasGuardian);
+    if (!notifyAny) {
+      setError("Lütfen bildirim gönderilecek en az bir veli/yakın seçiniz");
       return;
     }
     setSaving(true);
@@ -212,15 +223,80 @@ export function StudentFormModal({
       </div>
 
       <div className="mb-2 text-xs font-extrabold tracking-wide text-brand dark:text-[#93c5fd]">
-        VELİ BİLGİLERİ <span className="font-normal normal-case text-slate-400">(anne veya baba telefonundan en az biri zorunlu)</span>
+        VELİ BİLGİLERİ{" "}
+        <span className="font-normal normal-case text-slate-400">
+          (anne, baba veya vasi/yakın telefonundan en az biri zorunlu — bildirim gönderilecek kişiyi işaretleyin)
+        </span>
       </div>
       <div className="mb-4 grid grid-cols-2 gap-2.5">
         <input className={inputCls} placeholder="Anne Ad Soyad" value={form.motherName} onChange={(e) => set("motherName", e.target.value)} />
-        <input className={inputCls} placeholder="Anne Telefon *" value={form.motherPhone} onChange={(e) => set("motherPhone", e.target.value)} />
+        <div className="flex items-center gap-2">
+          <input
+            className={`${inputCls} flex-1`}
+            placeholder="Anne Telefon"
+            value={form.motherPhone}
+            onChange={(e) => {
+              const value = e.target.value;
+              setForm((f) => ({ ...f, motherPhone: value, notifyMother: value.trim() ? f.notifyMother : false }));
+            }}
+          />
+          <label className="flex shrink-0 items-center gap-1.5 text-xs font-semibold text-slate-500 dark:text-slate-300">
+            <input
+              type="checkbox"
+              checked={form.notifyMother}
+              disabled={!form.motherPhone.trim()}
+              onChange={(e) => set("notifyMother", e.target.checked)}
+              className="h-4 w-4 accent-brand disabled:cursor-not-allowed disabled:opacity-40"
+            />
+            WhatsApp
+          </label>
+        </div>
+
         <input className={inputCls} placeholder="Baba Ad Soyad" value={form.fatherName} onChange={(e) => set("fatherName", e.target.value)} />
-        <input className={inputCls} placeholder="Baba Telefon *" value={form.fatherPhone} onChange={(e) => set("fatherPhone", e.target.value)} />
-        <input className={inputCls} placeholder="Acil Durum Kişisi" value={form.emergencyName} onChange={(e) => set("emergencyName", e.target.value)} />
-        <input className={inputCls} placeholder="Acil Durum Telefonu" value={form.emergencyPhone} onChange={(e) => set("emergencyPhone", e.target.value)} />
+        <div className="flex items-center gap-2">
+          <input
+            className={`${inputCls} flex-1`}
+            placeholder="Baba Telefon"
+            value={form.fatherPhone}
+            onChange={(e) => {
+              const value = e.target.value;
+              setForm((f) => ({ ...f, fatherPhone: value, notifyFather: value.trim() ? f.notifyFather : false }));
+            }}
+          />
+          <label className="flex shrink-0 items-center gap-1.5 text-xs font-semibold text-slate-500 dark:text-slate-300">
+            <input
+              type="checkbox"
+              checked={form.notifyFather}
+              disabled={!form.fatherPhone.trim()}
+              onChange={(e) => set("notifyFather", e.target.checked)}
+              className="h-4 w-4 accent-brand disabled:cursor-not-allowed disabled:opacity-40"
+            />
+            WhatsApp
+          </label>
+        </div>
+
+        <input className={inputCls} placeholder="Vasi / Yakın Adı" value={form.emergencyName} onChange={(e) => set("emergencyName", e.target.value)} />
+        <div className="flex items-center gap-2">
+          <input
+            className={`${inputCls} flex-1`}
+            placeholder="Vasi / Yakın Telefonu"
+            value={form.emergencyPhone}
+            onChange={(e) => {
+              const value = e.target.value;
+              setForm((f) => ({ ...f, emergencyPhone: value, notifyGuardian: value.trim() ? f.notifyGuardian : false }));
+            }}
+          />
+          <label className="flex shrink-0 items-center gap-1.5 text-xs font-semibold text-slate-500 dark:text-slate-300">
+            <input
+              type="checkbox"
+              checked={form.notifyGuardian}
+              disabled={!form.emergencyPhone.trim()}
+              onChange={(e) => set("notifyGuardian", e.target.checked)}
+              className="h-4 w-4 accent-brand disabled:cursor-not-allowed disabled:opacity-40"
+            />
+            WhatsApp
+          </label>
+        </div>
       </div>
 
       <div className="mb-2 text-xs font-extrabold tracking-wide text-brand dark:text-[#93c5fd]">KAYIT EVRAKLARI / SÖZLEŞME YÜKLE</div>

@@ -10,7 +10,7 @@ interface PaymentRow {
   dueDate: string;
   amount: string;
   status: "odenmedi" | "odendi";
-  student: { fullName: string; tcNoMasked: string; motherPhone?: string; fatherPhone?: string };
+  student: { id: string; fullName: string; tcNoMasked: string; motherPhone?: string; fatherPhone?: string };
 }
 
 function isOverdue(p: PaymentRow) {
@@ -23,6 +23,7 @@ export function AdminPaymentsTab() {
   const [search, setSearch] = useState("");
   const [remindingId, setRemindingId] = useState<string | null>(null);
   const [remindResult, setRemindResult] = useState<{ id: string; ok: boolean; text: string } | null>(null);
+  const [downloadingReportId, setDownloadingReportId] = useState<string | null>(null);
 
   function load() {
     apiClient.get("/payments").then((r) => setPayments(r.data));
@@ -46,6 +47,21 @@ export function AdminPaymentsTab() {
       setRemindResult({ id: p.id, ok: false, text: e.response?.data?.error ?? "Hatırlatma gönderilemedi." });
     } finally {
       setRemindingId(null);
+    }
+  }
+
+  /** Öğrencinin tüm dönemlerini kapsayan ödeme ekstresi PDF'ini indirir/yeni sekmede açar. */
+  async function downloadReport(studentId: string) {
+    setDownloadingReportId(studentId);
+    try {
+      const res = await apiClient.get(`/students/${studentId}/payment-report-pdf`, { responseType: "blob" });
+      const blobUrl = URL.createObjectURL(new Blob([res.data], { type: "application/pdf" }));
+      window.open(blobUrl, "_blank");
+      setTimeout(() => URL.revokeObjectURL(blobUrl), 60_000);
+    } catch {
+      alert("Ödeme raporu oluşturulamadı, lütfen tekrar deneyin.");
+    } finally {
+      setDownloadingReportId(null);
     }
   }
 
@@ -122,6 +138,13 @@ export function AdminPaymentsTab() {
                   {remindingId === p.id ? "Gönderiliyor…" : "WhatsApp İle Hatırlat"}
                 </button>
               )}
+              <button
+                onClick={() => downloadReport(p.student.id)}
+                disabled={downloadingReportId === p.student.id}
+                className="rounded-lg border border-slate-300 bg-white px-3.5 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50 disabled:cursor-default disabled:opacity-60 dark:border-slate-700 dark:bg-surface2 dark:text-slate-200 dark:hover:bg-surface"
+              >
+                {downloadingReportId === p.student.id ? "Hazırlanıyor…" : "📄 Ödeme Raporu (PDF)"}
+              </button>
               {remindResult?.id === p.id && (
                 <div className={`w-full text-xs font-semibold ${remindResult.ok ? "text-green-600" : "text-red-600"}`}>
                   {remindResult.text}

@@ -6,6 +6,7 @@ import { ForbiddenError, ValidationError } from "../../common/errors/AppError";
 import { studentInputSchema, studentUpdateSchema } from "./students.dto";
 import * as service from "./students.service";
 import { uploadRegistrationDocuments, deleteRegistrationDocuments } from "./studentDocuments.service";
+import { generatePaymentReportPdf } from "../payments/paymentReport.service";
 
 export const studentsRouter = Router();
 
@@ -94,4 +95,23 @@ studentsRouter.delete("/:id/documents", requireRole("yonetici"), async (req, res
   if (existing.branchId !== req.auth!.branchId) throw new ForbiddenError("Bu öğrenci farklı bir şubeye ait");
   await deleteRegistrationDocuments(req.params.id);
   res.status(204).send();
+});
+
+// Öğrencinin tüm dönemlerini kapsayan ödeme ekstresini (PDF) üretir. yonetici kendi şubesindeki
+// her öğrenci için, veli yalnızca kendi çocuğu için isteyebilir; egitmen bu finansal veriye erişemez.
+studentsRouter.get("/:id/payment-report-pdf", async (req, res) => {
+  const { role, studentId, branchId } = req.auth!;
+  if (role === "egitmen") throw new ForbiddenError("Bu rapora erişim yetkiniz yok");
+  if (role === "veli" && studentId !== req.params.id) {
+    throw new ForbiddenError("Sadece kendi öğrenciniz için rapor alabilirsiniz");
+  }
+  if (role === "yonetici") {
+    const existing = await service.getStudent(req.params.id);
+    if (existing.branchId !== branchId) throw new ForbiddenError("Bu öğrenci farklı bir şubeye ait");
+  }
+
+  const { bytes, fileName } = await generatePaymentReportPdf(req.params.id);
+  res.setHeader("Content-Type", "application/pdf");
+  res.setHeader("Content-Disposition", `inline; filename="${encodeURIComponent(fileName)}"`);
+  res.send(Buffer.from(bytes));
 });

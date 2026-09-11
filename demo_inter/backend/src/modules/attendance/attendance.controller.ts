@@ -7,6 +7,7 @@ import { ForbiddenError } from "../../common/errors/AppError";
 import { stripSeedTag } from "../../common/text/displayName";
 // WPPConnect tabanlı gercek gonderim servisi (proje kokunde duz JS, src/ disinda).
 const { sendTextMessage } = require("../../../services/whatsappService");
+const { getNotifyRecipients } = require("../../../services/notifyRecipients");
 
 function formatTrDate(d: Date): string {
   const day = String(d.getUTCDate()).padStart(2, "0");
@@ -88,18 +89,19 @@ attendanceRouter.post("/bulk", requireRole("yonetici", "egitmen"), validateBody(
   for (const studentId of absentStudentIds) {
     const student = await prisma.student.findUnique({ where: { id: studentId }, include: { group: true } });
     if (!student) continue;
-    const phone = student.motherPhone || student.fatherPhone;
-    if (!phone) continue;
+    const recipients: { label: string; phone: string }[] = getNotifyRecipients(student);
+    if (recipients.length === 0) continue;
     const rec = req.body.records.find((r: { studentId: string }) => r.studentId === studentId)!;
     const message = `Sayın Velimiz, sporcumuz ${stripSeedTag(student.fullName)}, ${formatTrDate(
       rec.sessionDate
     )} tarihli ${student.group?.name ?? "antrenman"} antrenmanına katılmamıştır. Bilgilerinize sunarız. - Inter Academy Samsun`;
-    const result = await sendTextMessage(phone, message);
-    if (result.success) {
-      notifiedCount++;
-    } else {
-      console.error(`[attendance] ${stripSeedTag(student.fullName)} icin bildirim gonderilemedi:`, result.error);
+    let anySent = false;
+    for (const { phone } of recipients) {
+      const result = await sendTextMessage(phone, message);
+      if (result.success) anySent = true;
+      else console.error(`[attendance] ${stripSeedTag(student.fullName)} icin bildirim gonderilemedi:`, result.error);
     }
+    if (anySent) notifiedCount++;
   }
 
   res.status(201).json({ results, notifiedCount });

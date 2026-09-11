@@ -3,6 +3,8 @@ import { ConflictError, NotFoundError, ValidationError } from "../../common/erro
 import { sendWhatsAppMessage } from "../../common/whatsapp/whatsapp.client";
 import { stripSeedTag } from "../../common/text/displayName";
 import { decryptTc, maskTc } from "../../common/security/tc";
+// WPPConnect tabanlı gercek gonderim icin bildirim-isaretli alici listesi (proje kokunde duz JS).
+const { getNotifyRecipients } = require("../../../services/notifyRecipients");
 
 function lastDayOfMonth(year: number, month: number): number {
   return new Date(year, month, 0).getDate(); // month is 1-12, Date() rolls to last day of previous month index
@@ -148,8 +150,8 @@ export async function runOverdueNotificationCheck(referenceDate: Date = new Date
   });
 
   for (const payment of overdue) {
-    const phone = payment.student.motherPhone || payment.student.fatherPhone;
-    if (phone) {
+    const recipients: { label: string; phone: string }[] = getNotifyRecipients(payment.student);
+    for (const { phone } of recipients) {
       await sendWhatsAppMessage(
         phone,
         `Sayın veli, ${stripSeedTag(payment.student.fullName)} için ${payment.periodMonth}/${payment.periodYear} dönemi aidat ödemesi gecikmiştir. Lütfen en kısa sürede tamamlayınız.`

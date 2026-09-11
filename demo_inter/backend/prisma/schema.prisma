@@ -154,6 +154,11 @@ model Student {
   fatherJob        String?  @map("father_job")
   emergencyName    String?  @map("emergency_name")
   emergencyPhone   String?  @map("emergency_phone")
+  // WhatsApp bildirimlerinin (devamsızlık, ödeme hatırlatma) gönderileceği kişileri işaretler.
+  // Yalnızca ilgili telefon alanı da doluysa gönderim yapılır — birden fazlası işaretliyse hepsine gider.
+  notifyMother     Boolean  @default(false) @map("notify_mother")
+  notifyFather     Boolean  @default(false) @map("notify_father")
+  notifyGuardian   Boolean  @default(false) @map("notify_guardian")
   groupId          String?  @map("group_id")
   parentUserId     String?  @unique @map("parent_user_id")
   paymentDueDay    Int      @map("payment_due_day")

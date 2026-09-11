@@ -1,5 +1,6 @@
 const { PrismaClient } = require("@prisma/client");
 const { sendTextMessage } = require("../services/whatsappService");
+const { getNotifyRecipients } = require("../services/notifyRecipients");
 
 const prisma = new PrismaClient();
 
@@ -74,20 +75,23 @@ async function saveAttendanceAndNotify(req, res) {
       const student = await prisma.student.findUnique({ where: { id: studentId }, include: { group: true } });
       if (!student) continue;
 
-      const phone = student.motherPhone || student.fatherPhone;
-      if (!phone) {
-        console.warn(`[attendance] ${student.fullName} icin veli telefonu bulunamadi, atlandi.`);
+      const recipients = getNotifyRecipients(student);
+      if (recipients.length === 0) {
+        console.warn(`[attendance] ${student.fullName} icin bildirim isaretli/telefonlu veli bulunamadi, atlandi.`);
         continue;
       }
 
       const record = records.find((r) => r.studentId === studentId);
       const message = buildAbsenceMessage(student, record.sessionDate);
-      const result = await sendTextMessage(phone, message);
 
-      if (result.success) notifiedCount++;
-
-      // Ardisik mesajlar arasinda spam algilanmamasi icin 1-2 saniye gecikme
-      await sleep(1000 + Math.floor(Math.random() * 1000));
+      let anySent = false;
+      for (const { phone } of recipients) {
+        const result = await sendTextMessage(phone, message);
+        if (result.success) anySent = true;
+        // Ardisik mesajlar arasinda spam algilanmamasi icin 1-2 saniye gecikme
+        await sleep(1000 + Math.floor(Math.random() * 1000));
+      }
+      if (anySent) notifiedCount++;
     }
 
     return res.status(201).json({
