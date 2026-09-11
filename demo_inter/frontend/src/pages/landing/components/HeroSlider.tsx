@@ -36,9 +36,13 @@ export function HeroSlider() {
   const trackWidth = useRef(0);
   const trackRef = useRef<HTMLDivElement>(null);
 
+  // Sabit varsayılan banner her zaman 0. index'te kalır; panelden eklenen haberler onun
+  // peşine eklenir (üzerine yazılmaz) — böylece tek bir haber eklendiğinde bile slider
+  // devreye girer, hiç eklenmediğinde de varsayılan görsel tek başına sorunsuz görünür.
   useEffect(() => {
     apiClient.get("/content/slides").then((r) => {
-      if (Array.isArray(r.data) && r.data.length > 0) setSlides(r.data);
+      const apiSlides: NewsSlide[] = Array.isArray(r.data) ? r.data : [];
+      setSlides([...newsSlides, ...apiSlides]);
     });
   }, []);
 
@@ -95,7 +99,7 @@ export function HeroSlider() {
 
   return (
     <div
-      className="relative mx-auto mt-6 aspect-[1660/600] w-full max-w-[1660px] overflow-hidden rounded-3xl bg-[#111827]"
+      className="relative mx-auto mt-6 aspect-[1660/600] w-full max-w-[1660px] max-h-[600px] overflow-hidden rounded-3xl bg-[#111827]"
       onMouseEnter={() => setIsHovering(true)}
       onMouseLeave={() => setIsHovering(false)}
     >
@@ -154,18 +158,18 @@ export function HeroSlider() {
           <button
             onClick={prev}
             aria-label="Önceki"
-            className="absolute left-3 top-1/2 z-[3] flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full bg-white/10 text-xl text-white opacity-70 backdrop-blur-sm transition hover:bg-white/20 hover:opacity-100 sm:h-12 sm:w-12"
+            className="absolute left-3 top-1/2 z-30 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full bg-white/10 text-xl text-white opacity-70 backdrop-blur-sm transition hover:bg-white/20 hover:opacity-100 sm:h-12 sm:w-12"
           >
             ‹
           </button>
           <button
             onClick={next}
             aria-label="Sonraki"
-            className="absolute right-3 top-1/2 z-[3] flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full bg-white/10 text-xl text-white opacity-70 backdrop-blur-sm transition hover:bg-white/20 hover:opacity-100 sm:h-12 sm:w-12"
+            className="absolute right-3 top-1/2 z-30 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full bg-white/10 text-xl text-white opacity-70 backdrop-blur-sm transition hover:bg-white/20 hover:opacity-100 sm:h-12 sm:w-12"
           >
             ›
           </button>
-          <div className="absolute inset-x-0 bottom-3 z-[3] flex justify-center gap-1.5">
+          <div className="absolute inset-x-0 bottom-3 z-30 flex justify-center gap-1.5">
             {slides.map((sl, i) => (
               <button
                 key={sl.id}
