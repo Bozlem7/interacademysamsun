@@ -32,18 +32,24 @@ contentRouter.put("/blocks/:key", validateBody(blockSchema.partial()), async (re
   res.json(row);
 });
 
-const slideSchema = z.object({
+const slideCreateSchema = z.object({
   imageUrl: z.string().min(1),
   title: z.string().optional(),
   body: z.string().optional(),
-  sortOrder: z.number().int().optional(),
 });
 
-contentRouter.post("/slides", validateBody(slideSchema), async (req, res) => {
-  res.status(201).json(await prisma.heroSlide.create({ data: req.body }));
+const slideUpdateSchema = slideCreateSchema.extend({ sortOrder: z.number().int().optional() }).partial();
+
+// Yeni slayt her zaman bir INSERT'tür (mevcut satırların üzerine asla yazılmaz) ve
+// display_order otomatik olarak mevcut en büyük değerin +1'i yapılır — istemcinin
+// gönderdiği bir sıralama değerine güvenilmez, sıralama mantığı burada, sunucuda kurulur.
+contentRouter.post("/slides", validateBody(slideCreateSchema), async (req, res) => {
+  const last = await prisma.heroSlide.findFirst({ orderBy: { sortOrder: "desc" } });
+  const sortOrder = (last?.sortOrder ?? 0) + 1;
+  res.status(201).json(await prisma.heroSlide.create({ data: { ...req.body, sortOrder } }));
 });
 
-contentRouter.put("/slides/:id", validateBody(slideSchema.partial()), async (req, res) => {
+contentRouter.put("/slides/:id", validateBody(slideUpdateSchema), async (req, res) => {
   res.json(await prisma.heroSlide.update({ where: { id: req.params.id }, data: req.body }));
 });
 

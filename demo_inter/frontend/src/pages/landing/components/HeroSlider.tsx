@@ -10,21 +10,12 @@ interface NewsSlide {
   link?: string;
 }
 
-const newsSlides: NewsSlide[] = [
-  {
-    id: "fallback-1",
-    imageUrl: "/haberinter.png",
-    title: "Yeni Sezon Kayıtları Açıldı",
-    body: "U-7'den U-16'ya kadar tüm yaş gruplarında ön kayıt başvuruları başladı.",
-  },
-];
-
 const AUTOPLAY_MS = 4500;
 const DRAG_THRESHOLD_PX = 40;
 const CLICK_SUPPRESS_THRESHOLD_PX = 5;
 
 export function HeroSlider() {
-  const [slides, setSlides] = useState<NewsSlide[]>(newsSlides);
+  const [slides, setSlides] = useState<NewsSlide[]>([]);
   const [index, setIndex] = useState(0);
   const [isHovering, setIsHovering] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
@@ -36,13 +27,13 @@ export function HeroSlider() {
   const trackWidth = useRef(0);
   const trackRef = useRef<HTMLDivElement>(null);
 
-  // Sabit varsayılan banner her zaman 0. index'te kalır; panelden eklenen haberler onun
-  // peşine eklenir (üzerine yazılmaz) — böylece tek bir haber eklendiğinde bile slider
-  // devreye girer, hiç eklenmediğinde de varsayılan görsel tek başına sorunsuz görünür.
+  // Varsayılan banner dahil tüm slaytlar artık veritabanında (hero_slides) gerçek satırlar
+  // olarak tutulur — panelden eklenen her görsel sort_order = max+1 ile sona eklenir,
+  // hiçbiri üzerine yazılmaz. Burada API'den geleni doğrudan kullanıyoruz, elle bir
+  // varsayılan değer birleştirmiyoruz.
   useEffect(() => {
     apiClient.get("/content/slides").then((r) => {
-      const apiSlides: NewsSlide[] = Array.isArray(r.data) ? r.data : [];
-      setSlides([...newsSlides, ...apiSlides]);
+      if (Array.isArray(r.data)) setSlides(r.data);
     });
   }, []);
 
@@ -114,6 +105,11 @@ export function HeroSlider() {
         onPointerUp={onPointerUp}
         onPointerLeave={onPointerUp}
       >
+        {slides.length === 0 && (
+          <div className="flex h-full w-full shrink-0 items-center justify-center bg-gradient-to-br from-[#010E80] to-[#0b1030] text-sm font-semibold text-slate-400">
+            Henüz bir haber görseli eklenmedi
+          </div>
+        )}
         {slides.map((sl) => {
           const media = sl.imageUrl ? (
             <img

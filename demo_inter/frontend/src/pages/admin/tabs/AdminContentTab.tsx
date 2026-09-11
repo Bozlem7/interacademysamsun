@@ -92,7 +92,6 @@ export function AdminContentTab() {
         imageUrl: data.url,
         title: newSlide.title || undefined,
         body: newSlide.body || undefined,
-        sortOrder: slides.length,
       });
       setNewSlide({ title: "", body: "" });
       setPendingFile(null);
