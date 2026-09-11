@@ -111,9 +111,9 @@ export function AdminPaymentsTab() {
                       : "bg-amber-100 text-amber-700 hover:bg-amber-200"
                 }`}
               >
-                {p.status === "odendi" ? "Ödendi" : "Ödenmedi — İşaretle"}
+                {p.status === "odendi" ? "Ödendi" : "Ödenmedi"}
               </button>
-              {phone && (
+              {phone && p.status === "odenmedi" && (
                 <button
                   onClick={() => sendReminder(p)}
                   disabled={remindingId === p.id}
