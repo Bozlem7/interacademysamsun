@@ -232,6 +232,13 @@ async function startSession() {
       puppeteerOptions: { args: PUPPETEER_ARGS },
       logQR: false,
       autoClose: 0,
+      // WPPConnect varsayilan olarak eski/sabit bir WhatsApp WEB surumune ("2.3000.10305x")
+      // zorlamaya calisiyor; bu surum artik WhatsApp tarafinda mevcut olmadigi icin "latest"e
+      // dusuyor ve bu zorla surum degistirme adimi sayfayi yeniden yukleyip enjeksiyon
+      // baglamini (execution context) bozarak "wapi.js failed" / 30sn timeout'a yol aciyordu.
+      // Bos string birakmak, zorla bir surum dayatmadan mevcut/guncel surumun kullanilmasini
+      // saglar (kutuphanenin kendi dokumantasyonundaki davranis).
+      whatsappVersion: "",
     });
 
     whatsappClient = client;
