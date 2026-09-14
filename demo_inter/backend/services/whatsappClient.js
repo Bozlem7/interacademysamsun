@@ -10,14 +10,17 @@ const SESSION_NAME = "inter-academy-session";
 const SESSION_DIR = path.resolve(__dirname, "..", "tokens");
 const QR_PATH = path.join(SESSION_DIR, "qr-latest.png");
 
+// NOT: "--single-process" (ve onunla birlikte kullanilan "--no-zygote") bilerek YOK —
+// yeni Chromium surumlerinde headless modda resmi olarak desteklenmiyor ve sayfa
+// yuklenirken "Waiting failed: 30000ms exceeded" / "Auto Close Called" turu donmalara
+// yol actigi VPS'te gozlemlendi. Bellek optimizasyonu icin gerekirse yerine
+// "--disable-features=site-per-process" gibi daha guvenli bir bayrak eklenebilir.
 const PUPPETEER_ARGS = [
   "--no-sandbox",
   "--disable-setuid-sandbox",
   "--disable-dev-shm-usage",
   "--disable-accelerated-2d-canvas",
   "--no-first-run",
-  "--no-zygote",
-  "--single-process",
   "--disable-gpu",
 ];
 
