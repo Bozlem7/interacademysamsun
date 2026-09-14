@@ -196,20 +196,30 @@ async function main() {
     console.log(`Seeded branch: ${branch.name}`);
   }
 
-  const admins = [
-    { username: "admin1", password: env.seedAdminPasswords.admin1 },
-    { username: "admin2", password: env.seedAdminPasswords.admin2 },
-    { username: "admin3", password: env.seedAdminPasswords.admin3 },
-  ];
+  // Sadece İLK KURULUM için: DB'de hiç yönetici hesabı yoksa .env'deki SEED_ADMIN*_PASSWORD
+  // değerleriyle admin1/admin2/admin3'ü oluşturur. Gerçek yöneticiler scripts/reset-admin.ts
+  // ile kullanıcı adı/şifresini değiştirdikten SONRA bu blok kalıcı olarak atlanır — aksi halde
+  // seed.ts tekrar çalıştırıldığında eski admin1/2/3 hesapları .env'deki (artık kullanılmayan)
+  // eski şifrelerle yeniden oluşturulup bilinen-şifreli bir arka kapı hesap açılmış olurdu.
+  const existingAdmin = await prisma.user.findFirst({ where: { role: "yonetici" } });
+  if (existingAdmin) {
+    console.log("Zaten bir yönetici hesabı mevcut — ilk kurulum admin seed'i atlandı.");
+  } else {
+    const admins = [
+      { username: "admin1", password: env.seedAdminPasswords.admin1 },
+      { username: "admin2", password: env.seedAdminPasswords.admin2 },
+      { username: "admin3", password: env.seedAdminPasswords.admin3 },
+    ];
 
-  for (const admin of admins) {
-    const passwordHash = await hashPassword(admin.password);
-    await prisma.user.upsert({
-      where: { username: admin.username },
-      create: { username: admin.username, passwordHash, role: "yonetici" },
-      update: { passwordHash },
-    });
-    console.log(`Seeded admin user: ${admin.username}`);
+    for (const admin of admins) {
+      const passwordHash = await hashPassword(admin.password);
+      await prisma.user.upsert({
+        where: { username: admin.username },
+        create: { username: admin.username, passwordHash, role: "yonetici" },
+        update: { passwordHash },
+      });
+      console.log(`Seeded admin user: ${admin.username}`);
+    }
   }
 
   await prisma.feeSettings.upsert({
