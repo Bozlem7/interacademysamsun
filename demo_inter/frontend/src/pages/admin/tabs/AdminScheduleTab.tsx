@@ -3,6 +3,7 @@ import { apiClient } from "../../../lib/apiClient";
 import { fetchBranches, Branch } from "../../../features/branch/branchApi";
 import { useAuthStore } from "../../../features/auth/authStore";
 import { SPECIALTY_BADGE_CLASS, sessionTypeToSpecialty } from "../../../lib/specialtyColors";
+import { WhatsAppSyncCard } from "../../../features/whatsapp/WhatsAppSyncCard";
 
 const SESSION_TYPE_LABEL: Record<string, string> = { saha: "Saha Antrenmanı", diyet: "Diyetisyen", psikolog: "Psikolog" };
 
@@ -77,7 +78,8 @@ export function AdminScheduleTab() {
   }
 
   return (
-    <div className="p-7">
+    <div className="grid grid-cols-1 gap-6 p-7 lg:grid-cols-3">
+      <div className="lg:col-span-2">
       <p className="mb-4 text-sm font-semibold text-slate-500 dark:text-slate-400">
         Ana sayfadaki sabit genel programı buradan yönetin — değişiklikler anında yansır.
       </p>
@@ -163,6 +165,9 @@ export function AdminScheduleTab() {
           </button>
         </div>
       </div>
+      </div>
+
+      <WhatsAppSyncCard />
     </div>
   );
 }

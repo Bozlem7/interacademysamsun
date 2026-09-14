@@ -15,7 +15,7 @@ export function listStudents(params: { search?: string; groupId?: string; branch
 export function findStudentById(id: string) {
   return prisma.student.findUnique({
     where: { id },
-    include: { group: true, instructorStudents: { include: { instructor: { include: { staffProfile: true } } } } },
+    include: { group: true },
   });
 }
 

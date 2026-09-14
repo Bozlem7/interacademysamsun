@@ -8,12 +8,32 @@ import { StudentInput } from "./students.dto";
 import { generatePaymentForNewStudent } from "../payments/payments.service";
 import { stripSeedTag } from "../../common/text/displayName";
 
+/** Bir nesnedeki (ve varsa iç içe geçmiş ilişkilerdeki) şifre hash'i / TC alanlarını temizler. */
+function stripSecrets(value: any): any {
+  if (Array.isArray(value)) return value.map(stripSecrets);
+  // constructor === Object guard'ı olmadan Date/Buffer/Decimal gibi sınıf örnekleri de
+  // "object" sayılıp destructure edilir — bu da onları kendi enumerable property'si olmayan
+  // boş {} nesnesine çevirir (ör. dob/createdAt alanları bozulur). Sadece düz obje literalleri
+  // (Prisma'nın ilişki sonuçları) ve tanıdık plain-object şeklindeki alanlar için özyinelenir.
+  if (value && typeof value === "object" && value.constructor === Object) {
+    const { passwordHash, tcNoEncrypted, tcNoHash, ...rest } = value;
+    for (const key of Object.keys(rest)) rest[key] = stripSecrets(rest[key]);
+    return rest;
+  }
+  return value;
+}
+
+// Defense-in-depth: repository sorgusu ileride bir ilişki (ör. instructorStudents.instructor)
+// eklerse bile o ilişkideki passwordHash/tcNoEncrypted/tcNoHash asla yanıta sızmasın diye
+// tüm nesne ağacı taranıp temizleniyor — sadece öğrencinin kendi TC alanı burada ayrıca
+// maskeli haliyle (tcNoMasked) geri ekleniyor.
 function toPublicStudent(student: any) {
-  const { tcNoEncrypted, tcNoHash, ...rest } = student;
+  const tcNoMasked = maskTc(decryptTc(student.tcNoEncrypted));
+  const rest = stripSecrets(student); // öğrencinin kendi tcNoEncrypted/tcNoHash alanları da burada temizlenir
   return {
     ...rest,
     fullName: stripSeedTag(rest.fullName),
-    tcNoMasked: maskTc(decryptTc(tcNoEncrypted)),
+    tcNoMasked,
   };
 }
 
