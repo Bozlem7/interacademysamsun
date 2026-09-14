@@ -31,6 +31,58 @@ export function Modal({
   );
 }
 
+/**
+ * Merkezi hata pop-up'ı: uzun formlarda (öğrenci kaydı vb.) validasyon hatalarını sayfanın
+ * tepesindeki statik bir div yerine ekranın ortasında, tüm hataları tek seferde listeleyerek
+ * gösterir — kullanıcının hatayı görmek için sayfayı yukarı kaydırmasına gerek kalmaz.
+ */
+export function ErrorDialog({
+  open,
+  errors,
+  onClose,
+  title = "Formda Hata Var",
+}: {
+  open: boolean;
+  errors: string[];
+  onClose: () => void;
+  title?: string;
+}) {
+  if (!open || errors.length === 0) return null;
+  return (
+    <div className="fixed inset-0 z-[10000] flex items-center justify-center bg-black/70 p-5 backdrop-blur-sm" onClick={onClose}>
+      <div
+        className="w-full max-w-sm rounded-3xl border border-red-500/20 bg-paper2 p-6 shadow-2xl dark:bg-surface"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="mb-4 flex items-center gap-3">
+          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-red-100 text-xl dark:bg-red-500/15">
+            <span aria-hidden>⚠️</span>
+          </div>
+          <div className="text-lg font-extrabold text-slate-900 dark:text-white">{title}</div>
+        </div>
+        <ul className="mb-6 space-y-2">
+          {errors.map((msg, i) => (
+            <li
+              key={i}
+              className="flex gap-2 rounded-xl bg-red-50 p-3 text-sm font-semibold leading-relaxed text-red-600 dark:bg-red-500/10 dark:text-red-300"
+            >
+              <span className="shrink-0">•</span>
+              <span>{msg}</span>
+            </li>
+          ))}
+        </ul>
+        <button
+          type="button"
+          onClick={onClose}
+          className="w-full rounded-xl bg-red-600 py-3.5 text-sm font-extrabold text-white transition-colors hover:bg-red-700"
+        >
+          Tamam, Düzelteyim
+        </button>
+      </div>
+    </div>
+  );
+}
+
 export function ConfirmDialog({
   open,
   title,
