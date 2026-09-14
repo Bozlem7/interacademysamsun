@@ -8,7 +8,16 @@ const SESSION_NAME = "inter-academy-session";
 // NOT: Mevcut/canli oturum zaten "tokens/inter-academy-session/" altinda duruyor — burasi
 // bilerek DEGISTIRILMEDI, aksi halde restart'ta mevcut giris kaybolup tekrar QR gerekirdi.
 const SESSION_DIR = path.resolve(__dirname, "..", "tokens");
+// WPPConnect'in gercek tarayici profilini yazdigi klasor (SESSION_DIR/SESSION_NAME).
+// Kilitlenmis/bozuk oturumu temizlerken SESSION_DIR'in tamamini degil, sadece bunu silmeliyiz.
+const BROWSER_DATA_DIR = path.join(SESSION_DIR, SESSION_NAME);
 const QR_PATH = path.join(SESSION_DIR, "qr-latest.png");
+// Chromium ayni profil klasorunu baska bir surecin kullandigini sanip acilamadiginda
+// biraktigi kilit dosyalari — kesilen/zorla oldurulen restart'lardan sonra kalabilir.
+const STALE_LOCK_FILES = ["SingletonLock", "SingletonCookie", "SingletonSocket"];
+// Art arda bu kadar baglanti denemesi basarisiz olursa (ör. bozuk tarayici profili
+// yuzunden surekli timeout), profil klasoru tamamen sifirlanip temiz QR uretilir.
+const MAX_CONSECUTIVE_FAILURES_BEFORE_WIPE = 3;
 
 // NOT: "--single-process" (ve onunla birlikte kullanilan "--no-zygote") bilerek YOK —
 // yeni Chromium surumlerinde headless modda resmi olarak desteklenmiyor ve sayfa
@@ -34,6 +43,7 @@ const stateEmitter = new EventEmitter();
 let whatsappClient = null;
 let isInitializing = false;
 let reconnectAttempts = 0;
+let consecutiveFailures = 0;
 let reconnectTimer = null;
 
 let currentState = {
@@ -70,6 +80,34 @@ function ensureSessionDirAccess() {
     throw new Error(
       `WhatsApp oturum dizinine okuma/yazma izni yok (${SESSION_DIR}). Sunucu kullanıcısının izinlerini kontrol edin.`
     );
+  }
+}
+
+// Zorla oldurulen/kesilen restart'lardan sonra Chromium'un profil klasorunde birakabildigi
+// kilit dosyalarini temizler — aksi halde yeni tarayici sureci profili "kullanimda" sanip
+// acilamaz ve sayfa hic yuklenmeden timeout'a duser.
+function removeStaleLockFiles() {
+  for (const name of STALE_LOCK_FILES) {
+    const p = path.join(BROWSER_DATA_DIR, name);
+    try {
+      if (fs.existsSync(p)) {
+        fs.rmSync(p, { force: true });
+        console.warn(`[whatsapp] Eski kilit dosyası temizlendi: ${p}`);
+      }
+    } catch (err) {
+      console.error(`[whatsapp] Kilit dosyası temizlenemedi (${p}):`, err.message);
+    }
+  }
+}
+
+// Tarayici profili gercekten bozulmussa (surekli timeout/Auto Close Called) kilit dosyasi
+// temizligi yetmez — profili tamamen silip temiz bir QR akisiyla sifirdan baslamak gerekir.
+function wipeCorruptedSession(reason) {
+  console.error(`[whatsapp] Oturum profili bozuk görünüyor (${reason}), temiz QR için sıfırlanıyor: ${BROWSER_DATA_DIR}`);
+  try {
+    fs.rmSync(BROWSER_DATA_DIR, { recursive: true, force: true });
+  } catch (err) {
+    console.error("[whatsapp] Oturum profili sıfırlanamadı:", err.message);
   }
 }
 
@@ -162,6 +200,8 @@ async function startSession() {
     return null;
   }
 
+  removeStaleLockFiles();
+
   try {
     const client = await wppconnect.create({
       session: SESSION_NAME,
@@ -196,6 +236,7 @@ async function startSession() {
 
     whatsappClient = client;
     reconnectAttempts = 0;
+    consecutiveFailures = 0;
     setState({ status: "CONNECTED", qrBase64: null, lastConnectedAt: Date.now(), lastError: null });
     console.log("[whatsapp] Baglanti basariyla kuruldu.");
 
@@ -213,7 +254,14 @@ async function startSession() {
     return client;
   } catch (error) {
     console.error("[whatsapp] Baglanti kurulurken hata olustu:", error);
+    consecutiveFailures += 1;
     setState({ status: "DISCONNECTED_UNEXPECTED", lastError: error.message });
+
+    if (consecutiveFailures >= MAX_CONSECUTIVE_FAILURES_BEFORE_WIPE) {
+      wipeCorruptedSession(error.message);
+      consecutiveFailures = 0;
+    }
+
     scheduleReconnect("startSession hatası");
     return null;
   } finally {
@@ -223,6 +271,7 @@ async function startSession() {
 
 async function requestReconnect() {
   reconnectAttempts = 0;
+  consecutiveFailures = 0;
   clearReconnectTimer();
   return startSession();
 }
@@ -230,6 +279,7 @@ async function requestReconnect() {
 async function logoutSession() {
   clearReconnectTimer();
   reconnectAttempts = 0;
+  consecutiveFailures = 0;
 
   if (whatsappClient) {
     try {
@@ -241,7 +291,9 @@ async function logoutSession() {
   whatsappClient = null;
 
   try {
-    fs.rmSync(SESSION_DIR, { recursive: true, force: true });
+    // Sadece bu oturumun profil klasorunu sil — SESSION_DIR'in tamami degil (icinde
+    // qr-latest.png de var, ve ileride baska session'lar da barinabilir).
+    fs.rmSync(BROWSER_DATA_DIR, { recursive: true, force: true });
   } catch (err) {
     console.error("[whatsapp] Oturum dizini temizlenemedi:", err.message);
   }

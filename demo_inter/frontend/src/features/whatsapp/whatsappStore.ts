@@ -18,11 +18,9 @@ interface WhatsAppState {
   maxAttempts: number;
   lastError: string | null;
   lastConnectedAt: number | null;
-  highlight: boolean;
   setStatus: (status: WhatsAppStatus, message?: string) => void;
   setQr: (qrBase64: string, attempt: number, maxAttempts: number) => void;
   setError: (message: string) => void;
-  triggerHighlight: () => void;
 }
 
 export const useWhatsAppStore = create<WhatsAppState>()((set) => ({
@@ -32,7 +30,6 @@ export const useWhatsAppStore = create<WhatsAppState>()((set) => ({
   maxAttempts: 5,
   lastError: null,
   lastConnectedAt: null,
-  highlight: false,
   setStatus: (status, message) =>
     set((s) => ({
       status,
@@ -42,8 +39,4 @@ export const useWhatsAppStore = create<WhatsAppState>()((set) => ({
     })),
   setQr: (qrBase64, attempt, maxAttempts) => set({ qrBase64, attempt, maxAttempts }),
   setError: (message) => set({ lastError: message }),
-  triggerHighlight: () => {
-    set({ highlight: true });
-    setTimeout(() => set({ highlight: false }), 2500);
-  },
 }));
