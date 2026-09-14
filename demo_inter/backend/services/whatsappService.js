@@ -3,7 +3,8 @@ const { getWhatsAppClient } = require("./whatsappClient");
 const TR_NUMBER_REGEX = /^90\d{10}$/;
 
 // '0532 123 45 67', '+90 532 123 45 67', '532-123-45-67' gibi girdileri
-// '905321234567@c.us' formatina cevirir. Numara eksik/gecersizse null doner.
+// '905321234567@s.whatsapp.net' formatina cevirir (Baileys JID formati). Numara
+// eksik/gecersizse null doner.
 function sanitizePhoneNumber(phone) {
   if (!phone) return null;
 
@@ -22,18 +23,11 @@ function sanitizePhoneNumber(phone) {
     return null;
   }
 
-  return `${digits}@c.us`;
+  return `${digits}@s.whatsapp.net`;
 }
 
 function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
-}
-
-// Puppeteer/WA Web sayfasi tam o anda ic senkronizasyon/yeniden render yaparsa
-// wppconnect'in kullandigi DOM frame'i gecici olarak "detached" hale gelebilir.
-// Bu bilinen, gecici bir race condition oldugu icin bir kez kisa bekleyip yeniden deniyoruz.
-function isDetachedFrameError(error) {
-  return typeof error?.message === "string" && error.message.includes("detached Frame");
 }
 
 async function sendTextMessage(toPhone, messageText) {
@@ -44,22 +38,22 @@ async function sendTextMessage(toPhone, messageText) {
     return { success: false, error: "WhatsApp client hazir degil." };
   }
 
-  const chatId = sanitizePhoneNumber(toPhone);
+  const jid = sanitizePhoneNumber(toPhone);
 
-  if (!chatId) {
+  if (!jid) {
     console.error(`[whatsapp] Gecersiz telefon numarasi, mesaj gonderilemedi: ${toPhone}`);
     return { success: false, error: "Gecersiz telefon numarasi." };
   }
 
   for (let attempt = 1; attempt <= 2; attempt++) {
     try {
-      const result = await client.sendText(chatId, messageText);
-      console.log(`[whatsapp] Mesaj basariyla gonderildi -> ${chatId}`);
+      const result = await client.sendMessage(jid, { text: messageText });
+      console.log(`[whatsapp] Mesaj basariyla gonderildi -> ${jid}`);
       return { success: true, result };
     } catch (error) {
-      const willRetry = attempt === 1 && isDetachedFrameError(error);
+      const willRetry = attempt === 1;
       console.error(
-        `[whatsapp] Mesaj gonderilirken hata olustu -> ${chatId} (deneme ${attempt}):`,
+        `[whatsapp] Mesaj gonderilirken hata olustu -> ${jid} (deneme ${attempt}):`,
         error.message
       );
       if (!willRetry) {

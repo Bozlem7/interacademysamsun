@@ -4,6 +4,8 @@ dist
 .env.test
 coverage
 
-# WPPConnect oturum/token dosyalari (QR ile eslesen WhatsApp Web oturumu, tarayici profili)
+# WPPConnect oturum/token dosyalari (eski, artik kullanilmiyor ama silinmedi)
 tokens/
+# Baileys oturum/anahtar dosyalari (Signal protokolu, useMultiFileAuthState)
+storage/baileys-auth/
 *.log

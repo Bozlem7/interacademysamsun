@@ -1,50 +1,37 @@
-const wppconnect = require("@wppconnect-team/wppconnect");
+const {
+  default: makeWASocket,
+  useMultiFileAuthState,
+  fetchLatestBaileysVersion,
+  DisconnectReason,
+} = require("@whiskeysockets/baileys");
+const qrcode = require("qrcode");
+const pino = require("pino");
 const fs = require("fs");
 const path = require("path");
 const EventEmitter = require("events");
 
-const SESSION_NAME = "inter-academy-session";
-// Mutlak yol: PM2/Docker restart'larinda calisma dizini degisse bile oturum ayni yerde kalir.
-// NOT: Mevcut/canli oturum zaten "tokens/inter-academy-session/" altinda duruyor — burasi
-// bilerek DEGISTIRILMEDI, aksi halde restart'ta mevcut giris kaybolup tekrar QR gerekirdi.
-const SESSION_DIR = path.resolve(__dirname, "..", "tokens");
-// WPPConnect'in gercek tarayici profilini yazdigi klasor (SESSION_DIR/SESSION_NAME).
-// Kilitlenmis/bozuk oturumu temizlerken SESSION_DIR'in tamamini degil, sadece bunu silmeliyiz.
-const BROWSER_DATA_DIR = path.join(SESSION_DIR, SESSION_NAME);
-const QR_PATH = path.join(SESSION_DIR, "qr-latest.png");
-// Chromium ayni profil klasorunu baska bir surecin kullandigini sanip acilamadiginda
-// biraktigi kilit dosyalari — kesilen/zorla oldurulen restart'lardan sonra kalabilir.
-const STALE_LOCK_FILES = ["SingletonLock", "SingletonCookie", "SingletonSocket"];
-// Art arda bu kadar baglanti denemesi basarisiz olursa (ör. bozuk tarayici profili
-// yuzunden surekli timeout), profil klasoru tamamen sifirlanip temiz QR uretilir.
-const MAX_CONSECUTIVE_FAILURES_BEFORE_WIPE = 3;
-
-// NOT: "--single-process" (ve onunla birlikte kullanilan "--no-zygote") bilerek YOK —
-// yeni Chromium surumlerinde headless modda resmi olarak desteklenmiyor ve sayfa
-// yuklenirken "Waiting failed: 30000ms exceeded" / "Auto Close Called" turu donmalara
-// yol actigi VPS'te gozlemlendi. Bellek optimizasyonu icin gerekirse yerine
-// "--disable-features=site-per-process" gibi daha guvenli bir bayrak eklenebilir.
-const PUPPETEER_ARGS = [
-  "--no-sandbox",
-  "--disable-setuid-sandbox",
-  "--disable-dev-shm-usage",
-  "--disable-accelerated-2d-canvas",
-  "--no-first-run",
-  "--disable-gpu",
-];
+// Baileys'in oturum verisi (Signal protokolu anahtarlari) WPPConnect'in Chromium tarayici
+// profiliyle uyumsuz oldugu icin bilerek ayri, yeni bir klasor kullaniliyor. Mutlak yol:
+// PM2/Docker restart'larinda calisma dizini degisse bile oturum ayni yerde kalir.
+const SESSION_DIR = path.resolve(__dirname, "..", "storage", "baileys-auth");
 
 const MAX_QR_ATTEMPTS = 5;
 const MAX_RECONNECT_ATTEMPTS = 8;
 const BACKOFF_BASE_MS = 2000;
 const BACKOFF_MAX_MS = 60000;
+// Art arda bu kadar baglanti denemesi basarisiz olursa (ör. bozuk/uyumsuz auth dosyalari
+// yuzunden surekli hata), oturum klasoru tamamen sifirlanip temiz QR uretilir.
+const MAX_CONSECUTIVE_FAILURES_BEFORE_WIPE = 3;
 
 const stateEmitter = new EventEmitter();
+const logger = pino({ level: "silent" });
 
 let whatsappClient = null;
 let isInitializing = false;
 let reconnectAttempts = 0;
 let consecutiveFailures = 0;
 let reconnectTimer = null;
+let qrAttemptCounter = 0;
 
 let currentState = {
   status: "DISCONNECTED",
@@ -83,74 +70,14 @@ function ensureSessionDirAccess() {
   }
 }
 
-// Zorla oldurulen/kesilen restart'lardan sonra Chromium'un profil klasorunde birakabildigi
-// kilit dosyalarini temizler — aksi halde yeni tarayici sureci profili "kullanimda" sanip
-// acilamaz ve sayfa hic yuklenmeden timeout'a duser.
-function removeStaleLockFiles() {
-  for (const name of STALE_LOCK_FILES) {
-    const p = path.join(BROWSER_DATA_DIR, name);
-    try {
-      if (fs.existsSync(p)) {
-        fs.rmSync(p, { force: true });
-        console.warn(`[whatsapp] Eski kilit dosyası temizlendi: ${p}`);
-      }
-    } catch (err) {
-      console.error(`[whatsapp] Kilit dosyası temizlenemedi (${p}):`, err.message);
-    }
-  }
-}
-
-// Tarayici profili gercekten bozulmussa (surekli timeout/Auto Close Called) kilit dosyasi
-// temizligi yetmez — profili tamamen silip temiz bir QR akisiyla sifirdan baslamak gerekir.
+// Oturum dosyalari gercekten bozulmussa (surekli baglanti hatasi) sifirlayip temiz bir
+// QR akisiyla sifirdan baslamak gerekir.
 function wipeCorruptedSession(reason) {
-  console.error(`[whatsapp] Oturum profili bozuk görünüyor (${reason}), temiz QR için sıfırlanıyor: ${BROWSER_DATA_DIR}`);
+  console.error(`[whatsapp] Oturum bozuk görünüyor (${reason}), temiz QR için sıfırlanıyor: ${SESSION_DIR}`);
   try {
-    fs.rmSync(BROWSER_DATA_DIR, { recursive: true, force: true });
+    fs.rmSync(SESSION_DIR, { recursive: true, force: true });
   } catch (err) {
-    console.error("[whatsapp] Oturum profili sıfırlanamadı:", err.message);
-  }
-}
-
-// WPPConnect'in dondurdugu statusFind string'lerini kendi state machine'imize esler.
-function mapStatusFind(statusSession) {
-  switch (statusSession) {
-    case "isLogged":
-    case "inChat":
-    case "successChat":
-      return { status: "CONNECTED", lastConnectedAt: Date.now(), lastError: null };
-    case "qrReadSuccess":
-      return { status: "AUTHENTICATING" };
-    case "notLogged":
-      return { status: "INITIALIZING" };
-    case "qrReadError":
-      return { status: "DISCONNECTED_UNEXPECTED", lastError: "QR okutma başarısız oldu" };
-    case "desconnectedMobile":
-      return { status: "DISCONNECTED_UNEXPECTED", lastError: "Telefon bağlantısı kesildi" };
-    case "browserClose":
-      return { status: "DISCONNECTED_UNEXPECTED", lastError: "Tarayıcı süreci kapandı" };
-    case "deviceNotConnected":
-      return { status: "DISCONNECTED", lastError: "Cihaz bağlı değil" };
-    case "autocloseCalled":
-      return { status: "DISCONNECTED", lastError: "QR süresi doldu, oturum kapatıldı" };
-    default:
-      return null;
-  }
-}
-
-// whatsapp-web.js soyundan gelen internal client state'leri (onStateChange).
-function mapClientState(state) {
-  switch (state) {
-    case "CONFLICT":
-    case "UNPAIRED":
-    case "UNPAIRED_IDLE":
-      return { status: "CONFLICT", lastError: "Başka bir yerden oturum açıldı" };
-    case "CONNECTED":
-      return { status: "CONNECTED", lastConnectedAt: Date.now(), lastError: null };
-    case "DISCONNECTED":
-    case "TIMEOUT":
-      return { status: "DISCONNECTED_UNEXPECTED", lastError: `Bağlantı koptu (${state})` };
-    default:
-      return null;
+    console.error("[whatsapp] Oturum dizini sıfırlanamadı:", err.message);
   }
 }
 
@@ -200,65 +127,80 @@ async function startSession() {
     return null;
   }
 
-  removeStaleLockFiles();
-
   try {
-    const client = await wppconnect.create({
-      session: SESSION_NAME,
-      folderNameToken: SESSION_DIR,
-      catchQR: (base64Qr, asciiQR, attempt) => {
-        console.log("[whatsapp] QR kodu okutmak icin taratin:");
-        console.log(asciiQR);
-        try {
-          const data = base64Qr.replace(/^data:image\/\w+;base64,/, "");
-          fs.mkdirSync(path.dirname(QR_PATH), { recursive: true });
-          fs.writeFileSync(QR_PATH, Buffer.from(data, "base64"));
-        } catch (qrErr) {
-          console.error("[whatsapp] QR PNG kaydedilemedi:", qrErr);
-        }
-        setState({
-          status: "QR_READY",
-          qrBase64: base64Qr,
-          attempt: attempt ?? currentState.attempt + 1,
-          maxAttempts: MAX_QR_ATTEMPTS,
-        });
-      },
-      statusFind: (statusSession) => {
-        console.log(`[whatsapp] Oturum durumu: ${statusSession}`);
-        const patch = mapStatusFind(statusSession);
-        if (patch) setState(patch);
-      },
-      headless: true,
-      puppeteerOptions: { args: PUPPETEER_ARGS },
-      logQR: false,
-      autoClose: 0,
-      // WPPConnect varsayilan olarak eski/sabit bir WhatsApp WEB surumune ("2.3000.10305x")
-      // zorlamaya calisiyor; bu surum artik WhatsApp tarafinda mevcut olmadigi icin "latest"e
-      // dusuyor ve bu zorla surum degistirme adimi sayfayi yeniden yukleyip enjeksiyon
-      // baglamini (execution context) bozarak "wapi.js failed" / 30sn timeout'a yol aciyordu.
-      // Bos string birakmak, zorla bir surum dayatmadan mevcut/guncel surumun kullanilmasini
-      // saglar (kutuphanenin kendi dokumantasyonundaki davranis).
-      whatsappVersion: "",
+    const { state, saveCreds } = await useMultiFileAuthState(SESSION_DIR);
+    const { version } = await fetchLatestBaileysVersion();
+
+    const sock = makeWASocket({
+      version,
+      auth: state,
+      logger,
+      printQRInTerminal: false,
+      syncFullHistory: false,
     });
 
-    whatsappClient = client;
-    reconnectAttempts = 0;
-    consecutiveFailures = 0;
-    setState({ status: "CONNECTED", qrBase64: null, lastConnectedAt: Date.now(), lastError: null });
-    console.log("[whatsapp] Baglanti basariyla kuruldu.");
+    sock.ev.on("creds.update", saveCreds);
 
-    client.onStateChange((state) => {
-      console.log(`[whatsapp] Client state degisti: ${state}`);
-      const patch = mapClientState(state);
-      if (patch) {
-        setState(patch);
-        if (patch.status === "DISCONNECTED_UNEXPECTED" || patch.status === "CONFLICT") {
-          scheduleReconnect(`client.onStateChange -> ${state}`);
+    sock.ev.on("connection.update", async (update) => {
+      const { connection, lastDisconnect, qr } = update;
+
+      if (qr) {
+        try {
+          qrAttemptCounter += 1;
+          const qrBase64 = await qrcode.toDataURL(qr);
+          console.log("[whatsapp] QR kodu okutmak icin taratin (panelden goruntulenebilir).");
+          setState({
+            status: "QR_READY",
+            qrBase64,
+            attempt: qrAttemptCounter,
+            maxAttempts: MAX_QR_ATTEMPTS,
+          });
+        } catch (qrErr) {
+          console.error("[whatsapp] QR base64'e cevrilemedi:", qrErr.message);
+        }
+      }
+
+      if (connection === "connecting") {
+        setState({ status: "INITIALIZING" });
+      }
+
+      if (connection === "open") {
+        whatsappClient = sock;
+        reconnectAttempts = 0;
+        consecutiveFailures = 0;
+        qrAttemptCounter = 0;
+        setState({ status: "CONNECTED", qrBase64: null, lastConnectedAt: Date.now(), lastError: null });
+        console.log("[whatsapp] Baglanti basariyla kuruldu.");
+      }
+
+      if (connection === "close") {
+        whatsappClient = null;
+        const statusCode = lastDisconnect?.error?.output?.statusCode;
+        const reasonText = `Bağlantı koptu (kod: ${statusCode ?? "bilinmiyor"})`;
+
+        if (statusCode === DisconnectReason.loggedOut || statusCode === DisconnectReason.badSession) {
+          setState({ status: "DISCONNECTED", lastError: "Oturum geçersiz kılındı, yeni QR gerekiyor." });
+          wipeCorruptedSession(reasonText);
+          consecutiveFailures = 0;
+          scheduleReconnect("oturum gecersiz, temiz QR icin yeniden baslatiliyor");
+        } else if (statusCode === DisconnectReason.connectionReplaced) {
+          setState({ status: "CONFLICT", lastError: "Başka bir yerden oturum açıldı" });
+          scheduleReconnect(reasonText);
+        } else {
+          consecutiveFailures += 1;
+          setState({ status: "DISCONNECTED_UNEXPECTED", lastError: reasonText });
+
+          if (consecutiveFailures >= MAX_CONSECUTIVE_FAILURES_BEFORE_WIPE) {
+            wipeCorruptedSession(reasonText);
+            consecutiveFailures = 0;
+          }
+
+          scheduleReconnect(reasonText);
         }
       }
     });
 
-    return client;
+    return sock;
   } catch (error) {
     console.error("[whatsapp] Baglanti kurulurken hata olustu:", error);
     consecutiveFailures += 1;
@@ -298,9 +240,7 @@ async function logoutSession() {
   whatsappClient = null;
 
   try {
-    // Sadece bu oturumun profil klasorunu sil — SESSION_DIR'in tamami degil (icinde
-    // qr-latest.png de var, ve ileride baska session'lar da barinabilir).
-    fs.rmSync(BROWSER_DATA_DIR, { recursive: true, force: true });
+    fs.rmSync(SESSION_DIR, { recursive: true, force: true });
   } catch (err) {
     console.error("[whatsapp] Oturum dizini temizlenemedi:", err.message);
   }
