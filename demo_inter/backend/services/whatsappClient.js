@@ -245,7 +245,15 @@ async function startSession() {
         const reasonText = `Bağlantı koptu (kod: ${statusCode ?? "bilinmiyor"})`;
         recordDiagnostic("baglanti_koptu", `kod=${statusCode ?? "?"} mesaj=${errorMessage ?? "?"}`);
 
-        if (statusCode === DisconnectReason.loggedOut || statusCode === DisconnectReason.badSession) {
+        if (statusCode === DisconnectReason.restartRequired) {
+          // Baileys, ilk QR eslestirmesinden hemen sonra baglantiyi bilerek bu kodla kapatip
+          // yeniden baglanmayi bekler — bu bir HATA DEGIL, normal eslestirme akisinin parcasi.
+          // Hata sayaci artirilmadan, backoff beklemeden aninda yeniden baslatilir; aksi halde
+          // (eski davranis) bu 3 kez tekrarlaninca YENI ESLESTIRILEN oturum sifirlaniyordu.
+          recordDiagnostic("yeniden_baslatma_gerekli", "Baileys pairing sonrasi beklenen davranis");
+          clearReconnectTimer();
+          startSession().catch((err) => console.error("[whatsapp] Pairing sonrasi yeniden baslatma basarisiz:", err));
+        } else if (statusCode === DisconnectReason.loggedOut || statusCode === DisconnectReason.badSession) {
           setState({ status: "DISCONNECTED", lastError: "Oturum geçersiz kılındı, yeni QR gerekiyor." });
           wipeCorruptedSession(reasonText);
           consecutiveFailures = 0;

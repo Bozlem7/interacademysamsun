@@ -30,6 +30,7 @@ export function StaffPanelPage() {
   const [attendanceSaving, setAttendanceSaving] = useState(false);
   const [attendanceSavedMessage, setAttendanceSavedMessage] = useState("");
   const [attendanceError, setAttendanceError] = useState("");
+  const [attendanceNotifyWarning, setAttendanceNotifyWarning] = useState("");
 
   const [noteGroupId, setNoteGroupId] = useState("");
   const [noteRoster, setNoteRoster] = useState<RosterEntry[]>([]);
@@ -79,6 +80,7 @@ export function StaffPanelPage() {
   async function saveAttendance() {
     setAttendanceError("");
     setAttendanceSavedMessage("");
+    setAttendanceNotifyWarning("");
     const records = roster
       .filter((r) => r.status)
       .map((r) => ({ studentId: r.studentId, sessionDate: new Date().toISOString().slice(0, 10), status: r.status }));
@@ -92,6 +94,15 @@ export function StaffPanelPage() {
       setAttendanceSavedMessage(
         `Yoklama kaydedildi ve gelmeyen ${data.notifiedCount} öğrencinin velisine WhatsApp bildirimi iletildi.`
       );
+      // Yoklama kaydı başarılı olsa bile WhatsApp gönderimi kısmen/tamamen başarısız
+      // olmuş olabilir (ör. WhatsApp bağlantısı kopuk) — bunu sessizce geçmeyelim.
+      const notifyErrors = (data.notifyErrors ?? []) as { student: string; phone: string; error: string }[];
+      if (notifyErrors.length > 0) {
+        setAttendanceNotifyWarning(
+          `${notifyErrors.length} bildirim gönderilemedi: ` +
+            notifyErrors.map((e) => `${e.student} (${e.error})`).join(", ")
+        );
+      }
     } catch (e: any) {
       setAttendanceError(e.response?.data?.error?.message ?? "Yoklama kaydedilemedi");
     } finally {
@@ -197,6 +208,11 @@ export function StaffPanelPage() {
               {attendanceSavedMessage && (
                 <div className="mb-3 rounded-xl bg-green-50 px-4 py-3 text-sm font-bold text-green-700 dark:bg-green-900/20 dark:text-green-400">
                   ✓ {attendanceSavedMessage}
+                </div>
+              )}
+              {attendanceNotifyWarning && (
+                <div className="mb-3 rounded-xl bg-amber-50 px-4 py-3 text-sm font-bold text-amber-700 dark:bg-amber-900/20 dark:text-amber-400">
+                  ⚠ {attendanceNotifyWarning}
                 </div>
               )}
               {attendanceError && (

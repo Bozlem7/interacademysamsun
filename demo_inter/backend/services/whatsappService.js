@@ -1,4 +1,4 @@
-const { getWhatsAppClient } = require("./whatsappClient");
+const { getWhatsAppClient, getState } = require("./whatsappClient");
 
 const TR_NUMBER_REGEX = /^90\d{10}$/;
 
@@ -32,17 +32,24 @@ function sleep(ms) {
 
 async function sendTextMessage(toPhone, messageText) {
   const client = getWhatsAppClient();
+  const currentStatus = getState().status;
+
+  console.log(
+    `[whatsapp] sendTextMessage cagrildi -> hedef(ham): "${toPhone}", client hazir mi: ${!!client}, durum: ${currentStatus}`
+  );
 
   if (!client) {
-    console.error("[whatsapp] Client hazir degil (baglanti kurulmamis), mesaj gonderilemedi.");
-    return { success: false, error: "WhatsApp client hazir degil." };
+    const error = `WhatsApp client hazir degil (durum: ${currentStatus}). Once panelden QR okutup bağlanın.`;
+    console.error(`[whatsapp] ${error}`);
+    return { success: false, error };
   }
 
   const jid = sanitizePhoneNumber(toPhone);
 
   if (!jid) {
-    console.error(`[whatsapp] Gecersiz telefon numarasi, mesaj gonderilemedi: ${toPhone}`);
-    return { success: false, error: "Gecersiz telefon numarasi." };
+    const error = `Gecersiz telefon numarasi: "${toPhone}"`;
+    console.error(`[whatsapp] ${error}`);
+    return { success: false, error };
   }
 
   for (let attempt = 1; attempt <= 2; attempt++) {
@@ -53,8 +60,9 @@ async function sendTextMessage(toPhone, messageText) {
     } catch (error) {
       const willRetry = attempt === 1;
       console.error(
-        `[whatsapp] Mesaj gonderilirken hata olustu -> ${jid} (deneme ${attempt}):`,
-        error.message
+        `[whatsapp] Mesaj gonderilirken hata olustu -> ${jid} (deneme ${attempt}/2):`,
+        error.message,
+        error.output?.statusCode ? `(kod: ${error.output.statusCode})` : ""
       );
       if (!willRetry) {
         return { success: false, error: error.message };

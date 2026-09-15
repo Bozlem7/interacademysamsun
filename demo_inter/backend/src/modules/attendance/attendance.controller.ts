@@ -5,7 +5,7 @@ import { requireAuth, requireRole } from "../../common/middleware/auth";
 import { validateBody } from "../../common/middleware/validate";
 import { ForbiddenError } from "../../common/errors/AppError";
 import { stripSeedTag } from "../../common/text/displayName";
-// WPPConnect tabanlı gercek gonderim servisi (proje kokunde duz JS, src/ disinda).
+// Baileys tabanlı gercek gonderim servisi (proje kokunde duz JS, src/ disinda).
 const { sendTextMessage } = require("../../../services/whatsappService");
 const { getNotifyRecipients } = require("../../../services/notifyRecipients");
 
@@ -89,6 +89,10 @@ attendanceRouter.post("/bulk", requireRole("yonetici", "egitmen"), validateBody(
   // "Yok" işaretlenen her öğrencinin velisine, akademinin WhatsApp altyapısı üzerinden
   // otomatik devamsızlık bildirimi gönderilir (telefon numarası kayıtlıysa).
   let notifiedCount = 0;
+  // Basarisiz gonderimler eskiden sadece konsola loglanip yanit her zaman "basarili"
+  // donuyordu — yonetici/egitmen panelde hep yesil mesaj gorup mesajlarin gercekten
+  // gitmedigini fark edemiyordu. Artik hatalar yanitla birlikte donuyor.
+  const notifyErrors: { student: string; phone: string; error: string }[] = [];
   for (const studentId of absentStudentIds) {
     const student = await prisma.student.findUnique({ where: { id: studentId }, include: { group: true } });
     if (!student) continue;
@@ -101,11 +105,15 @@ attendanceRouter.post("/bulk", requireRole("yonetici", "egitmen"), validateBody(
     let anySent = false;
     for (const { phone } of recipients) {
       const result = await sendTextMessage(phone, message);
-      if (result.success) anySent = true;
-      else console.error(`[attendance] ${stripSeedTag(student.fullName)} icin bildirim gonderilemedi:`, result.error);
+      if (result.success) {
+        anySent = true;
+      } else {
+        console.error(`[attendance] ${stripSeedTag(student.fullName)} icin bildirim gonderilemedi:`, result.error);
+        notifyErrors.push({ student: stripSeedTag(student.fullName), phone, error: result.error });
+      }
     }
     if (anySent) notifiedCount++;
   }
 
-  res.status(201).json({ results, notifiedCount });
+  res.status(201).json({ results, notifiedCount, notifyErrors });
 });
