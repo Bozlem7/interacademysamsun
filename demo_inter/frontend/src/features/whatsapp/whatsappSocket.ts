@@ -17,11 +17,16 @@ export function connectWhatsAppSocket() {
     reconnectionDelayMax: 30000,
   });
 
+  socket.on("connect", () => console.log("[whatsapp] Socket bağlandı:", socket?.id));
+  socket.on("connect_error", (err) => console.error("[whatsapp] Socket bağlantı hatası:", err.message));
+
   socket.on("wp:status", (payload: { status: WhatsAppStatus; message?: string }) => {
+    console.log("[whatsapp] wp:status alındı:", payload);
     useWhatsAppStore.getState().setStatus(payload.status, payload.message);
   });
 
   socket.on("wp:qr", (payload: { qrBase64: string; attempt: number; maxAttempts: number }) => {
+    console.log("[whatsapp] wp:qr alındı, uzunluk:", payload.qrBase64?.length, "deneme:", payload.attempt);
     useWhatsAppStore.getState().setQr(payload.qrBase64, payload.attempt, payload.maxAttempts);
   });
 

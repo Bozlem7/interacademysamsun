@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
-import { DIAGNOSTIC_STEP_LABEL, useWhatsAppStore } from "./whatsappStore";
+import { apiClient } from "../../lib/apiClient";
+import { DIAGNOSTIC_STEP_LABEL, useWhatsAppStore, WhatsAppStatus } from "./whatsappStore";
 import { requestLogout, requestReconnect } from "./whatsappSocket";
 
 // Backend baglanti/sorgu timeout'larini 90-120sn'ye kadar genisletti (yavas VPS aglari
@@ -13,12 +14,34 @@ interface Props {
 }
 
 export function WhatsAppQrModal({ open, onClose }: Props) {
-  const { status, qrBase64, lastError, lastDiagnosticStep, diagnosticSteps, sessionStartedAt } = useWhatsAppStore();
+  const { status, qrBase64, lastError, lastDiagnosticStep, diagnosticSteps, sessionStartedAt, setStatus, setQr } =
+    useWhatsAppStore();
   const [showDiagnostics, setShowDiagnostics] = useState(false);
   const [timedOut, setTimedOut] = useState(false);
   const [elapsedMs, setElapsedMs] = useState(0);
 
   const waitingForQr = open && !qrBase64 && status !== "CONNECTED";
+
+  // Socket.io mesajı gecikmiş/kaçmış olabilir ihtimaline karşı (Nginx proxy, ağ kopması vb.) —
+  // modal açılır açılmaz mevcut durumu REST üzerinden de bir kere çekip anında ekrana bas.
+  useEffect(() => {
+    if (!open) return;
+    apiClient
+      .get("/whatsapp/status")
+      .then((res) => {
+        const data = res.data as {
+          status: WhatsAppStatus;
+          qrBase64: string | null;
+          attempt: number;
+          maxAttempts: number;
+          lastError: string | null;
+        };
+        console.log("[whatsapp] REST fallback durumu:", data);
+        setStatus(data.status, data.lastError ?? undefined);
+        if (data.qrBase64) setQr(data.qrBase64, data.attempt, data.maxAttempts);
+      })
+      .catch((err) => console.error("[whatsapp] REST fallback durumu alınamadı:", err));
+  }, [open, setStatus, setQr]);
 
   // Sunucu belirli bir süre icinde QR uretemezse (ör. tarayici baslatma sorunu) kullaniciyi
   // sonsuza kadar "bekleniyor" spinner'inda birakmak yerine "Yeniden Dene" secenegi sunuyoruz.
