@@ -1,8 +1,15 @@
 import { Server, Socket } from "socket.io";
 import { verifyToken } from "../../common/security/jwt";
 
-// WPPConnect/Puppeteer istemcisi proje kökünde düz JS olarak yazıldı (bkz. services/whatsappClient.js).
+// Baileys istemcisi proje kökünde düz JS olarak yazıldı (bkz. services/whatsappClient.js).
 const whatsappClient = require("../../../services/whatsappClient");
+
+interface DiagnosticStep {
+  step: string;
+  timestamp: number;
+  durationMs: number | null;
+  detail: string | null;
+}
 
 interface WhatsAppState {
   status: string;
@@ -11,6 +18,7 @@ interface WhatsAppState {
   maxAttempts: number;
   lastError: string | null;
   lastConnectedAt: number | null;
+  diagnosticHistory: DiagnosticStep[];
 }
 
 function emitSnapshot(target: Socket | Server, state: WhatsAppState) {
@@ -37,7 +45,11 @@ export function registerWhatsAppGateway(io: Server) {
   });
 
   io.on("connection", (socket) => {
-    emitSnapshot(socket, whatsappClient.getState());
+    const state = whatsappClient.getState();
+    emitSnapshot(socket, state);
+    for (const step of state.diagnosticHistory as DiagnosticStep[]) {
+      socket.emit("wp:diagnostic_step", step);
+    }
 
     socket.on("wp:request_status", () => {
       emitSnapshot(socket, whatsappClient.getState());
@@ -54,5 +66,9 @@ export function registerWhatsAppGateway(io: Server) {
 
   whatsappClient.onStateChange((state: WhatsAppState) => {
     emitSnapshot(io, state);
+  });
+
+  whatsappClient.onDiagnostic((step: DiagnosticStep) => {
+    io.emit("wp:diagnostic_step", step);
   });
 }

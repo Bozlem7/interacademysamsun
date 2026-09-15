@@ -1,6 +1,6 @@
 import { io, Socket } from "socket.io-client";
 import { useAuthStore } from "../auth/authStore";
-import { useWhatsAppStore, WhatsAppStatus } from "./whatsappStore";
+import { useWhatsAppStore, WhatsAppDiagnosticStep, WhatsAppStatus } from "./whatsappStore";
 
 let socket: Socket | null = null;
 
@@ -27,6 +27,10 @@ export function connectWhatsAppSocket() {
 
   socket.on("wp:error", (payload: { message: string }) => {
     useWhatsAppStore.getState().setError(payload.message);
+  });
+
+  socket.on("wp:diagnostic_step", (payload: WhatsAppDiagnosticStep) => {
+    useWhatsAppStore.getState().addDiagnosticStep(payload);
   });
 }
 
