@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { apiClient } from "../../../lib/apiClient";
 import { ConfirmDialog } from "../../../components/common/Modal";
 import { useAuthStore } from "../../../features/auth/authStore";
+import { hasWhatsAppNotifyRecipient, StudentNotifyFields } from "../../../lib/notifyRecipients";
 
 interface PaymentRow {
   id: string;
@@ -11,7 +12,7 @@ interface PaymentRow {
   dueDate: string;
   amount: string;
   status: "odenmedi" | "odendi";
-  student: { id: string; fullName: string; tcNoMasked: string; motherPhone?: string; fatherPhone?: string };
+  student: { id: string; fullName: string; tcNoMasked: string } & StudentNotifyFields;
 }
 
 function isOverdue(p: PaymentRow) {
@@ -32,8 +33,13 @@ export function AdminPaymentsTab() {
   }
   useEffect(load, []);
 
+  function openConfirm(p: PaymentRow) {
+    if (!canConfirmPayment) return;
+    setConfirmTarget(p);
+  }
+
   async function markPaid() {
-    if (!confirmTarget) return;
+    if (!confirmTarget || !canConfirmPayment) return;
     await apiClient.patch(`/payments/${confirmTarget.id}/status`, { confirm: true });
     setConfirmTarget(null);
     load();
@@ -102,7 +108,7 @@ export function AdminPaymentsTab() {
       <div className="overflow-hidden rounded-2xl border border-slate-200 bg-paper2 dark:border-slate-800 dark:bg-surface">
         {filteredPayments.map((p) => {
           const overdue = isOverdue(p);
-          const phone = p.student.motherPhone || p.student.fatherPhone;
+          const canRemind = hasWhatsAppNotifyRecipient(p.student);
           return (
             <div key={p.id} className="flex flex-wrap items-center gap-3.5 border-b border-slate-100 px-5 py-3.5 last:border-0 dark:border-slate-800">
               <div className="min-w-[160px] flex-1">
@@ -118,23 +124,31 @@ export function AdminPaymentsTab() {
                   {p.periodMonth}/{p.periodYear} (vade: {p.dueDay}) · {p.amount} TL
                 </div>
               </div>
-              <button
-                disabled={p.status === "odendi" || !canConfirmPayment}
-                onClick={() => setConfirmTarget(p)}
-                title={!canConfirmPayment && p.status !== "odendi" ? "Ödemeyi onaylama yetkiniz bulunmuyor." : undefined}
-                className={`rounded-lg px-3.5 py-2 text-xs font-bold ${
-                  p.status === "odendi"
-                    ? "cursor-default bg-green-100 text-green-700"
-                    : !canConfirmPayment
-                      ? "cursor-not-allowed bg-slate-100 text-slate-400"
+              {canConfirmPayment ? (
+                <button
+                  disabled={p.status === "odendi"}
+                  onClick={() => openConfirm(p)}
+                  className={`rounded-lg px-3.5 py-2 text-xs font-bold ${
+                    p.status === "odendi"
+                      ? "cursor-default bg-green-100 text-green-700"
                       : overdue
                         ? "bg-red-100 text-red-700 hover:bg-red-200"
                         : "bg-amber-100 text-amber-700 hover:bg-amber-200"
-                }`}
-              >
-                {p.status === "odendi" ? "Ödendi" : "Ödenmedi"}
-              </button>
-              {phone && p.status === "odenmedi" && (
+                  }`}
+                >
+                  {p.status === "odendi" ? "Ödendi" : "Ödenmedi"}
+                </button>
+              ) : (
+                <span
+                  title="Ödemeyi onaylama yetkiniz bulunmuyor."
+                  className={`pointer-events-none select-none rounded-lg px-3.5 py-2 text-xs font-bold cursor-default ${
+                    p.status === "odendi" ? "bg-green-100 text-green-700" : "bg-slate-100 text-slate-400"
+                  }`}
+                >
+                  {p.status === "odendi" ? "Ödendi" : "Ödenmedi"}
+                </span>
+              )}
+              {canRemind && p.status === "odenmedi" && (
                 <button
                   onClick={() => sendReminder(p)}
                   disabled={remindingId === p.id}
