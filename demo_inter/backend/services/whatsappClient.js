@@ -33,6 +33,10 @@ const stateEmitter = new EventEmitter();
 const logger = pino({ level: "silent" });
 
 let whatsappClient = null;
+// Sadece "open" olunca degil, sock olusturulur olusmaz set edilir — reconnect oncesi eskisini
+// kapatabilmek icin. Baileys'in bilinen bir sorunu: onceki socket tam sonlanmadan yenisi
+// acilirsa WhatsApp sunuculari "Stream Errored (conflict)" (440) ile sonsuz dongu baslatiyor.
+let activeSocket = null;
 let isInitializing = false;
 // isInitializing true iken gelen bir "Yeniden Dene" istegi burada bekletilir; eskiden
 // bu durumda istek sessizce yok sayilir, kullaniciya hicbir geri bildirim gitmezdi
@@ -120,6 +124,21 @@ function wipeCorruptedSession(reason) {
   }
 }
 
+// Onceki socket'i tam olarak sonlandirmadan yenisini acmak, WhatsApp sunucularinda
+// "Stream Errored (conflict)" (440) dongusune yol aciyor (Baileys'in bilinen sorunu).
+// Yeni bir baglanti kurmadan once burasi cagrilir.
+function terminateActiveSocket(reason) {
+  if (!activeSocket) return;
+  const sockToClose = activeSocket;
+  activeSocket = null;
+  try {
+    sockToClose.ev.removeAllListeners();
+    sockToClose.end(new Error(reason || "Yeniden baslatiliyor"));
+  } catch (err) {
+    console.error("[whatsapp] Onceki socket sonlandirilirken hata (yok sayildi):", err.message);
+  }
+}
+
 function clearReconnectTimer() {
   if (reconnectTimer) {
     clearTimeout(reconnectTimer);
@@ -166,6 +185,7 @@ async function startSession() {
 
   isInitializing = true;
   clearReconnectTimer();
+  terminateActiveSocket("Yeni baglanti denemesi baslatiliyor");
   sessionStartedAt = Date.now();
   diagnosticHistory = [];
   recordDiagnostic("baslatiliyor");
@@ -199,6 +219,7 @@ async function startSession() {
       defaultQueryTimeoutMs: DEFAULT_QUERY_TIMEOUT_MS,
     });
     recordDiagnostic("socket_olusturuldu");
+    activeSocket = sock;
 
     sock.ev.on("creds.update", saveCreds);
 
@@ -240,6 +261,7 @@ async function startSession() {
 
       if (connection === "close") {
         whatsappClient = null;
+        if (activeSocket === sock) activeSocket = null;
         const statusCode = lastDisconnect?.error?.output?.statusCode;
         const errorMessage = lastDisconnect?.error?.message;
         const reasonText = `Bağlantı koptu (kod: ${statusCode ?? "bilinmiyor"})`;
