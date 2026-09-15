@@ -76,6 +76,8 @@ model User {
   username     String   @unique
   passwordHash String   @map("password_hash")
   role         UserRole
+  /// Yönetici hesapları arasında ek bir yetki ayrımı: aidat durumunu "Ödendi" olarak işaretleyebilme.
+  canManagePayments Boolean @default(false) @map("can_manage_payments")
   isActive     Boolean  @default(true) @map("is_active")
   createdAt    DateTime @default(now()) @map("created_at")
   updatedAt    DateTime @updatedAt @map("updated_at")

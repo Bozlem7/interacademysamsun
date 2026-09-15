@@ -17,6 +17,7 @@ export async function staffOrAdminLogin(kind: "staff" | "admin", username: strin
       fullName: string;
       specialty: "antrenor" | "diyetisyen" | "psikolog" | null;
       isGlobalStaff?: boolean;
+      canManagePayments?: boolean;
     };
     branch: BranchInfo;
   };

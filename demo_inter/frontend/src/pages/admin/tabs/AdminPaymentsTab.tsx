@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { apiClient } from "../../../lib/apiClient";
 import { ConfirmDialog } from "../../../components/common/Modal";
+import { useAuthStore } from "../../../features/auth/authStore";
 
 interface PaymentRow {
   id: string;
@@ -18,6 +19,7 @@ function isOverdue(p: PaymentRow) {
 }
 
 export function AdminPaymentsTab() {
+  const canConfirmPayment = useAuthStore((s) => s.canManagePayments);
   const [payments, setPayments] = useState<PaymentRow[]>([]);
   const [confirmTarget, setConfirmTarget] = useState<PaymentRow | null>(null);
   const [search, setSearch] = useState("");
@@ -117,14 +119,17 @@ export function AdminPaymentsTab() {
                 </div>
               </div>
               <button
-                disabled={p.status === "odendi"}
+                disabled={p.status === "odendi" || !canConfirmPayment}
                 onClick={() => setConfirmTarget(p)}
+                title={!canConfirmPayment && p.status !== "odendi" ? "Ödemeyi onaylama yetkiniz bulunmuyor." : undefined}
                 className={`rounded-lg px-3.5 py-2 text-xs font-bold ${
                   p.status === "odendi"
                     ? "cursor-default bg-green-100 text-green-700"
-                    : overdue
-                      ? "bg-red-100 text-red-700 hover:bg-red-200"
-                      : "bg-amber-100 text-amber-700 hover:bg-amber-200"
+                    : !canConfirmPayment
+                      ? "cursor-not-allowed bg-slate-100 text-slate-400"
+                      : overdue
+                        ? "bg-red-100 text-red-700 hover:bg-red-200"
+                        : "bg-amber-100 text-amber-700 hover:bg-amber-200"
                 }`}
               >
                 {p.status === "odendi" ? "Ödendi" : "Ödenmedi"}

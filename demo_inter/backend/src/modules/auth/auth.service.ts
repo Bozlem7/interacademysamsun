@@ -40,6 +40,8 @@ export async function loginStaffOrAdmin(username: string, password: string, bran
   const token = signToken({
     sub: user.id,
     role: user.role,
+    username: user.username,
+    canManagePayments: user.canManagePayments,
     staffId: user.staffProfile?.id,
     branchId: branch.id,
     branchCode: branch.code,
@@ -55,6 +57,7 @@ export async function loginStaffOrAdmin(username: string, password: string, bran
       fullName: user.staffProfile?.fullName ?? user.username,
       specialty: user.staffProfile?.specialty ?? null,
       isGlobalStaff,
+      canManagePayments: user.canManagePayments,
     },
     branch: { id: branch.id, name: branch.name, code: branch.code },
   };

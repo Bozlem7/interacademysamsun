@@ -27,7 +27,15 @@ export function AdminLoginPage() {
     setError("");
     try {
       const { token, user, branch } = await staffOrAdminLogin("admin", username, password, activeBranch.code);
-      login({ token, role: "yonetici", displayName: user.username, roleLabel: "Yönetici Oturumu", branch });
+      login({
+        token,
+        role: "yonetici",
+        username: user.username,
+        displayName: user.username,
+        roleLabel: "Yönetici Oturumu",
+        branch,
+        canManagePayments: user.canManagePayments,
+      });
       navigate("/yonetici/panel");
     } catch (e: any) {
       setError(e.response?.data?.error?.message ?? "Giriş başarısız");

@@ -5,6 +5,8 @@ import { UserRole } from "@prisma/client";
 export interface AuthTokenPayload {
   sub: string; // user id
   role: UserRole;
+  username?: string;
+  canManagePayments?: boolean;
   staffId?: string;
   studentId?: string;
   /** Active branch for this session — always present after login (admin picks it at login too). */

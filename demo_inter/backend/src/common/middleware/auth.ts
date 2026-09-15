@@ -30,3 +30,12 @@ export function requireRole(...roles: UserRole[]) {
     next();
   };
 }
+
+/** Yönetici hesapları arasında ek ayrım gerektiren işlemler için (örn. ödeme onayı yalnızca yetkili hesaba özel). */
+export function requireCanManagePayments() {
+  return (req: Request, _res: Response, next: NextFunction) => {
+    if (!req.auth) throw new UnauthorizedError();
+    if (!req.auth.canManagePayments) throw new ForbiddenError();
+    next();
+  };
+}

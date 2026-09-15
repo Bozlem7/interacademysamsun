@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { z } from "zod";
 import { prisma } from "../../config/prisma";
-import { requireAuth, requireRole } from "../../common/middleware/auth";
+import { requireAuth, requireRole, requireCanManagePayments } from "../../common/middleware/auth";
 import { validateBody } from "../../common/middleware/validate";
 import { ForbiddenError, NotFoundError } from "../../common/errors/AppError";
 import * as service from "./payments.service";
@@ -29,14 +29,20 @@ paymentsRouter.get("/", async (req, res) => {
 
 const markPaidSchema = z.object({ confirm: z.literal(true) });
 
-paymentsRouter.patch("/:id/status", requireRole("yonetici"), validateBody(markPaidSchema), async (req, res) => {
-  const existing = await prisma.payment.findUnique({ where: { id: req.params.id }, include: { student: true } });
-  if (!existing) throw new NotFoundError("Ödeme kaydı bulunamadı");
-  if (existing.student.branchId !== req.auth!.branchId) throw new ForbiddenError("Bu ödeme farklı bir şubeye ait");
+paymentsRouter.patch(
+  "/:id/status",
+  requireRole("yonetici"),
+  requireCanManagePayments(),
+  validateBody(markPaidSchema),
+  async (req, res) => {
+    const existing = await prisma.payment.findUnique({ where: { id: req.params.id }, include: { student: true } });
+    if (!existing) throw new NotFoundError("Ödeme kaydı bulunamadı");
+    if (existing.student.branchId !== req.auth!.branchId) throw new ForbiddenError("Bu ödeme farklı bir şubeye ait");
 
-  const payment = await service.markPaymentPaid(req.params.id, req.auth!.sub, req.body.confirm);
-  res.json(payment);
-});
+    const payment = await service.markPaymentPaid(req.params.id, req.auth!.sub, req.body.confirm);
+    res.json(payment);
+  }
+);
 
 paymentsRouter.post("/generate-period", requireRole("yonetici"), async (_req, res) => {
   res.json(await service.generateMonthlyPayments());
