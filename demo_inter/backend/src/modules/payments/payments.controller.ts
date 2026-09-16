@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { z } from "zod";
 import { prisma } from "../../config/prisma";
-import { requireAuth, requireRole, requireCanManagePayments } from "../../common/middleware/auth";
+import { requireAuth, requireRole, requirePaymentConfirmationAccess } from "../../common/middleware/auth";
 import { validateBody } from "../../common/middleware/validate";
 import { ForbiddenError, NotFoundError } from "../../common/errors/AppError";
 import * as service from "./payments.service";
@@ -32,7 +32,7 @@ const markPaidSchema = z.object({ confirm: z.literal(true) });
 paymentsRouter.patch(
   "/:id/status",
   requireRole("yonetici"),
-  requireCanManagePayments(),
+  requirePaymentConfirmationAccess(),
   validateBody(markPaidSchema),
   async (req, res) => {
     const existing = await prisma.payment.findUnique({ where: { id: req.params.id }, include: { student: true } });

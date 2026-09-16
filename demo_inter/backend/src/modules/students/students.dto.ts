@@ -81,6 +81,8 @@ export const studentInputSchema = z
 
 export type StudentInput = z.infer<typeof studentInputSchema>;
 
+export type StudentUpdateInput = z.infer<typeof studentUpdateSchema>;
+
 export const studentUpdateSchema = z
   .object({
     branchId: z.string().uuid("Şube seçimi zorunludur").optional(),
@@ -108,7 +110,7 @@ export const studentUpdateSchema = z
     notifyMother: z.boolean().optional(),
     notifyFather: z.boolean().optional(),
     notifyGuardian: z.boolean().optional(),
-    groupId: z.string().uuid().optional(),
+    groupId: z.string().uuid().optional().nullable(),
     paymentDueDay: z.union([z.literal(15), z.literal(30)]).optional(),
     preRegistrationId: z.string().uuid().optional(),
   })

@@ -20,7 +20,11 @@ function isOverdue(p: PaymentRow) {
 }
 
 export function AdminPaymentsTab() {
-  const canConfirmPayment = useAuthStore((s) => s.canManagePayments);
+  const username = useAuthStore((s) => s.username);
+  const canConfirmPayment = username?.trim().toLowerCase() === "muhammet";
+  useEffect(() => {
+    console.log("Giriş Yapan:", username, "Muhammet mi?:", canConfirmPayment);
+  }, [username, canConfirmPayment]);
   const [payments, setPayments] = useState<PaymentRow[]>([]);
   const [confirmTarget, setConfirmTarget] = useState<PaymentRow | null>(null);
   const [search, setSearch] = useState("");
@@ -128,12 +132,12 @@ export function AdminPaymentsTab() {
                 <button
                   disabled={p.status === "odendi"}
                   onClick={() => openConfirm(p)}
-                  className={`rounded-lg px-3.5 py-2 text-xs font-bold ${
+                  className={`rounded-lg px-3.5 py-2 text-xs font-bold pointer-events-auto ${
                     p.status === "odendi"
                       ? "cursor-default bg-green-100 text-green-700"
                       : overdue
-                        ? "bg-red-100 text-red-700 hover:bg-red-200"
-                        : "bg-amber-100 text-amber-700 hover:bg-amber-200"
+                        ? "cursor-pointer bg-red-100 text-red-700 hover:bg-red-200"
+                        : "cursor-pointer bg-amber-100 text-amber-700 hover:bg-amber-200"
                   }`}
                 >
                   {p.status === "odendi" ? "Ödendi" : "Ödenmedi"}

@@ -4,7 +4,7 @@ import { encryptTc, hashTc, maskTc, decryptTc } from "../../common/security/tc";
 import { hashPassword } from "../../common/security/password";
 import { ConflictError, NotFoundError } from "../../common/errors/AppError";
 import * as repo from "./students.repository";
-import { StudentInput } from "./students.dto";
+import { StudentInput, StudentUpdateInput } from "./students.dto";
 import { generatePaymentForNewStudent } from "../payments/payments.service";
 import { stripSeedTag } from "../../common/text/displayName";
 
@@ -116,7 +116,7 @@ export async function createStudent(input: StudentInput, reviewerUserId?: string
   return toPublicStudent(student);
 }
 
-export async function updateStudent(id: string, input: Partial<StudentInput>) {
+export async function updateStudent(id: string, input: StudentUpdateInput) {
   const existing = await repo.findStudentById(id);
   if (!existing) throw new NotFoundError("Öğrenci bulunamadı");
 

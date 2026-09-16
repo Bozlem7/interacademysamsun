@@ -31,11 +31,14 @@ export function requireRole(...roles: UserRole[]) {
   };
 }
 
-/** Yönetici hesapları arasında ek ayrım gerektiren işlemler için (örn. ödeme onayı yalnızca yetkili hesaba özel). */
-export function requireCanManagePayments() {
+/** Ödeme durumunu ("Ödendi/Ödenmedi") değiştirme yetkisi kesin olarak "muhammet" kullanıcı adına özeldir. */
+export function requirePaymentConfirmationAccess() {
   return (req: Request, _res: Response, next: NextFunction) => {
     if (!req.auth) throw new UnauthorizedError();
-    if (!req.auth.canManagePayments) throw new ForbiddenError();
+    const username = req.auth.username?.trim().toLowerCase();
+    if (username !== "muhammet") {
+      throw new ForbiddenError("Ödeme durumunu güncelleme yetkiniz bulunmamaktadır.");
+    }
     next();
   };
 }
