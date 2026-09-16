@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { Link } from "react-router-dom";
 import { apiClient } from "../../lib/apiClient";
 import { useAuthStore } from "../../features/auth/authStore";
 import {
@@ -63,6 +64,12 @@ export function ParentDashboardPage() {
         <div className="flex-1">
           <div className="text-xl font-extrabold text-slate-900 dark:text-white">{displayName}</div>
         </div>
+        <Link
+          to="/veli/yoklama"
+          className="rounded-xl bg-brand px-4 py-2.5 text-xs font-extrabold text-white hover:bg-brand-hover"
+        >
+          📊 Yoklama Raporu
+        </Link>
       </div>
 
       <div className="grid gap-5 p-7 md:grid-cols-2">

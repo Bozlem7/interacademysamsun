@@ -34,6 +34,9 @@ enum SessionType {
 enum AttendanceStatus {
   var
   yok
+  /// İzinli/raporlu devamsızlık — "yok" (mazeretsiz devamsızlık) ile aynı davranışta
+  /// sayılmaz, veli yoklama raporunda ayrı bir (sarı/turuncu) rozetle gösterilir.
+  izinli
 }
 
 enum PaymentStatus {

@@ -3,6 +3,7 @@ import { GlobalShell } from "./app/GlobalShell";
 import { HomePage } from "./pages/landing/HomePage";
 import { ParentLoginPage } from "./pages/parent/ParentLoginPage";
 import { ParentDashboardPage } from "./pages/parent/ParentDashboardPage";
+import { ParentAttendanceReportPage } from "./pages/parent/ParentAttendanceReportPage";
 import { StaffLoginPage } from "./pages/staff/StaffLoginPage";
 import { StaffPanelPage } from "./pages/staff/StaffPanelPage";
 import { AdminLoginPage } from "./pages/admin/AdminLoginPage";
@@ -19,6 +20,7 @@ export default function App() {
           <Route path="/veli" element={<ParentLoginPage />} />
           <Route element={<ProtectedRoute allow={["veli"]} />}>
             <Route path="/veli/panel" element={<ParentDashboardPage />} />
+            <Route path="/veli/yoklama" element={<ParentAttendanceReportPage />} />
           </Route>
 
           <Route path="/egitmen" element={<StaffLoginPage />} />

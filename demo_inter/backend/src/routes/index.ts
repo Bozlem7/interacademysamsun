@@ -15,6 +15,7 @@ import { contentRouter } from "../modules/content/content.controller";
 import { announcementsRouter } from "../modules/announcements/announcements.controller";
 import { uploadsRouter } from "../modules/uploads/uploads.controller";
 import { whatsappRouter } from "../modules/whatsapp/whatsapp.controller";
+import { parentRouter } from "../modules/parent/parent.controller";
 
 // WPPConnect ile anlık "Hatırlat" ucu (bkz. controllers/paymentController.js) — TS
 // derlemesinin (rootDir: src) dışındaki düz JS router'ı require() ile ekleniyor.
@@ -43,3 +44,4 @@ apiRouter.use("/content", contentRouter);
 apiRouter.use("/announcements", announcementsRouter);
 apiRouter.use("/uploads", uploadsRouter);
 apiRouter.use("/whatsapp", whatsappRouter);
+apiRouter.use("/parent", parentRouter);

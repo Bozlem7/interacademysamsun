@@ -1,12 +1,20 @@
 import { useEffect, useState } from "react";
 import { apiClient } from "../../../lib/apiClient";
-
-type LessonType = "antrenman" | "diyetisyen" | "psikolog";
+import {
+  AttendanceRowStatus,
+  ATTENDANCE_STATUS_BADGE_CLASS,
+  ATTENDANCE_STATUS_LABEL,
+  formatDateWithDay,
+  LessonType,
+  LESSON_TYPE_LABEL,
+} from "../../../lib/attendanceStatus";
 
 interface AttendanceReportRow {
   date: string;
   lessonType: LessonType;
-  status: "geldi" | "gelmedi";
+  status: AttendanceRowStatus;
+  groupName: string | null;
+  markedByName: string | null;
   notes: string | null;
 }
 
@@ -17,24 +25,11 @@ interface AttendanceReport {
     totalSessions: number;
     attended: number;
     absent: number;
+    excused: number;
+    attendanceRate: number;
     byLessonType: Record<LessonType, { attended: number; total: number }>;
   };
   history: AttendanceReportRow[];
-}
-
-const LESSON_TYPE_LABEL: Record<LessonType, string> = {
-  antrenman: "Antrenman",
-  diyetisyen: "Diyetisyen",
-  psikolog: "Psikolog",
-};
-
-function formatDateWithDay(isoDate: string): string {
-  // "2026-09-16" -> yerel saat dilimi kaymasına takılmadan doğrudan UTC tarih olarak ayrıştırılır.
-  const d = new Date(`${isoDate}T00:00:00Z`);
-  const dayLabel = d.toLocaleDateString("tr-TR", { weekday: "long", timeZone: "UTC" });
-  const day = String(d.getUTCDate()).padStart(2, "0");
-  const month = String(d.getUTCMonth() + 1).padStart(2, "0");
-  return `${day}.${month}.${d.getUTCFullYear()} ${dayLabel}`;
 }
 
 export function AttendanceReportModal({
@@ -96,7 +91,7 @@ export function AttendanceReportModal({
 
         {report && !loading && !error && (
           <>
-            <div className="mb-5 grid grid-cols-2 gap-2.5 sm:grid-cols-3">
+            <div className="mb-5 grid grid-cols-2 gap-2.5 sm:grid-cols-4">
               <div className="rounded-2xl border border-slate-200 bg-paper2 px-4 py-3.5 dark:border-slate-800 dark:bg-surface2">
                 <div className="text-xs font-bold text-slate-400">TOPLAM DERS</div>
                 <div className="text-lg font-extrabold text-slate-700 dark:text-slate-200">{report.summary.totalSessions}</div>
@@ -108,6 +103,10 @@ export function AttendanceReportModal({
               <div className="rounded-2xl border border-slate-200 bg-paper2 px-4 py-3.5 dark:border-slate-800 dark:bg-surface2">
                 <div className="text-xs font-bold text-slate-400">GELMEDİ</div>
                 <div className="text-lg font-extrabold text-red-600 dark:text-red-400">{report.summary.absent}</div>
+              </div>
+              <div className="rounded-2xl border border-slate-200 bg-paper2 px-4 py-3.5 dark:border-slate-800 dark:bg-surface2">
+                <div className="text-xs font-bold text-slate-400">İZİNLİ</div>
+                <div className="text-lg font-extrabold text-amber-600 dark:text-amber-400">{report.summary.excused}</div>
               </div>
             </div>
 
@@ -147,14 +146,8 @@ export function AttendanceReportModal({
                         </td>
                         <td className="px-3 py-2.5 text-slate-600 dark:text-slate-300">{LESSON_TYPE_LABEL[row.lessonType]}</td>
                         <td className="px-3 py-2.5">
-                          <span
-                            className={`rounded-full px-2 py-0.5 text-[10px] font-extrabold ${
-                              row.status === "geldi"
-                                ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
-                                : "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"
-                            }`}
-                          >
-                            {row.status === "geldi" ? "Geldi" : "Gelmedi"}
+                          <span className={`rounded-full px-2 py-0.5 text-[10px] font-extrabold ${ATTENDANCE_STATUS_BADGE_CLASS[row.status]}`}>
+                            {ATTENDANCE_STATUS_LABEL[row.status]}
                           </span>
                         </td>
                         <td className="px-3 py-2.5 text-slate-500 dark:text-slate-400">{row.notes ?? "—"}</td>
