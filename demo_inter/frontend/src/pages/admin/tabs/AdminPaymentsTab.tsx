@@ -103,6 +103,10 @@ export function AdminPaymentsTab() {
     <div className="p-7">
       <div className="mb-4 flex flex-wrap items-center gap-2.5">
         <div className="rounded-2xl border border-slate-200 bg-paper2 px-4 py-3.5 dark:border-slate-800 dark:bg-surface">
+          <div className="text-xs font-bold text-slate-400">TOPLAM KAYIT</div>
+          <div className="text-base font-extrabold text-slate-700 dark:text-slate-200">{filteredPayments.length}</div>
+        </div>
+        <div className="rounded-2xl border border-slate-200 bg-paper2 px-4 py-3.5 dark:border-slate-800 dark:bg-surface">
           <div className="text-xs font-bold text-slate-400">BEKLEYEN ÖDEME</div>
           <div className="text-base font-extrabold text-amber-600">{unpaidCount}</div>
         </div>
@@ -121,7 +125,7 @@ export function AdminPaymentsTab() {
       />
 
       <div className="overflow-hidden rounded-2xl border border-slate-200 bg-paper2 dark:border-slate-800 dark:bg-surface">
-        {filteredPayments.map((p) => {
+        {filteredPayments.map((p, index) => {
           const overdue = isOverdue(p);
           const canRemind = hasWhatsAppNotifyRecipient(p.student);
           const primaryRecipient = getWhatsAppNotifyPrimaryRecipient(p.student);
@@ -129,6 +133,9 @@ export function AdminPaymentsTab() {
             <div key={p.id} className="flex flex-wrap items-center gap-3.5 border-b border-slate-100 px-5 py-3.5 last:border-0 dark:border-slate-800">
               <div className="min-w-[160px] flex-1">
                 <div className="flex items-center gap-2">
+                  <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-slate-100 text-[10px] font-extrabold text-slate-500 dark:bg-surface2 dark:text-slate-400">
+                    {index + 1}
+                  </span>
                   <div className="text-sm font-bold text-slate-800 dark:text-slate-100">{p.student.fullName}</div>
                   {overdue && (
                     <span className="rounded-full bg-red-100 px-2 py-0.5 text-[10px] font-extrabold text-red-700 dark:bg-red-900/30 dark:text-red-400">
