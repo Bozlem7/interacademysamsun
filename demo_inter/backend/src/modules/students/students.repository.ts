@@ -30,7 +30,9 @@ export function createStudent(data: Prisma.StudentCreateInput) {
 }
 
 export function updateStudent(id: string, data: Prisma.StudentUpdateInput) {
-  return prisma.student.update({ where: { id }, data });
+  // include: group şart — aksi halde yanıt sadece ham groupId döner, ilişkisel { id, name }
+  // gelmez ve frontend'deki liste, grup değişse bile eski grup adını göstermeye devam eder.
+  return prisma.student.update({ where: { id }, data, include: { group: true } });
 }
 
 export function deleteStudent(id: string) {
