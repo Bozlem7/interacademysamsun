@@ -1,11 +1,17 @@
 import cron from "node-cron";
-import { generateMonthlyPayments, runOverdueNotificationCheck } from "./payments.service";
+import { generateMonthlyPayments } from "./payments.service";
 
 /**
- * Registers the two payment-related cron jobs described in the architecture doc:
+ * Registers the period-generation cron job:
  * - 1st of month, 00:05: generate this month's payment rows for every student.
- * - Every day, 09:00: find every payment where `dueDate < today && status === 'odenmedi'`
- *   and fire an overdue WhatsApp notification (once per payment, guarded by overdueNotifiedAt).
+ *
+ * The actual overdue-reminder WhatsApp notification (vade tarihi + 2 gün, 12:00-13:00 arası)
+ * is handled by the WPPConnect-based `jobs/paymentReminderCron.js`, registered in server.ts —
+ * that is the system with a live WhatsApp session configured. The Cloud API-based
+ * `runOverdueNotificationCheck` job was removed from here to avoid two parallel reminder
+ * systems double-notifying the same parent; `WHATSAPP_API_TOKEN` is unset in this project,
+ * so it was a no-op stub anyway. Its implementation still lives in payments.service.ts if the
+ * Cloud API integration is set up in the future.
  */
 export function registerPaymentCronJobs() {
   cron.schedule("5 0 1 * *", async () => {
@@ -14,15 +20,6 @@ export function registerPaymentCronJobs() {
       console.info("[cron] generateMonthlyPayments", result);
     } catch (err) {
       console.error("[cron] generateMonthlyPayments failed", err);
-    }
-  });
-
-  cron.schedule("0 9 * * *", async () => {
-    try {
-      const result = await runOverdueNotificationCheck();
-      console.info("[cron] runOverdueNotificationCheck", result);
-    } catch (err) {
-      console.error("[cron] runOverdueNotificationCheck failed", err);
     }
   });
 }

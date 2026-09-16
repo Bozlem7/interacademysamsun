@@ -2,7 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { PDFDocument } from "pdf-lib";
 import { prisma } from "../../config/prisma";
-import { NotFoundError, ValidationError } from "../../common/errors/AppError";
+import { AppError, NotFoundError, ValidationError } from "../../common/errors/AppError";
 
 const STORAGE_ROOT = path.join(process.cwd(), "storage", "documents");
 
@@ -59,12 +59,23 @@ export async function uploadRegistrationDocuments(studentId: string, files: Uplo
   const student = await prisma.student.findUnique({ where: { id: studentId }, include: { branch: true } });
   if (!student) throw new NotFoundError("Öğrenci bulunamadı");
 
-  const pdfBytes = await mergeIntoPdf(files);
+  let pdfBytes: Uint8Array;
+  try {
+    pdfBytes = await mergeIntoPdf(files);
+  } catch (err) {
+    console.error(`[studentDocuments] PDF birleştirme başarısız (studentId=${studentId}):`, err);
+    throw new ValidationError("Yüklenen dosyalar geçerli bir görsel/PDF olarak işlenemedi");
+  }
 
   const branchDir = path.join(STORAGE_ROOT, student.branch.code);
-  fs.mkdirSync(branchDir, { recursive: true });
   const fileName = `${studentId}_kayit_belgeleri.pdf`;
-  fs.writeFileSync(path.join(branchDir, fileName), pdfBytes);
+  try {
+    fs.mkdirSync(branchDir, { recursive: true });
+    fs.writeFileSync(path.join(branchDir, fileName), pdfBytes);
+  } catch (err) {
+    console.error(`[studentDocuments] Diske yazma başarısız (studentId=${studentId}, dir=${branchDir}):`, err);
+    throw new AppError(500, "Evrak diske yazılamadı, sunucu izinlerini kontrol edin");
+  }
 
   const registrationPdfUrl = `/storage/documents/${student.branch.code}/${fileName}`;
   await prisma.student.update({ where: { id: studentId }, data: { registrationPdfUrl } });

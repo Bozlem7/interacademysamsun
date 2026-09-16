@@ -263,6 +263,7 @@ model Payment {
   overdueNotifiedAt DateTime?     @map("overdue_notified_at")
   autoReminderSent  Boolean       @default(false) @map("auto_reminder_sent")
   lastReminderDate  DateTime?     @map("last_reminder_date")
+  reminderCount     Int           @default(0) @map("reminder_count")
   createdAt         DateTime      @default(now()) @map("created_at")
   updatedAt         DateTime      @updatedAt @map("updated_at")
 

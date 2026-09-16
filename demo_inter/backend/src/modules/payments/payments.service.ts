@@ -130,12 +130,13 @@ export async function markPaymentPaid(paymentId: string, confirmedByUserId: stri
 }
 
 /**
- * Daily overdue-payment trigger — run once a day (e.g. 09:00).
+ * Cloud API-based overdue check — not wired to an automatic cron (no `WHATSAPP_API_TOKEN`
+ * configured in this project), only reachable via the manual `POST /payments/run-overdue-check`
+ * admin endpoint. The automatic daily reminder runs through the WPPConnect-based
+ * `jobs/paymentReminderCron.js` instead (vade tarihi + 2 gün, her gün 12:00).
  * Condition: `dueDate < today && status === 'odenmedi'` (the "UNPAID" status) for every
- * period, not just the one whose due day happens to match today — this way a payment that
- * becomes overdue never slips through just because the cron missed its exact due day
- * (a restart, a deploy, etc.). `overdueNotifiedAt IS NULL` guard makes reruns a no-op
- * (each overdue payment is only notified once).
+ * period. `overdueNotifiedAt IS NULL` guard makes reruns a no-op (each overdue payment is
+ * only notified once).
  */
 export async function runOverdueNotificationCheck(referenceDate: Date = new Date()) {
   const startOfToday = new Date(Date.UTC(referenceDate.getUTCFullYear(), referenceDate.getUTCMonth(), referenceDate.getUTCDate()));

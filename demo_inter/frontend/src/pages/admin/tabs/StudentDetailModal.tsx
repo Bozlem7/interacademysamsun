@@ -226,9 +226,7 @@ export function StudentDetailModal({
     try {
       const formData = new FormData();
       docFiles.forEach((f) => formData.append("files", f));
-      await apiClient.post(`/students/${studentId}/upload-documents`, formData, {
-        headers: { "Content-Type": "multipart/form-data" },
-      });
+      await apiClient.post(`/students/${studentId}/upload-documents`, formData);
       setDocFiles([]);
       setDocUploadOpen(false);
       loadDetail();

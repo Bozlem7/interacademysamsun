@@ -19,11 +19,11 @@ registerWhatsAppGateway(io);
 httpServer.listen(env.port, () => {
   console.log(`Inter Academy API listening on port ${env.port} (${env.nodeEnv})`);
 
-  // Mevcut Cloud API tabanlı ödeme hatırlatma job'ı
+  // Aylık aidat kaydı üretim job'ı (her ayın 1'i, 00:05)
   registerPaymentCronJobs();
 
   // WPPConnect oturumunu başlat (kalıcı oturum varsa QR sormadan bağlanır) ve bağlı client
-  // hazır olunca wppconnect tabanlı aidat hatırlatma cron'unu (her gün 09:30) devreye al.
+  // hazır olunca wppconnect tabanlı aidat hatırlatma cron'unu (vade tarihi + 2 gün, her gün 12:00) devreye al.
   initWhatsApp()
     .then(() => startPaymentReminderCron())
     .catch((err: unknown) => console.error("[whatsapp] Baslatilamadi:", err));

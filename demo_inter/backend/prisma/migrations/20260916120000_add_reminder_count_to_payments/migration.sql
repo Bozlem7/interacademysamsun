@@ -1,0 +1,1 @@
+ALTER TABLE "payments" ADD COLUMN "reminder_count" INTEGER NOT NULL DEFAULT 0;

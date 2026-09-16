@@ -185,9 +185,7 @@ export function StudentFormModal({
         const formData = new FormData();
         docFiles.forEach((f) => formData.append("files", f));
         try {
-          await apiClient.post(`/students/${created.id}/upload-documents`, formData, {
-            headers: { "Content-Type": "multipart/form-data" },
-          });
+          await apiClient.post(`/students/${created.id}/upload-documents`, formData);
         } catch {
           // Öğrenci kaydı zaten başarılı oldu — evrak birleştirme başarısız olursa yönetici
           // detay ekranından tekrar deneyebilir; kaydı bu yüzden geri almıyoruz.

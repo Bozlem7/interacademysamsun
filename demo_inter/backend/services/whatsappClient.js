@@ -353,9 +353,12 @@ async function logoutSession() {
     console.error("[whatsapp] Oturum dizini temizlenemedi:", err.message);
   }
 
+  // Manuel "Bağlantıyı Kes" işleminden sonra oturum kasıtlı olarak kapalı bırakılır — otomatik
+  // yeniden QR üretimi başlatılmaz. Yönetici tekrar bağlanmak isterse "Yeniden Bağlan" ile
+  // (requestReconnect) açıkça yeni bir oturum başlatabilir.
   setState({ status: "DISCONNECTED", qrBase64: null, attempt: 0, lastConnectedAt: null, lastError: null });
 
-  return startSession();
+  return null;
 }
 
 async function initWhatsApp() {
