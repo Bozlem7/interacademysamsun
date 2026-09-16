@@ -100,7 +100,11 @@ export function ConfirmDialog({
 }) {
   if (!open) return null;
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 p-5" onClick={onCancel}>
+    // z-[10000]: ConfirmDialog genellikle zaten açık bir Modal'ın (z-[9999]) içinden/yanından
+    // tetiklenir (ör. "Evrak Sil" onayı). z-50 kullanıldığında üst Modal'ın tam ekran backdrop'ı
+    // (kendi onClick={onClose}'uyla) üstte kalıp tüm tıklamaları yutuyor, onay butonuna hiç
+    // ulaşılamıyordu — ErrorDialog ile aynı üst katmana (z-[10000]) çekildi.
+    <div className="fixed inset-0 z-[10000] flex items-center justify-center bg-slate-950/60 p-5" onClick={onCancel}>
       <div className="w-full max-w-sm rounded-2xl bg-paper2 p-6 dark:bg-surface" onClick={(e) => e.stopPropagation()}>
         <div className="mb-2 text-lg font-extrabold text-slate-900 dark:text-white">{title}</div>
         <div className="mb-5 text-sm leading-relaxed text-slate-600 dark:text-slate-400">{body}</div>
