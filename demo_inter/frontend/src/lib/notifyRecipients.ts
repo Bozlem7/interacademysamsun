@@ -1,6 +1,9 @@
 export interface StudentNotifyFields {
+  motherName?: string | null;
   motherPhone?: string | null;
+  fatherName?: string | null;
   fatherPhone?: string | null;
+  emergencyName?: string | null;
   emergencyPhone?: string | null;
   notifyMother?: boolean;
   notifyFather?: boolean;
@@ -17,4 +20,13 @@ export function hasWhatsAppNotifyRecipient(student: StudentNotifyFields): boolea
     (!!student.notifyFather && !!student.fatherPhone) ||
     (!!student.notifyGuardian && !!student.emergencyPhone)
   );
+}
+
+/** WhatsApp bildirimi gidecek kişi(ler)in adını döner — "Anne", "Baba" veya "Vasi/Yakın" etiketiyle. */
+export function getWhatsAppNotifyRecipientNames(student: StudentNotifyFields): string[] {
+  const names: string[] = [];
+  if (student.notifyMother && student.motherPhone && student.motherName) names.push(student.motherName);
+  if (student.notifyFather && student.fatherPhone && student.fatherName) names.push(student.fatherName);
+  if (student.notifyGuardian && student.emergencyPhone && student.emergencyName) names.push(student.emergencyName);
+  return names;
 }
