@@ -30,6 +30,20 @@ function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+const SEND_TIMEOUT_MS = 8000;
+
+// Baglanti "CONNECTED" gorunse bile socket gercekte yanit vermiyor olabilir (ör. bozuk/askida
+// kalmis WebSocket) — client.sendMessage() boyle bir durumda sonsuza kadar askida kalabilir.
+// Bu yuzden sabit bir ust sinir koyup, suresi dolarsa net bir hata ile kullaniciya donuyoruz.
+function sendWithTimeout(client, jid, messageText) {
+  return Promise.race([
+    client.sendMessage(jid, { text: messageText }),
+    new Promise((_, reject) =>
+      setTimeout(() => reject(new Error("WhatsApp bağlantınız iyi değil veya yanıt vermiyor.")), SEND_TIMEOUT_MS)
+    ),
+  ]);
+}
+
 async function sendTextMessage(toPhone, messageText) {
   const client = getWhatsAppClient();
   const currentStatus = getState().status;
@@ -54,7 +68,7 @@ async function sendTextMessage(toPhone, messageText) {
 
   for (let attempt = 1; attempt <= 2; attempt++) {
     try {
-      const result = await client.sendMessage(jid, { text: messageText });
+      const result = await sendWithTimeout(client, jid, messageText);
       console.log(`[whatsapp] Mesaj basariyla gonderildi -> ${jid}`);
       return { success: true, result };
     } catch (error) {

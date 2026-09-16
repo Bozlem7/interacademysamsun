@@ -3,6 +3,7 @@ import { apiClient } from "../../../lib/apiClient";
 import { ConfirmDialog } from "../../../components/common/Modal";
 import { useAuthStore } from "../../../features/auth/authStore";
 import { hasWhatsAppNotifyRecipient, StudentNotifyFields } from "../../../lib/notifyRecipients";
+import { useWhatsAppStore } from "../../../features/whatsapp/whatsappStore";
 
 interface PaymentRow {
   id: string;
@@ -49,7 +50,17 @@ export function AdminPaymentsTab() {
     load();
   }
 
+  const whatsappStatus = useWhatsAppStore((s) => s.status);
+
   async function sendReminder(p: PaymentRow) {
+    if (whatsappStatus !== "CONNECTED") {
+      setRemindResult({
+        id: p.id,
+        ok: false,
+        text: "WhatsApp bağlantınız aktif veya stabil değil. Lütfen bağlantınızı kontrol edip tekrar deneyin.",
+      });
+      return;
+    }
     setRemindingId(p.id);
     setRemindResult(null);
     try {
