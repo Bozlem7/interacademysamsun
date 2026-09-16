@@ -19,6 +19,15 @@ const MONTH_NAMES = [
   "Temmuz", "Ağustos", "Eylül", "Ekim", "Kasım", "Aralık",
 ];
 
+// Hızlı Mesaj şablonları — {ogrenci_adi} yer tutucusu backend'de her öğrenci için kendi
+// ismiyle değiştirilir (toplu gönderimde her veli kendi çocuğunun adını görür).
+const QUICK_MESSAGE_TEMPLATES = [
+  { label: "Katıldı", text: "Öğrenciniz {ogrenci_adi} bugünkü antrenmana/derse katılmıştır." },
+  { label: "Katılmadı", text: "Öğrenciniz {ogrenci_adi} bugünkü antrenmana/derse katılmamıştır." },
+  { label: "İzinli", text: "Öğrenciniz {ogrenci_adi} bugünkü derse izinli olarak katılmamıştır." },
+  { label: "Sakatlık/Rahatsızlık", text: "Öğrenciniz {ogrenci_adi} bugün ders sırasında hafif bir sakatlık/rahatsızlık yaşamıştır." },
+];
+
 export function StaffPanelPage() {
   const { displayName, specialty } = useAuthStore();
   const theme = SPECIALTY_THEME[specialty ?? "antrenor"];
@@ -31,6 +40,7 @@ export function StaffPanelPage() {
   const [attendanceSavedMessage, setAttendanceSavedMessage] = useState("");
   const [attendanceError, setAttendanceError] = useState("");
   const [attendanceNotifyWarning, setAttendanceNotifyWarning] = useState("");
+  const [attendanceMessage, setAttendanceMessage] = useState("");
 
   const [noteGroupId, setNoteGroupId] = useState("");
   const [noteRoster, setNoteRoster] = useState<RosterEntry[]>([]);
@@ -90,9 +100,10 @@ export function StaffPanelPage() {
     }
     setAttendanceSaving(true);
     try {
-      const { data } = await apiClient.post("/attendance/bulk", { records });
+      const message = attendanceMessage.trim() || undefined;
+      const { data } = await apiClient.post("/attendance/bulk", { records, message });
       setAttendanceSavedMessage(
-        `Yoklama kaydedildi ve gelmeyen ${data.notifiedCount} öğrencinin velisine WhatsApp bildirimi iletildi.`
+        `Yoklama kaydedildi ve ${data.notifiedCount} öğrencinin velisine WhatsApp bildirimi iletildi.`
       );
       // Yoklama kaydı başarılı olsa bile WhatsApp gönderimi kısmen/tamamen başarısız
       // olmuş olabilir (ör. WhatsApp bağlantısı kopuk) — bunu sessizce geçmeyelim.
@@ -202,6 +213,42 @@ export function StaffPanelPage() {
               <div className={`p-4 text-sm ${theme.infoBox}`}>Aramanızla eşleşen öğrenci bulunamadı.</div>
             )}
           </div>
+
+          {groupId && roster.length > 0 && (
+            <div className="mt-4 rounded-2xl border border-slate-200 bg-paper2 p-4 dark:border-slate-800 dark:bg-surface">
+              <div className="mb-2 text-xs font-bold text-slate-600 dark:text-slate-300">
+                Hızlı Mesaj (isteğe bağlı — seçilirse tüm işaretli öğrencilere bu metin gönderilir)
+              </div>
+              <div className="mb-3 flex flex-wrap gap-2">
+                {QUICK_MESSAGE_TEMPLATES.map((t) => (
+                  <button
+                    key={t.label}
+                    type="button"
+                    onClick={() => setAttendanceMessage(t.text)}
+                    className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-bold text-slate-700 hover:border-slate-300 dark:border-slate-700 dark:bg-surface2 dark:text-slate-200 dark:hover:border-slate-600"
+                  >
+                    {t.label}
+                  </button>
+                ))}
+                {attendanceMessage && (
+                  <button
+                    type="button"
+                    onClick={() => setAttendanceMessage("")}
+                    className="rounded-lg px-3 py-1.5 text-xs font-bold text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
+                  >
+                    Temizle
+                  </button>
+                )}
+              </div>
+              <textarea
+                value={attendanceMessage}
+                onChange={(e) => setAttendanceMessage(e.target.value)}
+                rows={3}
+                placeholder="Bir şablon seçin ya da kendi mesajınızı yazın… ({ogrenci_adi} yazarsanız her veliye kendi çocuğunun adıyla gider)"
+                className={`w-full rounded-xl border border-slate-200 bg-paper2 p-3 text-sm text-slate-900 outline-none dark:border-slate-700 dark:bg-surface2 dark:text-white ${theme.focusRing}`}
+              />
+            </div>
+          )}
 
           {groupId && roster.length > 0 && (
             <div className="mt-4">

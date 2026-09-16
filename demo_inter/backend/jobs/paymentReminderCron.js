@@ -25,7 +25,13 @@ function buildReminderMessage(payment) {
   const ayAdi = TURKISH_MONTHS[payment.periodMonth - 1];
   return `Sayın Velimiz, sporcumuz ${studentName} adına ait ${ayAdi} dönemi aidat ödemesinin son günü ${formatDate(
     payment.dueDate
-  )} idi. Ödemenizin geciktiğini hatırlatır, en kısa sürede tamamlamanızı rica ederiz. Dekontunuzu bu hat üzerinden iletebilirsiniz. - Inter Academy Samsun`;
+  )} idi. Sistem kayıtlarımıza göre ödemeniz henüz yansımamış görünmektedir.
+
+Ödemenizi gerçekleştirdiyseniz lütfen bu mesajı dikkate almayınız ve dekontunuzu bu hat üzerinden bizimle paylaşınız. Henüz tamamlamadıysanız en kısa sürede ödemeyi gerçekleştirmenizi rica ederiz.
+
+Sağlıklı günler dileriz.
+
+Inter Academy Samsun`;
 }
 
 // Bugunun tarihinden (UTC gun baslangici) tam 2 gun once denk gelen takvim gununu dondurur.
