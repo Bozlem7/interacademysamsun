@@ -30,3 +30,23 @@ export function getWhatsAppNotifyRecipientNames(student: StudentNotifyFields): s
   if (student.notifyGuardian && student.emergencyPhone && student.emergencyName) names.push(student.emergencyName);
   return names;
 }
+
+export interface WhatsAppNotifyPrimaryRecipient {
+  role: "Anne" | "Baba" | "Yakını";
+  name: string;
+}
+
+// Kompakt/tek satır gösterimler için (ör. ödeme listesi kartı): birden fazla kişi işaretliyse
+// hepsini alt alta sıkıştırmak yerine tek bir öncelikli kişi gösterilir. Öncelik: Baba > Anne > Yakın.
+export function getWhatsAppNotifyPrimaryRecipient(student: StudentNotifyFields): WhatsAppNotifyPrimaryRecipient | null {
+  if (student.notifyFather && student.fatherPhone && student.fatherName) {
+    return { role: "Baba", name: student.fatherName };
+  }
+  if (student.notifyMother && student.motherPhone && student.motherName) {
+    return { role: "Anne", name: student.motherName };
+  }
+  if (student.notifyGuardian && student.emergencyPhone && student.emergencyName) {
+    return { role: "Yakını", name: student.emergencyName };
+  }
+  return null;
+}

@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { apiClient } from "../../../lib/apiClient";
 import { ConfirmDialog } from "../../../components/common/Modal";
 import { useAuthStore } from "../../../features/auth/authStore";
-import { getWhatsAppNotifyRecipientNames, hasWhatsAppNotifyRecipient, StudentNotifyFields } from "../../../lib/notifyRecipients";
+import { getWhatsAppNotifyPrimaryRecipient, hasWhatsAppNotifyRecipient, StudentNotifyFields } from "../../../lib/notifyRecipients";
 import { useWhatsAppStore } from "../../../features/whatsapp/whatsappStore";
 
 interface PaymentRow {
@@ -124,7 +124,7 @@ export function AdminPaymentsTab() {
         {filteredPayments.map((p) => {
           const overdue = isOverdue(p);
           const canRemind = hasWhatsAppNotifyRecipient(p.student);
-          const notifyNames = getWhatsAppNotifyRecipientNames(p.student);
+          const primaryRecipient = getWhatsAppNotifyPrimaryRecipient(p.student);
           return (
             <div key={p.id} className="flex flex-wrap items-center gap-3.5 border-b border-slate-100 px-5 py-3.5 last:border-0 dark:border-slate-800">
               <div className="min-w-[160px] flex-1">
@@ -139,12 +139,12 @@ export function AdminPaymentsTab() {
                 <div className="text-xs text-slate-400">
                   {p.periodMonth}/{p.periodYear} (vade: {p.dueDay}) · {p.amount} TL
                 </div>
-                {notifyNames.length > 0 && (
-                  <div className="mt-0.5 text-xs font-semibold text-emerald-600 dark:text-emerald-400">
-                    Veli (WhatsApp): {notifyNames.join(", ")}
-                  </div>
-                )}
               </div>
+              {primaryRecipient && (
+                <div className="flex items-center self-center text-xs font-semibold text-emerald-600 dark:text-emerald-400">
+                  Veli ({primaryRecipient.role}): {primaryRecipient.name}
+                </div>
+              )}
               {canConfirmPayment ? (
                 <button
                   disabled={p.status === "odendi"}
