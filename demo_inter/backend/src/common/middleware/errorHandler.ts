@@ -3,7 +3,7 @@ import { MulterError } from "multer";
 import { AppError } from "../errors/AppError";
 
 const MULTER_ERROR_MESSAGES: Record<string, string> = {
-  LIMIT_FILE_SIZE: "Dosya boyutu izin verilen üst sınırı aşıyor (en fazla 10 MB)",
+  LIMIT_FILE_SIZE: "Dosya boyutu izin verilen üst sınırı aşıyor (en fazla 20 MB)",
   LIMIT_FILE_COUNT: "İzin verilenden fazla dosya yüklemeye çalıştınız",
   LIMIT_UNEXPECTED_FILE: "Beklenmeyen dosya alanı gönderildi",
 };

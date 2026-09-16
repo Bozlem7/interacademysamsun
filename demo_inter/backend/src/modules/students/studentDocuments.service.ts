@@ -21,18 +21,34 @@ const MARGIN = 24;
  * dosyaları varsa sayfaları doğrudan kopyalanır, görseller her biri kendi A4 sayfasına
  * ortalanarak yerleştirilir.
  */
+// İstemcinin bildirdiği `mimetype` işletim sistemi/tarayıcıya göre değişebiliyor (bazı Windows
+// kurulumlarında PDF için boş, "application/x-pdf" veya "application/octet-stream" gelebiliyor —
+// yerelde çalışıp başka bir bilgisayardan erişimde "PDF Yüklenme Hatası" ile başarısız olmanın
+// asıl nedeni buydu: mimetype eşleşmeyince PDF baytları görsel gibi embedJpg/embedPng'e
+// veriliyor ve patlıyordu). Bunun yerine dosyanın gerçek baytlarındaki "magic number" imzasına
+// bakıyoruz — istemci beyanından tamamen bağımsız, güvenilir bir tespit yöntemi.
+function detectFileKind(buffer: Buffer, mimetype: string): "pdf" | "png" | "jpg" {
+  if (buffer.subarray(0, 5).toString("latin1") === "%PDF-") return "pdf";
+  if (buffer[0] === 0x89 && buffer[1] === 0x50 && buffer[2] === 0x4e && buffer[3] === 0x47) return "png";
+  if (buffer[0] === 0xff && buffer[1] === 0xd8 && buffer[2] === 0xff) return "jpg";
+  // Magic byte tespit edilemezse (beklenmedik/bozuk dosya) istemcinin bildirdiği mimetype'a düş.
+  if (mimetype === "application/pdf") return "pdf";
+  return mimetype === "image/png" ? "png" : "jpg";
+}
+
 async function mergeIntoPdf(files: UploadedFile[]): Promise<Uint8Array> {
   const merged = await PDFDocument.create();
 
   for (const file of files) {
-    if (file.mimetype === "application/pdf") {
+    const kind = detectFileKind(file.buffer, file.mimetype);
+    if (kind === "pdf") {
       const source = await PDFDocument.load(file.buffer);
       const pages = await merged.copyPages(source, source.getPageIndices());
       pages.forEach((p) => merged.addPage(p));
       continue;
     }
 
-    const image = file.mimetype === "image/png" ? await merged.embedPng(file.buffer) : await merged.embedJpg(file.buffer);
+    const image = kind === "png" ? await merged.embedPng(file.buffer) : await merged.embedJpg(file.buffer);
 
     const page = merged.addPage([A4_WIDTH, A4_HEIGHT]);
     const maxWidth = A4_WIDTH - MARGIN * 2;

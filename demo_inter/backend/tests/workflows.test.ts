@@ -2,7 +2,6 @@ import request from "supertest";
 import { createApp } from "../src/app";
 import { prisma } from "../src/config/prisma";
 import {
-  assignInstructor,
   createAdmin,
   createBranch,
   createGroup,
@@ -49,22 +48,20 @@ describe("Öğrenci Grubu Transfer & Atama", () => {
 });
 
 describe("Sınıf Bazlı Yoklama & Kayıt Doğruluğu", () => {
-  test("eğitmen seçtiği sınıftaki tüm öğrencileri görür (bireysel atama şartı aranmaz)", async () => {
+  test("eğitmen seçtiği sınıftaki tüm öğrencileri görür", async () => {
     const branch = await createBranch("AttendanceBranch");
     const group = await createGroup(branch.id, "Yoklama Grubu");
-    const { user: instructor, username, tcNo } = await createInstructor(branch.id);
-    const { student: assignedStudent } = await createStudent(branch.id, { groupId: group.id, fullName: "Atanmış Öğrenci" });
-    const { student: otherStudent } = await createStudent(branch.id, { groupId: group.id, fullName: "Atanmamış Öğrenci" });
-    await assignInstructor(instructor.id, assignedStudent.id);
-    // otherStudent bu eğitmene bireysel atanmadı, ama aynı sınıfta olduğu için rostere gelmeli.
+    const { username, tcNo } = await createInstructor(branch.id);
+    const { student: firstStudent } = await createStudent(branch.id, { groupId: group.id, fullName: "Öğrenci Bir" });
+    const { student: secondStudent } = await createStudent(branch.id, { groupId: group.id, fullName: "Öğrenci İki" });
 
     const login = await request(app).post("/api/auth/staff-login").send({ username, password: tcNo, branchCode: branch.code });
     const token = login.body.token;
 
     const roster = await request(app).get("/api/attendance").query({ groupId: group.id }).set("Authorization", `Bearer ${token}`);
     const ids = roster.body.map((r: any) => r.studentId);
-    expect(ids).toContain(assignedStudent.id);
-    expect(ids).toContain(otherStudent.id);
+    expect(ids).toContain(firstStudent.id);
+    expect(ids).toContain(secondStudent.id);
   });
 
   test("yoklama işaretlemesi attendance_records tablosuna doğru student_id ve durumla yazılır", async () => {
@@ -72,7 +69,6 @@ describe("Sınıf Bazlı Yoklama & Kayıt Doğruluğu", () => {
     const group = await createGroup(branch.id, "Yazma Grubu");
     const { user: instructor, username, tcNo } = await createInstructor(branch.id);
     const { student } = await createStudent(branch.id, { groupId: group.id });
-    await assignInstructor(instructor.id, student.id);
 
     const login = await request(app).post("/api/auth/staff-login").send({ username, password: tcNo, branchCode: branch.code });
     const token = login.body.token;
@@ -92,11 +88,11 @@ describe("Sınıf Bazlı Yoklama & Kayıt Doğruluğu", () => {
     expect(row?.markedBy).toBe(instructor.id);
   });
 
-  test("eğitmen kendisine bireysel atanmamış ama aynı şubedeki bir öğrenciyi de yoklamaya işaretleyebilir", async () => {
+  test("eğitmen aynı şubedeki herhangi bir öğrenciyi yoklamaya işaretleyebilir", async () => {
     const branch = await createBranch("AttendanceForbidBranch");
     const group = await createGroup(branch.id, "Yasak Grup");
     const { username, tcNo } = await createInstructor(branch.id);
-    const { student } = await createStudent(branch.id, { groupId: group.id }); // bireysel atanmamış
+    const { student } = await createStudent(branch.id, { groupId: group.id });
 
     const login = await request(app).post("/api/auth/staff-login").send({ username, password: tcNo, branchCode: branch.code });
     const token = login.body.token;

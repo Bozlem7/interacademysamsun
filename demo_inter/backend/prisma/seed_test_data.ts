@@ -312,10 +312,6 @@ async function main() {
       });
     }
 
-    // Antrenör ataması: yalnızca kendi şubesindeki antrenöre.
-    const instructorUserId = def.branch.code === "atakum" ? antrenorAtakum.id : antrenorVezirkopru.id;
-    await prisma.instructorStudent.create({ data: { instructorUserId, studentId: student.id } });
-
     createdStudents.push({ id: student.id, branchCode: def.branch.code, fullName });
     credentials.push({ role: "veli", username: parentUsername, tcNo, note: `${fullName} velisi (${def.branch.name})` });
   }

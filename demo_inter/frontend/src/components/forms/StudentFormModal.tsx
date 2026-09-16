@@ -186,9 +186,24 @@ export function StudentFormModal({
         docFiles.forEach((f) => formData.append("files", f));
         try {
           await apiClient.post(`/students/${created.id}/upload-documents`, formData);
-        } catch {
+        } catch (docErr: any) {
           // Öğrenci kaydı zaten başarılı oldu — evrak birleştirme başarısız olursa yönetici
-          // detay ekranından tekrar deneyebilir; kaydı bu yüzden geri almıyoruz.
+          // detay ekranından tekrar deneyebilir; kaydı bu yüzden geri almıyoruz. Ama hatayı
+          // eskiden tamamen sessizce yutuyorduk — başka bir makineden gelen CORS/ağ hatası gibi
+          // durumlarda yöneticinin evrakın hiç yüklenmediğini fark etmesi imkansızdı.
+          console.error("[student-register] Evrak yükleme başarısız (öğrenci kaydı başarılı):", {
+            status: docErr.response?.status,
+            serverMessage: docErr.response?.data?.error?.message,
+            error: docErr,
+          });
+          const detail = docErr.response
+            ? docErr.response.data?.error?.message ?? `Sunucu hatası (HTTP ${docErr.response.status})`
+            : "Sunucuya ulaşılamadı (ağ/CORS hatası) — konsolu kontrol edin";
+          onSaved();
+          setErrors([
+            `Öğrenci kaydı başarıyla oluşturuldu ancak evrak yüklenemedi: ${detail}. Öğrenci detayından tekrar deneyebilirsiniz.`,
+          ]);
+          return;
         }
       }
 

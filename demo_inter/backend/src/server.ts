@@ -4,6 +4,7 @@ import { createApp } from "./app";
 import { env } from "./config/env";
 import { registerPaymentCronJobs } from "./modules/payments/payments.scheduler";
 import { registerWhatsAppGateway } from "./modules/whatsapp/whatsapp.gateway";
+import { corsOriginHandler } from "./common/security/corsOrigin";
 
 // WPPConnect tabanlı servisler proje kökünde düz JS dosyaları olarak yazıldı
 // (src/ TypeScript derlemesinin dışında), bu yüzden require() ile yükleniyor.
@@ -12,7 +13,7 @@ const { startPaymentReminderCron } = require("../jobs/paymentReminderCron");
 
 const app = createApp();
 const httpServer = http.createServer(app);
-const io = new Server(httpServer, { cors: { origin: env.corsOrigin, credentials: true } });
+const io = new Server(httpServer, { cors: { origin: corsOriginHandler } });
 
 registerWhatsAppGateway(io);
 

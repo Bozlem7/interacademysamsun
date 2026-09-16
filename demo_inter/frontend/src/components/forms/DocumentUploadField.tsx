@@ -15,6 +15,15 @@ function fileKey(file: File): string {
   return `${file.name}::${file.lastModified}::${file.size}`;
 }
 
+// Bazı işletim sistemi/tarayıcı kombinasyonlarında (özellikle Windows'ta dosya türü ilişkisi
+// bozuk olan makinelerde) `File.type` boş string ("") veya "application/x-pdf" gibi standart
+// dışı bir değer döndürebiliyor — yalnızca `type === PDF_MIME` kontrolü bu durumda geçerli bir
+// PDF'i reddediyordu (yerelde çalışıp başka bir bilgisayarda çalışmama şikayetinin sebebi buydu).
+// Dosya adı uzantısını da yedek olarak kontrol ediyoruz.
+function isPdfFile(file: File): boolean {
+  return file.type === PDF_MIME || file.name.toLowerCase().endsWith(".pdf");
+}
+
 function readFileAsDataURL(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -93,7 +102,7 @@ export function DocumentUploadField({ files, onChange }: { files: File[]; onChan
   function handlePdfSelect(e: React.ChangeEvent<HTMLInputElement>) {
     try {
       const selected = e.target.files ? Array.from(e.target.files) : [];
-      const validPdfs = selected.filter((f) => f.type === PDF_MIME);
+      const validPdfs = selected.filter(isPdfFile);
       if (validPdfs.length < selected.length) {
         showError("Sadece PDF (.pdf) dosyası seçebilirsiniz");
       }

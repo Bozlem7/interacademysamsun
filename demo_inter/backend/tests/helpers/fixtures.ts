@@ -79,11 +79,3 @@ export async function createStudent(branchId: string, opts: { groupId?: string; 
   });
   return { student, tcNo, parentUser };
 }
-
-export async function assignInstructor(instructorUserId: string, studentId: string) {
-  return prisma.instructorStudent.upsert({
-    where: { instructorUserId_studentId: { instructorUserId, studentId } },
-    create: { instructorUserId, studentId },
-    update: {},
-  });
-}

@@ -5,8 +5,7 @@ import { requireAuth, requireRole } from "../../common/middleware/auth";
 import { validateBody } from "../../common/middleware/validate";
 import { hashPassword } from "../../common/security/password";
 import { encryptTc, hashTc, maskTc, decryptTc, tcNoSchema } from "../../common/security/tc";
-import { ConflictError, ForbiddenError, NotFoundError, ValidationError } from "../../common/errors/AppError";
-import { stripSeedTag } from "../../common/text/displayName";
+import { ConflictError, ForbiddenError, NotFoundError } from "../../common/errors/AppError";
 
 // Admin-only eğitmen detay & düzenleme ekranı — RBAC: yalnızca yonetici.
 export const adminInstructorsRouter = Router();
@@ -16,10 +15,7 @@ adminInstructorsRouter.use(requireAuth, requireRole("yonetici"));
 async function loadInstructor(id: string, branchId: string) {
   const user = await prisma.user.findUnique({
     where: { id },
-    include: {
-      staffProfile: true,
-      instructorStudents: { include: { student: { select: { id: true, fullName: true } } } },
-    },
+    include: { staffProfile: true },
   });
   if (!user || user.role !== "egitmen" || !user.staffProfile) {
     throw new NotFoundError("Eğitmen bulunamadı");
@@ -41,7 +37,6 @@ function toDetailResponse(user: Awaited<ReturnType<typeof loadInstructor>>) {
     specialty: sp.specialty,
     metaNote: sp.metaNote,
     tcNoMasked: sp.tcNoEncrypted ? maskTc(decryptTc(sp.tcNoEncrypted)) : null,
-    assignedStudents: user.instructorStudents.map((is) => ({ ...is.student, fullName: stripSeedTag(is.student.fullName) })),
   };
 }
 
@@ -58,13 +53,11 @@ const updateSchema = z.object({
   isActive: z.boolean().optional(),
   // Boş bırakılırsa (undefined ya da "") mevcut TC/şifre korunur — üzerine yazılmaz.
   tcNo: z.union([tcNoSchema, z.literal("")]).optional(),
-  // Verilirse, eğitmenin atandığı öğrenci listesi TAMAMEN bu setle senkronize edilir.
-  studentIds: z.array(z.string().uuid()).optional(),
 });
 
 adminInstructorsRouter.put("/:id", validateBody(updateSchema), async (req, res) => {
   const user = await loadInstructor(req.params.id, req.auth!.branchId);
-  const { fullName, phone, specialty, metaNote, isActive, tcNo, studentIds } = req.body as z.infer<typeof updateSchema>;
+  const { fullName, phone, specialty, metaNote, isActive, tcNo } = req.body as z.infer<typeof updateSchema>;
 
   const profileData: Record<string, unknown> = { fullName, phone, specialty, metaNote };
   Object.keys(profileData).forEach((k) => profileData[k] === undefined && delete profileData[k]);
@@ -88,23 +81,6 @@ adminInstructorsRouter.put("/:id", validateBody(updateSchema), async (req, res) 
     if (tcNo) {
       const passwordHash = await hashPassword(tcNo);
       await tx.user.update({ where: { id: user.id }, data: { passwordHash } });
-    }
-    if (studentIds !== undefined) {
-      await tx.instructorStudent.deleteMany({
-        where: { instructorUserId: user.id, studentId: { notIn: studentIds } },
-      });
-      for (const studentId of studentIds) {
-        const student = await tx.student.findUnique({ where: { id: studentId } });
-        if (!student) throw new ValidationError(`Öğrenci bulunamadı: ${studentId}`);
-        if (student.branchId !== user.staffProfile!.branchId) {
-          throw new ValidationError("Öğrenci ve eğitmen farklı şubelerde — atama yapılamaz");
-        }
-        await tx.instructorStudent.upsert({
-          where: { instructorUserId_studentId: { instructorUserId: user.id, studentId } },
-          create: { instructorUserId: user.id, studentId },
-          update: {},
-        });
-      }
     }
   });
 

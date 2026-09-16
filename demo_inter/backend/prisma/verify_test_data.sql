@@ -20,28 +20,7 @@ ORDER BY b.name;
 
 
 -- ----------------------------------------------------------------------------
--- 2) "Atakum hocası Vezirköprü öğrencisini görüyor mu?" — antrenör/öğrenci şube uyuşmazlığı
--- Antrenörler (specialty='antrenor') branch-scoped'tur; instructor_students ataması
--- kesinlikle aynı şubede olmalı (adminInstructors.controller.ts / instructorStudents.controller.ts
--- bunu zaten ValidationError ile engelliyor — burada seed verisinin de bu kurala uyduğunu
--- veritabanı seviyesinde doğruluyoruz).
--- BEKLENEN: 0 satır (hiçbir çapraz-şube ataması olmamalı)
--- ----------------------------------------------------------------------------
-SELECT
-  u.username AS antrenor,
-  sp.branch_id AS antrenor_sube_id,
-  st.full_name AS ogrenci,
-  st.branch_id AS ogrenci_sube_id
-FROM instructor_students ins
-JOIN users u ON u.id = ins.instructor_user_id
-JOIN staff_profiles sp ON sp.user_id = u.id
-JOIN students st ON st.id = ins.student_id
-WHERE sp.specialty = 'antrenor'
-  AND sp.branch_id <> st.branch_id;
-
-
--- ----------------------------------------------------------------------------
--- 3) "Diyetisyen/psikolog her iki şubeyi de listeliyor mu?" — seans notu üzerinden kanıt
+-- 2) "Diyetisyen/psikolog her iki şubeyi de listeliyor mu?" — seans notu üzerinden kanıt
 -- isGlobalStaff app-katmanında (JWT) hesaplanan bir alan olduğu için doğrudan SQL'den
 -- görünmez; ama global uzmanın GERÇEKTEN iki şubeden de öğrenciye not girmiş olması,
 -- backend'in bu erişimi kabul ettiğinin (branch filtresini bypass ettiğinin) kanıtıdır.
@@ -66,7 +45,7 @@ ORDER BY u.username;
 
 
 -- ----------------------------------------------------------------------------
--- 4) Diyetisyen/psikolog StaffProfile.branch_id her zaman DOLU mu? (migration YOK, nullable değil)
+-- 3) Diyetisyen/psikolog StaffProfile.branch_id her zaman DOLU mu? (migration YOK, nullable değil)
 -- BEKLENEN: 0 satır — global uzmanların branch_id'si NULL değil, sadece "ev şubesi"dir
 -- ----------------------------------------------------------------------------
 SELECT sp.id, u.username, sp.specialty, sp.branch_id
@@ -78,7 +57,7 @@ WHERE u.username LIKE 'qatest_%'
 
 
 -- ----------------------------------------------------------------------------
--- 5) Ödeme kayıtları öğrencinin kendi şubesinden sızıyor mu?
+-- 4) Ödeme kayıtları öğrencinin kendi şubesinden sızıyor mu?
 -- BEKLENEN: 0 satır (payments tablosunda branch_id yok, student join'i üzerinden kontrol)
 -- ----------------------------------------------------------------------------
 SELECT p.id, st.full_name, st.branch_id, p.status, p.paid_at
@@ -89,7 +68,7 @@ WHERE st.full_name LIKE '%[QATEST]'
 
 
 -- ----------------------------------------------------------------------------
--- 6) Ödeme durumu dağılımı — "ödendi" ve "ödenmedi" karışık mı test edilmiş?
+-- 5) Ödeme durumu dağılımı — "ödendi" ve "ödenmedi" karışık mı test edilmiş?
 -- BEKLENEN: her iki durumdan da satır olmalı (0/0 veya tamamı tek statüyse test eksik demektir)
 -- ----------------------------------------------------------------------------
 SELECT b.name AS sube, p.status, COUNT(*) AS adet
@@ -102,7 +81,7 @@ ORDER BY b.name, p.status;
 
 
 -- ----------------------------------------------------------------------------
--- 7) Veli iletişim kuralı: her öğrencide en az bir (telefon dolu + notify=true) çifti var mı?
+-- 6) Veli iletişim kuralı: her öğrencide en az bir (telefon dolu + notify=true) çifti var mı?
 -- BEKLENEN: 0 satır (kuralı ihlal eden öğrenci olmamalı)
 -- ----------------------------------------------------------------------------
 SELECT id, full_name, mother_phone, notify_mother, father_phone, notify_father, emergency_phone, notify_guardian
@@ -116,7 +95,7 @@ WHERE full_name LIKE '%[QATEST]'
 
 
 -- ----------------------------------------------------------------------------
--- 8) Antrenman programı çakışma kontrolü: iki şube aynı gün+saatte mi çakışıyor?
+-- 7) Antrenman programı çakışma kontrolü: iki şube aynı gün+saatte mi çakışıyor?
 -- BEKLENEN: 0 satır
 -- ----------------------------------------------------------------------------
 SELECT
@@ -136,7 +115,7 @@ WHERE g1.name LIKE 'QATEST %'
 
 
 -- ----------------------------------------------------------------------------
--- 9) Genel özet — kaç kayıt seed edilmiş, tek bakışta
+-- 8) Genel özet — kaç kayıt seed edilmiş, tek bakışta
 -- ----------------------------------------------------------------------------
 SELECT
   (SELECT COUNT(*) FROM users WHERE username LIKE 'qatest_%' AND role = 'egitmen') AS personel,

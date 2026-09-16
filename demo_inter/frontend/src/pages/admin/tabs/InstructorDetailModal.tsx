@@ -3,11 +3,6 @@ import { apiClient } from "../../../lib/apiClient";
 import { Modal } from "../../../components/common/Modal";
 import { tcErrorMessage } from "../../../lib/tcValidation";
 
-interface StudentOption {
-  id: string;
-  fullName: string;
-}
-
 interface InstructorDetail {
   id: string;
   username: string;
@@ -17,7 +12,6 @@ interface InstructorDetail {
   specialty: "antrenor" | "diyetisyen" | "psikolog";
   metaNote: string | null;
   tcNoMasked: string | null;
-  assignedStudents: StudentOption[];
 }
 
 export function InstructorDetailModal({
@@ -30,8 +24,6 @@ export function InstructorDetailModal({
   onSaved: () => void;
 }) {
   const [detail, setDetail] = useState<InstructorDetail | null>(null);
-  const [allStudents, setAllStudents] = useState<StudentOption[]>([]);
-  const [assignedIds, setAssignedIds] = useState<Set<string>>(new Set());
   const [form, setForm] = useState({ fullName: "", phone: "", specialty: "antrenor" as InstructorDetail["specialty"], isActive: true, tcNo: "" });
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
@@ -39,24 +31,12 @@ export function InstructorDetailModal({
   useEffect(() => {
     if (!instructorId) return;
     setError("");
-    Promise.all([apiClient.get(`/admin/instructors/${instructorId}`), apiClient.get("/students")]).then(
-      ([detailRes, studentsRes]) => {
-        const d: InstructorDetail = detailRes.data;
-        setDetail(d);
-        setForm({ fullName: d.fullName, phone: d.phone ?? "", specialty: d.specialty, isActive: d.isActive, tcNo: "" });
-        setAllStudents(studentsRes.data.map((s: any) => ({ id: s.id, fullName: s.fullName })));
-        setAssignedIds(new Set(d.assignedStudents.map((s) => s.id)));
-      }
-    );
-  }, [instructorId]);
-
-  function toggleStudent(id: string) {
-    setAssignedIds((prev) => {
-      const next = new Set(prev);
-      next.has(id) ? next.delete(id) : next.add(id);
-      return next;
+    apiClient.get(`/admin/instructors/${instructorId}`).then((detailRes) => {
+      const d: InstructorDetail = detailRes.data;
+      setDetail(d);
+      setForm({ fullName: d.fullName, phone: d.phone ?? "", specialty: d.specialty, isActive: d.isActive, tcNo: "" });
     });
-  }
+  }, [instructorId]);
 
   async function save() {
     setError("");
@@ -75,7 +55,6 @@ export function InstructorDetailModal({
         specialty: form.specialty,
         isActive: form.isActive,
         tcNo: form.tcNo || undefined,
-        studentIds: Array.from(assignedIds),
       });
       onSaved();
       onClose();
@@ -134,20 +113,6 @@ export function InstructorDetailModal({
             onChange={(e) => setForm({ ...form, tcNo: e.target.value.replace(/\D/g, "") })}
             maxLength={11}
           />
-
-          <div className="mb-2 flex items-center justify-between">
-            <div className="text-xs font-extrabold tracking-wide text-brand dark:text-[#93c5fd]">ATANDIĞI ÖĞRENCİLER</div>
-            <span className="text-xs font-bold text-slate-400">{assignedIds.size} öğrenci</span>
-          </div>
-          <div className="mb-5 flex max-h-56 flex-col gap-1 overflow-auto rounded-xl border border-slate-200 p-2 dark:border-slate-700">
-            {allStudents.map((s) => (
-              <label key={s.id} className="flex cursor-pointer items-center gap-2.5 rounded-lg px-2 py-2 hover:bg-slate-50 dark:hover:bg-surface2">
-                <input type="checkbox" checked={assignedIds.has(s.id)} onChange={() => toggleStudent(s.id)} />
-                <span className="text-sm font-semibold text-slate-800 dark:text-slate-100">{s.fullName}</span>
-              </label>
-            ))}
-            {allStudents.length === 0 && <div className="p-2 text-xs text-slate-400">Sistemde kayıtlı öğrenci yok.</div>}
-          </div>
 
           <div className="flex gap-2.5">
             <button

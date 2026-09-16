@@ -12,11 +12,20 @@ import { getStudentAttendanceReport } from "../attendance/attendanceReport.servi
 export const studentsRouter = Router();
 
 const ALLOWED_DOCUMENT_MIME = new Set(["image/jpeg", "image/png", "application/pdf"]);
+const ALLOWED_DOCUMENT_EXTENSIONS = [".jpg", ".jpeg", ".png", ".pdf"];
+// Bazı işletim sistemi/tarayıcı kombinasyonlarında `mimetype` boş, "application/octet-stream"
+// veya "application/x-pdf" gibi standart dışı bir değer olarak gelebiliyor — yalnızca mimetype'a
+// bakan kontrol bu durumda geçerli dosyaları reddediyordu (yerelde çalışıp başka bir makineden
+// erişimde başarısız olma şikayetinin olası bir nedeni). Dosya adı uzantısını da yedek olarak kabul ediyoruz.
 const documentsUpload = multer({
   storage: multer.memoryStorage(),
-  limits: { fileSize: 10 * 1024 * 1024, files: 5 }, // 10MB/dosya, en fazla 5 dosya
+  // 20MB/dosya, en fazla 5 dosya — telefon kamerasıyla taranan yüksek çözünürlüklü görseller
+  // 10MB sınırını rahatça aşabiliyor, bu da başka bir cihazdan yüklemede sessizce 413 ile
+  // reddediliyordu (yerelde küçük test dosyalarıyla fark edilmiyordu).
+  limits: { fileSize: 20 * 1024 * 1024, files: 5 },
   fileFilter: (_req, file, cb) => {
-    if (!ALLOWED_DOCUMENT_MIME.has(file.mimetype)) {
+    const hasAllowedExtension = ALLOWED_DOCUMENT_EXTENSIONS.some((ext) => file.originalname.toLowerCase().endsWith(ext));
+    if (!ALLOWED_DOCUMENT_MIME.has(file.mimetype) && !hasAllowedExtension) {
       cb(new ValidationError("Sadece JPG, PNG görsel veya PDF yükleyebilirsiniz"));
       return;
     }
@@ -40,15 +49,12 @@ studentsRouter.get("/check-tc/:tcNo", requireRole("yonetici"), async (req, res) 
 });
 
 studentsRouter.get("/:id", async (req, res) => {
-  const { role, sub, studentId, branchId } = req.auth!;
-  if (role === "egitmen") {
-    const assigned = await service.isStudentAssignedToInstructor(req.params.id, sub);
-    if (!assigned) throw new ForbiddenError("Bu öğrenci size atanmamış");
-  } else if (role === "veli") {
-    if (studentId !== req.params.id) throw new ForbiddenError("Sadece kendi öğrencinizi görüntüleyebilirsiniz");
+  const { role, studentId, branchId, isGlobalStaff } = req.auth!;
+  if (role === "veli" && studentId !== req.params.id) {
+    throw new ForbiddenError("Sadece kendi öğrencinizi görüntüleyebilirsiniz");
   }
   const student = await service.getStudent(req.params.id);
-  if (role !== "veli" && student.branchId !== branchId) {
+  if (role !== "veli" && !(role === "egitmen" && isGlobalStaff) && student.branchId !== branchId) {
     throw new ForbiddenError("Bu öğrenci farklı bir şubeye ait");
   }
   res.json(student);
@@ -118,16 +124,13 @@ studentsRouter.get("/:id/payment-report-pdf", async (req, res) => {
 });
 
 // Öğrencinin tüm zamanların yoklama geçmişini (özet istatistik + kronolojik liste) döner.
-// yonetici kendi şubesindeki her öğrenci için, egitmen kendine atanmış öğrenci için, veli
-// yalnızca kendi çocuğu için isteyebilir — GET /:id ile aynı erişim kuralları.
+// yonetici ve egitmen kendi şubesindeki her öğrenci için (diyetisyen/psikolog şube bağımsız
+// çalışır), veli yalnızca kendi çocuğu için isteyebilir — GET /:id ile aynı erişim kuralları.
 studentsRouter.get("/:id/attendance-report", async (req, res) => {
-  const { role, sub, studentId, branchId } = req.auth!;
-  if (role === "egitmen") {
-    const assigned = await service.isStudentAssignedToInstructor(req.params.id, sub);
-    if (!assigned) throw new ForbiddenError("Bu öğrenci size atanmamış");
-  } else if (role === "veli") {
-    if (studentId !== req.params.id) throw new ForbiddenError("Sadece kendi öğrencinizi görüntüleyebilirsiniz");
-  } else if (role === "yonetici") {
+  const { role, studentId, branchId, isGlobalStaff } = req.auth!;
+  if (role === "veli" && studentId !== req.params.id) {
+    throw new ForbiddenError("Sadece kendi öğrencinizi görüntüleyebilirsiniz");
+  } else if ((role === "yonetici" || role === "egitmen") && !(role === "egitmen" && isGlobalStaff)) {
     const existing = await service.getStudent(req.params.id);
     if (existing.branchId !== branchId) throw new ForbiddenError("Bu öğrenci farklı bir şubeye ait");
   }

@@ -13,7 +13,7 @@
 --  bu yüzden "@test.interacademy.com" gibi bir e-posta deseni kullanılmıyor.)
 --
 -- Silme sırası, foreign key kısıtlarına takılmamak için alttan yukarıya:
---   yoklama/notlar/ödemeler/atamalar -> antrenman programı -> öğrenciler -> gruplar
+--   yoklama/notlar/ödemeler -> antrenman programı -> öğrenciler -> gruplar
 --   -> staff_profiles -> users
 --
 -- Kullanım:
@@ -34,7 +34,6 @@ DECLARE
   n_attendance  INT;
   n_notes       INT;
   n_payments    INT;
-  n_instructor_students INT;
   n_sessions    INT;
   n_prereg_unlinked INT;
   n_students    INT;
@@ -64,35 +63,30 @@ BEGIN
   WHERE student_id = ANY(student_ids);
   GET DIAGNOSTICS n_payments = ROW_COUNT;
 
-  -- 4) Antrenör-öğrenci atamaları
-  DELETE FROM instructor_students
-  WHERE student_id = ANY(student_ids) OR instructor_user_id = ANY(user_ids);
-  GET DIAGNOSTICS n_instructor_students = ROW_COUNT;
-
-  -- 5) Antrenman programı (test gruplarına bağlı seanslar)
+  -- 4) Antrenman programı (test gruplarına bağlı seanslar)
   DELETE FROM training_sessions
   WHERE group_id = ANY(group_ids);
   GET DIAGNOSTICS n_sessions = ROW_COUNT;
 
-  -- 6) Ön kayıt (varsa, test öğrencisine dönüştürülmüş bir pre-registration olabilir)
+  -- 5) Ön kayıt (varsa, test öğrencisine dönüştürülmüş bir pre-registration olabilir)
   UPDATE pre_registrations
   SET converted_student_id = NULL
   WHERE converted_student_id = ANY(student_ids);
   GET DIAGNOSTICS n_prereg_unlinked = ROW_COUNT;
 
-  -- 7) Öğrenciler
+  -- 6) Öğrenciler
   DELETE FROM students WHERE id = ANY(student_ids);
   GET DIAGNOSTICS n_students = ROW_COUNT;
 
-  -- 8) Test grupları
+  -- 7) Test grupları
   DELETE FROM groups WHERE id = ANY(group_ids);
   GET DIAGNOSTICS n_groups = ROW_COUNT;
 
-  -- 9) staff_profiles (users.id FK'si CASCADE olsa da açıkça ve ayrı sayılabilir şekilde siliniyor)
+  -- 8) staff_profiles (users.id FK'si CASCADE olsa da açıkça ve ayrı sayılabilir şekilde siliniyor)
   DELETE FROM staff_profiles WHERE user_id = ANY(user_ids);
   GET DIAGNOSTICS n_staff_profiles = ROW_COUNT;
 
-  -- 10) Personel + veli kullanıcı hesapları
+  -- 9) Personel + veli kullanıcı hesapları
   DELETE FROM users WHERE id = ANY(user_ids);
   GET DIAGNOSTICS n_users = ROW_COUNT;
 
@@ -101,7 +95,6 @@ BEGIN
   RAISE NOTICE '  yoklama_kaydi (attendance_records)     : %', n_attendance;
   RAISE NOTICE '  uzman_notu (student_notes)              : %', n_notes;
   RAISE NOTICE '  odeme_kaydi (payments)                  : %', n_payments;
-  RAISE NOTICE '  antrenor_atamasi (instructor_students)  : %', n_instructor_students;
   RAISE NOTICE '  antrenman_seansi (training_sessions)    : %', n_sessions;
   RAISE NOTICE '  on_kayit_baglantisi_temizlendi          : %', n_prereg_unlinked;
   RAISE NOTICE '  ogrenci (students)                      : %', n_students;

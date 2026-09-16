@@ -75,7 +75,6 @@ async function seedMockData() {
       { fullName: "Ayşe Şahin", specialty: "diyetisyen" },
     ],
   };
-  const antrenorIdByBranch: Record<string, string> = {};
   let staffSeedCounter = 900000;
   for (const branch of branchRows) {
     const defs = instructorNamesByBranch[branch.code] ?? [];
@@ -83,12 +82,9 @@ async function seedMockData() {
       const username = usernameFromName(def.fullName);
       const tcNo = generateTc(staffSeedCounter++);
       const existing = await prisma.user.findUnique({ where: { username } });
-      let userId: string;
-      if (existing) {
-        userId = existing.id;
-      } else {
+      if (!existing) {
         const passwordHash = await hashPassword(tcNo);
-        const user = await prisma.user.create({
+        await prisma.user.create({
           data: {
             username,
             passwordHash,
@@ -105,10 +101,8 @@ async function seedMockData() {
             },
           },
         });
-        userId = user.id;
         console.log(`Seeded instructor: ${def.fullName} (${branch.name}, şifre=TCKN=${tcNo}, kullanıcı adı=${username})`);
       }
-      if (def.specialty === "antrenor") antrenorIdByBranch[branch.code] = userId;
     }
   }
 
@@ -171,17 +165,6 @@ async function seedMockData() {
     });
 
     await generatePaymentForNewStudent(student.id);
-
-    if (group) {
-      const instructorUserId = antrenorIdByBranch[branch.code];
-      if (instructorUserId) {
-        await prisma.instructorStudent.upsert({
-          where: { instructorUserId_studentId: { instructorUserId, studentId: student.id } },
-          create: { instructorUserId, studentId: student.id },
-          update: {},
-        });
-      }
-    }
   }
   console.log(`Seeded ${TOTAL_STUDENTS} mock students across ${branchRows.length} branches.`);
 }

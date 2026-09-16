@@ -3,15 +3,18 @@ import path from "node:path";
 import express from "express";
 import cors from "cors";
 import helmet from "helmet";
-import { env } from "./config/env";
 import { apiRouter } from "./routes";
 import { errorHandler, notFoundHandler } from "./common/middleware/errorHandler";
+import { corsOriginHandler } from "./common/security/corsOrigin";
 
 export function createApp() {
   const app = express();
 
   app.use(helmet());
-  app.use(cors({ origin: env.corsOrigin, credentials: true }));
+  // credentials:true bilerek kullanılmıyor — kimlik doğrulama JWT Bearer header ile yapılıyor,
+  // cookie tabanlı bir oturum yok. Bu sayede CORS_ORIGIN=* (acil teşhis/staging) güvenle çalışır;
+  // credentials:true + origin:'*' kombinasyonu tarayıcılar tarafından zaten reddedilir.
+  app.use(cors({ origin: corsOriginHandler }));
   app.use(express.json({ limit: "5mb" }));
 
   app.get("/health", (_req, res) => res.json({ status: "ok" }));

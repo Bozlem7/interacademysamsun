@@ -13,7 +13,11 @@ export const env = {
   jwtSecret: required("JWT_SECRET"),
   jwtExpiresIn: process.env.JWT_EXPIRES_IN ?? "8h",
   tcEncryptionKey: required("TC_ENCRYPTION_KEY"),
-  corsOrigin: process.env.CORS_ORIGIN ?? "http://localhost:5173",
+  // Virgülle ayrılmış birden fazla origin desteklenir (ör. "https://interacademysamsun.com,https://www.interacademysamsun.com")
+  // — nginx frontend'i backend ile aynı origin'den proxy'lemiyorsa (ayrı subdomain/port) tarayıcı
+  // isteği CORS ile sessizce reddeder; axios bu durumda `.response` içermeyen bir network hatası
+  // fırlatır, bu da "PDF yüklenemedi" gibi anlamsız genel hata mesajlarına yol açar.
+  corsOrigins: (process.env.CORS_ORIGIN ?? "http://localhost:5173").split(",").map((o) => o.trim()),
   whatsapp: {
     apiToken: process.env.WHATSAPP_API_TOKEN ?? "",
     phoneNumberId: process.env.WHATSAPP_PHONE_NUMBER_ID ?? "",

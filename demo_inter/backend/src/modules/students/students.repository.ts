@@ -19,12 +19,6 @@ export function findStudentById(id: string) {
   });
 }
 
-export function isStudentAssignedToInstructor(studentId: string, instructorUserId: string) {
-  return prisma.instructorStudent
-    .findUnique({ where: { instructorUserId_studentId: { instructorUserId, studentId } } })
-    .then((row) => !!row);
-}
-
 export function createStudent(data: Prisma.StudentCreateInput) {
   return prisma.student.create({ data });
 }

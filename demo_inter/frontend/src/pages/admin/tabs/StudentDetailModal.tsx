@@ -233,7 +233,19 @@ export function StudentDetailModal({
       setDocUploadOpen(false);
       loadDetail();
     } catch (e: any) {
-      setDocError(e.response?.data?.error?.message ?? "Evrak yüklenemedi");
+      // e.response undefined olması (CORS engeli, ağ kopması vb.) sunucudan hiç yanıt
+      // gelmediği anlamına gelir — bu durumda "Evrak yüklenemedi" gibi genel bir mesaj
+      // gerçek nedeni (ör. CORS reddi) gizler. Durum kodu ve varsa sunucu mesajı konsola
+      // basılıyor ki başka bir makineden gelen hatalar teşhis edilebilsin.
+      console.error("[document-upload] Yükleme başarısız:", {
+        status: e.response?.status,
+        serverMessage: e.response?.data?.error?.message,
+        error: e,
+      });
+      const detail = e.response
+        ? e.response.data?.error?.message ?? `Sunucu hatası (HTTP ${e.response.status})`
+        : "Sunucuya ulaşılamadı (ağ/CORS hatası) — konsolu kontrol edin";
+      setDocError(`Evrak yüklenemedi: ${detail}`);
     } finally {
       setDocUploading(false);
     }

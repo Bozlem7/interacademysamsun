@@ -48,9 +48,6 @@ async function main() {
       where: { OR: [{ studentId: { in: studentIds } }, { authorId: { in: userIds } }] },
     });
     const payments = await tx.payment.deleteMany({ where: { studentId: { in: studentIds } } });
-    const instructorStudents = await tx.instructorStudent.deleteMany({
-      where: { OR: [{ studentId: { in: studentIds } }, { instructorUserId: { in: userIds } }] },
-    });
     const sessions = await tx.trainingSession.deleteMany({ where: { groupId: { in: groupIds } } });
     const preregUnlinked = await tx.preRegistration.updateMany({
       where: { convertedStudentId: { in: studentIds } },
@@ -76,7 +73,6 @@ async function main() {
       attendance: attendance.count,
       notes: notes.count,
       payments: payments.count,
-      instructorStudents: instructorStudents.count,
       sessions: sessions.count,
       preregUnlinked: preregUnlinked.count,
       students: studentsDeleted.count,
@@ -90,7 +86,6 @@ async function main() {
   console.log(`  yoklama_kaydi (attendance_records)     : ${summary.attendance}`);
   console.log(`  uzman_notu (student_notes)              : ${summary.notes}`);
   console.log(`  odeme_kaydi (payments)                  : ${summary.payments}`);
-  console.log(`  antrenor_atamasi (instructor_students)  : ${summary.instructorStudents}`);
   console.log(`  antrenman_seansi (training_sessions)    : ${summary.sessions}`);
   console.log(`  on_kayit_baglantisi_temizlendi          : ${summary.preregUnlinked}`);
   console.log(`  ogrenci (students)                      : ${summary.students}`);

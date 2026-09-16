@@ -23,10 +23,10 @@ function stripSecrets(value: any): any {
   return value;
 }
 
-// Defense-in-depth: repository sorgusu ileride bir ilişki (ör. instructorStudents.instructor)
-// eklerse bile o ilişkideki passwordHash/tcNoEncrypted/tcNoHash asla yanıta sızmasın diye
-// tüm nesne ağacı taranıp temizleniyor — sadece öğrencinin kendi TC alanı burada ayrıca
-// maskeli haliyle (tcNoMasked) geri ekleniyor.
+// Defense-in-depth: repository sorgusu ileride bir ilişki eklerse bile o ilişkideki
+// passwordHash/tcNoEncrypted/tcNoHash asla yanıta sızmasın diye tüm nesne ağacı taranıp
+// temizleniyor — sadece öğrencinin kendi TC alanı burada ayrıca maskeli haliyle (tcNoMasked)
+// geri ekleniyor.
 function toPublicStudent(student: any) {
   const tcNoMasked = maskTc(decryptTc(student.tcNoEncrypted));
   const rest = stripSecrets(student); // öğrencinin kendi tcNoEncrypted/tcNoHash alanları da burada temizlenir
@@ -148,5 +148,3 @@ export async function deleteStudent(id: string) {
   if (!existing) throw new NotFoundError("Öğrenci bulunamadı");
   await repo.deleteStudent(id);
 }
-
-export { isStudentAssignedToInstructor } from "./students.repository";
