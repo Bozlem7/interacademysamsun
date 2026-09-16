@@ -91,6 +91,58 @@ function toForm(d: StudentDetail): EditableForm {
   };
 }
 
+// Backend'de birlikte doğrulanan (ör. "en az bir bildirim seçili mi") bir grup — bunlardan
+// biri değişirse hepsi birlikte gönderilir, aksi halde backend eksik bağlamla ("telefon yok"
+// gibi) hatalı bir doğrulama hatası üretir.
+const CONTACT_GROUP_KEYS = [
+  "motherPhone",
+  "fatherPhone",
+  "emergencyPhone",
+  "notifyMother",
+  "notifyFather",
+  "notifyGuardian",
+] as const;
+
+/**
+ * "original" (sunucudan gelen, henüz düzenlenmemiş) ile "current" (formdaki güncel) durumu
+ * karşılaştırıp yalnızca GERÇEKTEN değişen alanları içeren bir payload üretir (dirty-checking).
+ * Değişmeyen alanlar isteğe hiç dahil edilmez — backend zaten yalnızca gönderilen alanları
+ * günceller (Prisma `update` sadece `data`'da olanı değiştirir), böylece dokunulmayan alanlar
+ * sunucudaki mevcut değerini korur.
+ */
+function buildStudentUpdateDiff(original: EditableForm, current: EditableForm): Record<string, unknown> {
+  const payload: Record<string, unknown> = {};
+  const contactKeys: readonly string[] = CONTACT_GROUP_KEYS;
+
+  (Object.keys(current) as (keyof EditableForm)[]).forEach((key) => {
+    if (key === "tcNo" || key === "motherEmail" || key === "fatherEmail" || contactKeys.includes(key)) return;
+    if (current[key] === original[key]) return;
+
+    if (key === "heightCm" || key === "weightKg") {
+      payload[key] = current[key] ? Number(current[key]) : null;
+    } else if (key === "groupId") {
+      payload.groupId = current.groupId || null;
+    } else {
+      payload[key] = current[key];
+    }
+  });
+
+  // TC no formda her zaman boş başlar (maskelenmiş gösterilir) — dolu girildiyse "değişti" demektir.
+  if (current.tcNo) payload.tcNo = current.tcNo;
+
+  const contactChanged = CONTACT_GROUP_KEYS.some((key) => current[key] !== original[key]);
+  if (contactChanged) {
+    payload.motherPhone = current.motherPhone;
+    payload.fatherPhone = current.fatherPhone;
+    payload.emergencyPhone = current.emergencyPhone;
+    payload.notifyMother = current.notifyMother;
+    payload.notifyFather = current.notifyFather;
+    payload.notifyGuardian = current.notifyGuardian;
+  }
+
+  return payload;
+}
+
 function initials(name: string) {
   return name
     .split(" ")
@@ -208,17 +260,25 @@ export function StudentDetailModal({
     if (!form || !studentId || !detail) return;
     setError("");
 
-    const hasMother = form.motherPhone.trim().length > 0;
-    const hasFather = form.fatherPhone.trim().length > 0;
-    const hasGuardian = form.emergencyPhone.trim().length > 0;
-    if (!hasMother && !hasFather && !hasGuardian) {
-      setError("En az bir iletişim numarası girilmelidir");
-      return;
-    }
-    const notifyAny = (form.notifyMother && hasMother) || (form.notifyFather && hasFather) || (form.notifyGuardian && hasGuardian);
-    if (!notifyAny) {
-      setError("Lütfen bildirim gönderilecek en az bir veli/yakın seçiniz (WhatsApp kutucuğu)");
-      return;
+    const original = toForm(detail);
+    // Backend, iletişim/bildirim alanlarını yalnızca bunlardan biri istekte gönderiliyorsa
+    // doğruluyor — biz de aynı mantıkla, bu alanlardan hiçbiri değişmediyse (ör. sadece adres
+    // güncelleniyor) bu kontrolü atlıyoruz; aksi halde alakasız bir düzenlemede eski/geçersiz
+    // bir iletişim durumu yüzünden kaydı engellemiş oluruz.
+    const contactTouched = CONTACT_GROUP_KEYS.some((key) => form[key] !== original[key]);
+    if (contactTouched) {
+      const hasMother = form.motherPhone.trim().length > 0;
+      const hasFather = form.fatherPhone.trim().length > 0;
+      const hasGuardian = form.emergencyPhone.trim().length > 0;
+      if (!hasMother && !hasFather && !hasGuardian) {
+        setError("En az bir iletişim numarası girilmelidir");
+        return;
+      }
+      const notifyAny = (form.notifyMother && hasMother) || (form.notifyFather && hasFather) || (form.notifyGuardian && hasGuardian);
+      if (!notifyAny) {
+        setError("Lütfen bildirim gönderilecek en az bir veli/yakın seçiniz (WhatsApp kutucuğu)");
+        return;
+      }
     }
 
     if (form.tcNo) {
@@ -232,33 +292,19 @@ export function StudentDetailModal({
         return;
       }
     }
+    // Dirty-checking: sadece kullanıcının GERÇEKTEN değiştirdiği alanları gönder. "detail"
+    // sunucudan en son gelen (henüz kaydedilmemiş) orijinal veri olduğu için diff referansı olarak
+    // kullanılıyor — ayrı bir "initialStudentData" state'ine gerek yok, zaten elimizde.
+    const payload = buildStudentUpdateDiff(original, form);
+
+    if (Object.keys(payload).length === 0) {
+      alert("Herhangi bir değişiklik yapılmadı.");
+      setMode("view");
+      return;
+    }
+
     setSaving(true);
     try {
-      const payload: Record<string, unknown> = {
-        fullName: form.fullName,
-        dob: form.dob,
-        gender: form.gender,
-        groupId: form.groupId || undefined,
-        bloodType: form.bloodType || undefined,
-        heightCm: form.heightCm ? Number(form.heightCm) : undefined,
-        weightKg: form.weightKg ? Number(form.weightKg) : undefined,
-        email: form.email,
-        address: form.address || undefined,
-        motherName: form.motherName || undefined,
-        motherPhone: form.motherPhone || undefined,
-        motherJob: form.motherJob || undefined,
-        fatherName: form.fatherName || undefined,
-        fatherPhone: form.fatherPhone || undefined,
-        fatherJob: form.fatherJob || undefined,
-        emergencyName: form.emergencyName || undefined,
-        emergencyPhone: form.emergencyPhone || undefined,
-        notifyMother: form.notifyMother,
-        notifyFather: form.notifyFather,
-        notifyGuardian: form.notifyGuardian,
-      };
-      if (form.tcNo) payload.tcNo = form.tcNo;
-      if (!form.groupId) payload.groupId = null;
-
       const { data: updated } = await apiClient.put(`/students/${studentId}`, payload);
       setDetail(updated);
       setForm(toForm(updated));

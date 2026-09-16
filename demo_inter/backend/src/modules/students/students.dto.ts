@@ -94,8 +94,10 @@ export const studentUpdateSchema = z
       .optional(),
     gender: z.enum(["erkek", "kiz"]).optional(),
     bloodType: z.string().optional(),
-    heightCm: z.coerce.number().int().positive().optional(),
-    weightKg: z.coerce.number().int().positive().optional(),
+    // .nullable(): kısmi güncellemede (dirty-checking) bir alanı gerçekten temizleyebilmek
+    // icin — frontend bos birakilinca "degismedi" (undefined) degil "temizle" (null) gonderir.
+    heightCm: z.coerce.number().int().positive().optional().nullable(),
+    weightKg: z.coerce.number().int().positive().optional().nullable(),
     email: z.string().email().optional().or(z.literal("")),
     address: z.string().optional(),
     photoUrl: z.string().optional(),
