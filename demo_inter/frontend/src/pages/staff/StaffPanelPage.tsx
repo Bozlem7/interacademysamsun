@@ -19,13 +19,17 @@ const MONTH_NAMES = [
   "Temmuz", "Ağustos", "Eylül", "Ekim", "Kasım", "Aralık",
 ];
 
-// Hızlı Mesaj şablonları — {ogrenci_adi} yer tutucusu backend'de her öğrenci için kendi
-// ismiyle değiştirilir (toplu gönderimde her veli kendi çocuğunun adını görür).
+// Date.getDay() sırasına göre (0=Pazar) — panelin kilitli başlık önizlemesinde kullanılır.
+const TURKISH_DAY_NAMES = ["Pazar", "Pazartesi", "Salı", "Çarşamba", "Perşembe", "Cuma", "Cumartesi"];
+
+// Hızlı Mesaj şablonları — yalnızca "Yok" işaretli öğrencilere gider (katılanlara hiçbir koşulda
+// mesaj gönderilmez). Metin, backend'de kilitli başlık ("Sporcumuz {ad} için {tarih} ({gün})
+// tarihli bilgilendirme:") ve kilitli alt bilgi arasına otomatik yerleştirilir, bu yüzden öğrenci
+// adını burada tekrar etmeye gerek yok.
 const QUICK_MESSAGE_TEMPLATES = [
-  { label: "Katıldı", text: "Öğrenciniz {ogrenci_adi} bugünkü antrenmana/derse katılmıştır." },
-  { label: "Katılmadı", text: "Öğrenciniz {ogrenci_adi} bugünkü antrenmana/derse katılmamıştır." },
-  { label: "İzinli", text: "Öğrenciniz {ogrenci_adi} bugünkü derse izinli olarak katılmamıştır." },
-  { label: "Sakatlık/Rahatsızlık", text: "Öğrenciniz {ogrenci_adi} bugün ders sırasında hafif bir sakatlık/rahatsızlık yaşamıştır." },
+  { label: "İzinli", text: "Bugün derse izinli olarak katılmamıştır." },
+  { label: "Sakatlık/Rahatsızlık", text: "Bugün ders sırasında hafif bir sakatlık/rahatsızlık yaşamıştır." },
+  { label: "Mazeretsiz", text: "Bugünkü derse mazeretsiz olarak katılmamıştır." },
 ];
 
 export function StaffPanelPage() {
@@ -215,38 +219,50 @@ export function StaffPanelPage() {
           </div>
 
           {groupId && roster.length > 0 && (
-            <div className="mt-4 rounded-2xl border border-slate-200 bg-paper2 p-4 dark:border-slate-800 dark:bg-surface">
-              <div className="mb-2 text-xs font-bold text-slate-600 dark:text-slate-300">
-                Hızlı Mesaj (isteğe bağlı — seçilirse tüm işaretli öğrencilere bu metin gönderilir)
+            <div className="mt-4 overflow-hidden rounded-2xl border border-slate-200 dark:border-slate-800">
+              <div className="border-b border-slate-200 bg-slate-100 px-4 py-2.5 text-xs font-semibold text-slate-500 dark:border-slate-800 dark:bg-slate-800/60 dark:text-slate-400">
+                Sayın Velimiz, sporcumuz <span className="font-bold text-slate-700 dark:text-slate-200">[Öğrenci Adı]</span> için{" "}
+                <span className="font-bold text-slate-700 dark:text-slate-200">
+                  {new Date().toLocaleDateString("tr-TR")} ({TURKISH_DAY_NAMES[new Date().getDay()]})
+                </span>{" "}
+                tarihli bilgilendirme: <span className="italic">(yalnızca "Yok" işaretli öğrencilere gider)</span>
               </div>
-              <div className="mb-3 flex flex-wrap gap-2">
-                {QUICK_MESSAGE_TEMPLATES.map((t) => (
-                  <button
-                    key={t.label}
-                    type="button"
-                    onClick={() => setAttendanceMessage(t.text)}
-                    className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-bold text-slate-700 hover:border-slate-300 dark:border-slate-700 dark:bg-surface2 dark:text-slate-200 dark:hover:border-slate-600"
-                  >
-                    {t.label}
-                  </button>
-                ))}
-                {attendanceMessage && (
-                  <button
-                    type="button"
-                    onClick={() => setAttendanceMessage("")}
-                    className="rounded-lg px-3 py-1.5 text-xs font-bold text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
-                  >
-                    Temizle
-                  </button>
-                )}
+
+              <div className="bg-paper2 p-4 dark:bg-surface">
+                <div className="mb-2 text-xs font-bold text-slate-600 dark:text-slate-300">Hızlı Mesaj (isteğe bağlı)</div>
+                <div className="mb-3 flex flex-wrap gap-2">
+                  {QUICK_MESSAGE_TEMPLATES.map((t) => (
+                    <button
+                      key={t.label}
+                      type="button"
+                      onClick={() => setAttendanceMessage(t.text)}
+                      className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-bold text-slate-700 hover:border-slate-300 dark:border-slate-700 dark:bg-surface2 dark:text-slate-200 dark:hover:border-slate-600"
+                    >
+                      {t.label}
+                    </button>
+                  ))}
+                  {attendanceMessage && (
+                    <button
+                      type="button"
+                      onClick={() => setAttendanceMessage("")}
+                      className="rounded-lg px-3 py-1.5 text-xs font-bold text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
+                    >
+                      Temizle
+                    </button>
+                  )}
+                </div>
+                <textarea
+                  value={attendanceMessage}
+                  onChange={(e) => setAttendanceMessage(e.target.value)}
+                  rows={3}
+                  placeholder="Bir şablon seçin ya da kendi mesajınızı yazın… (boş bırakılırsa ders türüne göre otomatik devamsızlık mesajı gider)"
+                  className={`w-full rounded-xl border border-slate-200 bg-paper2 p-3 text-sm text-slate-900 outline-none dark:border-slate-700 dark:bg-surface2 dark:text-white ${theme.focusRing}`}
+                />
               </div>
-              <textarea
-                value={attendanceMessage}
-                onChange={(e) => setAttendanceMessage(e.target.value)}
-                rows={3}
-                placeholder="Bir şablon seçin ya da kendi mesajınızı yazın… ({ogrenci_adi} yazarsanız her veliye kendi çocuğunun adıyla gider)"
-                className={`w-full rounded-xl border border-slate-200 bg-paper2 p-3 text-sm text-slate-900 outline-none dark:border-slate-700 dark:bg-surface2 dark:text-white ${theme.focusRing}`}
-              />
+
+              <div className="border-t border-slate-200 bg-slate-100 px-4 py-2.5 text-xs italic text-slate-500 dark:border-slate-800 dark:bg-slate-800/60 dark:text-slate-400">
+                (Bu mesaj sistemimiz tarafından otomatik olarak iletilmiştir.) — <span className="font-bold not-italic">Inter Academy Samsun</span>
+              </div>
             </div>
           )}
 

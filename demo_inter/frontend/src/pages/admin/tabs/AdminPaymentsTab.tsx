@@ -4,6 +4,7 @@ import { ConfirmDialog } from "../../../components/common/Modal";
 import { useAuthStore } from "../../../features/auth/authStore";
 import { getWhatsAppNotifyPrimaryRecipient, hasWhatsAppNotifyRecipient, StudentNotifyFields } from "../../../lib/notifyRecipients";
 import { useWhatsAppStore } from "../../../features/whatsapp/whatsappStore";
+import { AttendanceReportModal } from "./AttendanceReportModal";
 
 interface PaymentRow {
   id: string;
@@ -32,6 +33,7 @@ export function AdminPaymentsTab() {
   const [remindingId, setRemindingId] = useState<string | null>(null);
   const [remindResult, setRemindResult] = useState<{ id: string; ok: boolean; text: string } | null>(null);
   const [downloadingReportId, setDownloadingReportId] = useState<string | null>(null);
+  const [attendanceReportTarget, setAttendanceReportTarget] = useState<{ id: string; name: string } | null>(null);
 
   function load() {
     apiClient.get("/payments").then((r) => setPayments(r.data));
@@ -192,6 +194,12 @@ export function AdminPaymentsTab() {
               >
                 {downloadingReportId === p.student.id ? "Hazırlanıyor…" : "📄 Ödeme Raporu (PDF)"}
               </button>
+              <button
+                onClick={() => setAttendanceReportTarget({ id: p.student.id, name: p.student.fullName })}
+                className="rounded-lg border border-slate-300 bg-white px-3.5 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:bg-surface2 dark:text-slate-200 dark:hover:bg-surface"
+              >
+                📊 Yoklama Raporu
+              </button>
               {remindResult?.id === p.id && (
                 <div className={`w-full text-xs font-semibold ${remindResult.ok ? "text-green-600" : "text-red-600"}`}>
                   {remindResult.text}
@@ -213,6 +221,12 @@ export function AdminPaymentsTab() {
         confirmLabel="Evet, Ödendi Olarak İşaretle"
         onConfirm={markPaid}
         onCancel={() => setConfirmTarget(null)}
+      />
+
+      <AttendanceReportModal
+        open={!!attendanceReportTarget}
+        onClose={() => setAttendanceReportTarget(null)}
+        studentId={attendanceReportTarget?.id ?? null}
       />
     </div>
   );

@@ -3,11 +3,12 @@ import { z } from "zod";
 import { prisma } from "../../config/prisma";
 import { requireAuth, requireRole } from "../../common/middleware/auth";
 import { validateBody } from "../../common/middleware/validate";
-import { ForbiddenError } from "../../common/errors/AppError";
+import { ForbiddenError, WhatsAppUnavailableError } from "../../common/errors/AppError";
 import { stripSeedTag } from "../../common/text/displayName";
 // Baileys tabanlı gercek gonderim servisi (proje kokunde duz JS, src/ disinda).
 const { sendTextMessage } = require("../../../services/whatsappService");
 const { getNotifyRecipients } = require("../../../services/notifyRecipients");
+const { getState: getWhatsAppState } = require("../../../services/whatsappClient");
 
 function formatTrDate(d: Date): string {
   const day = String(d.getUTCDate()).padStart(2, "0");
@@ -23,26 +24,44 @@ function formatTrDay(d: Date): string {
 // TrainingSession.sessionType (saha/diyet/psikolog) -> otomatik mesaj şablonundaki ders_turu etiketi.
 const DERS_TURU_LABELS: Record<string, string> = { saha: "antrenman", diyet: "diyetisyen", psikolog: "psikolog" };
 
-// Devamsızlık için gönderilen otomatik (Hızlı Mesaj seçilmediğinde kullanılan) WhatsApp bildirimi.
-// Ders türüne göre (antrenman / diyetisyen / psikolog / diğer) ayrı şablon kullanılır; WhatsApp
-// biçimlendirmesiyle (*kalın*, _italik_) sporcu adı, tarih ve akademi adı vurgulanır.
+// Devamsızlık için gönderilen otomatik (Hızlı Mesaj/serbest metin girilmediğinde kullanılan)
+// WhatsApp bildirimi. Ders türüne göre (antrenman / diyetisyen / psikolog / diğer) ayrı şablon
+// kullanılır; WhatsApp biçimlendirmesiyle (*kalın*, _italik_) sporcu adı, tarih ve akademi adı
+// vurgulanır. Yalnızca "yok" işaretlenen öğrenciler için çağrılır — derse katılanlara hiç mesaj
+// gönderilmez.
 function buildAutoAttendanceMessage(studentName: string, sessionDate: Date, dersTuru: string): string {
   const tarih = formatTrDate(sessionDate);
   const gun = formatTrDay(sessionDate);
   const footerWithHelp =
-    "_(Bu mesaj sistemimiz tarafından otomatik olarak iletilmiştir. Bir hata olduğunu düşünüyorsanız lütfen bizimle iletişime geçiniz.)_";
+    "_(Bu mesaj sistemimiz tarafından otomatik olarak iletilmiştir. Bir hata olduğunu düşünüyorsanız lütfen bu hat üzerinden bizimle iletişime geçiniz.)_";
   const footerPlain = "_(Bu mesaj sistemimiz tarafından otomatik olarak iletilmiştir.)_";
 
   if (dersTuru === "antrenman") {
-    return `Sayın Velimiz,\nSporcumuz *${studentName}*, *${tarih}* (*${gun}*) tarihli antrenmanına katılmamıştır.\n\nBilginize sunar, iyi günler dileriz.\n${footerWithHelp}\n*Inter Academy Samsun*`;
+    return `Sayın Velimiz,\nSporcumuz *${studentName}*, *${tarih}* (*${gun}*) tarihli *antrenman dersine katılmamıştır.*\n\nBilginize sunar, iyi günler dileriz.\n${footerWithHelp}\n*Inter Academy Samsun*`;
   }
   if (dersTuru === "diyetisyen") {
-    return `Sayın Velimiz,\nSporcumuz *${studentName}*, *${tarih}* (*${gun}*) tarihinde planlanan diyetisyen seansına katılmamıştır.\n\nYeni randevu veya telafi planlaması için lütfen bu hat üzerinden bizimle iletişime geçiniz.\n${footerPlain}\n*Inter Academy Samsun*`;
+    return `Sayın Velimiz,\nSporcumuz *${studentName}*, *${tarih}* (*${gun}*) tarihinde planlanan *diyetisyen dersine katılmamıştır.*\n\nRandevu telafisi ve detaylı bilgi için lütfen bu hat üzerinden bizimle iletişime geçiniz.\n${footerPlain}\n*Inter Academy Samsun*`;
   }
   if (dersTuru === "psikolog") {
-    return `Sayın Velimiz,\nSporcumuz *${studentName}*, *${tarih}* (*${gun}*) tarihinde planlanan psikolog görüşmesine / mental gelişim dersine katılmamıştır.\n\nBilginize sunar, sağlıklı günler dileriz.\n${footerPlain}\n*Inter Academy Samsun*`;
+    return `Sayın Velimiz,\nSporcumuz *${studentName}*, *${tarih}* (*${gun}*) tarihinde planlanan *psikolog dersine katılmamıştır.*\n\nBilginize sunar, sağlıklı günler dileriz.\n${footerPlain}\n*Inter Academy Samsun*`;
   }
-  return `Sayın Velimiz,\nSporcumuz *${studentName}*, *${tarih}* (*${gun}*) tarihinde planlanan ${dersTuru} çalışmasına katılmamıştır.\n\nBilginize sunar, sağlıklı günler dileriz.\n${footerWithHelp}\n*Inter Academy Samsun*`;
+  return `Sayın Velimiz,\nSporcumuz *${studentName}*, *${tarih}* (*${gun}*) tarihinde planlanan *${dersTuru} dersine katılmamıştır.*\n\nBilginize sunar, sağlıklı günler dileriz.\n${footerWithHelp}\n*Inter Academy Samsun*`;
+}
+
+// Sanitize: veliye giden nihai metinde asla süslü parantez/placeholder kalmamalı. {ogrenci_adi}
+// gerçek isimle değiştirilir; tanımsız kalan başka {...} kalıntıları (kullanıcı hatası/kopyala-
+// yapıştır) tamamen temizlenir.
+function sanitizeFreeText(text: string, studentName: string): string {
+  return text.replace(/\{ogrenci_adi\}/g, studentName).replace(/\{[^}]*\}/g, "");
+}
+
+// "Özel bilgilendirme" — panelde yönetici/eğitmenin serbest yazdığı notu, kilitli başlık
+// (öğrenci adı + tarih + gün) ve kilitli alt bilgi (yasal uyarı + akademi adı) arasına yerleştirir.
+// Bu iki blok kullanıcı tarafından değiştirilemez; yalnızca ortadaki not serbesttir.
+function buildOzelBilgilendirmeMessage(studentName: string, sessionDate: Date, ozelNot: string): string {
+  const tarih = formatTrDate(sessionDate);
+  const gun = formatTrDay(sessionDate);
+  return `Sayın Velimiz,\nSporcumuz *${studentName}* için *${tarih}* (*${gun}*) tarihli bilgilendirme:\n\n${ozelNot}\n\n_(Bu mesaj sistemimiz tarafından otomatik olarak iletilmiştir. Sorularınız için bu hat üzerinden yanıt verebilirsiniz.)_\n*Inter Academy Samsun*`;
 }
 
 export const attendanceRouter = Router();
@@ -95,6 +114,22 @@ const bulkSchema = z.object({
 
 attendanceRouter.post("/bulk", requireRole("yonetici", "egitmen"), validateBody(bulkSchema), async (req, res) => {
   const { sub, branchId, isGlobalStaff } = req.auth!;
+
+  // "yok" (devamsız) işaretlenen her öğrencinin velisine WhatsApp bildirimi gitmesi gerekir.
+  // WhatsApp oturumu bağlı değilse bildirim hiç gönderilemeyeceğinden, yoklama TAMAMEN abort
+  // edilir — hiçbir kayıt (ne "var" ne "yok") veritabanına yazılmaz. Kimse devamsız
+  // işaretlenmediyse (bildirilecek kimse yoksa) WhatsApp durumu kaydı engellemez.
+  const absentCount = req.body.records.filter((r: { status: string }) => r.status === "yok").length;
+  if (absentCount > 0) {
+    const whatsappStatus = getWhatsAppState().status;
+    if (whatsappStatus !== "CONNECTED") {
+      throw new WhatsAppUnavailableError(
+        `WhatsApp bağlantısı aktif değil! ${absentCount} öğrencinin velisine mesaj iletilemediği için yoklama kaydedilmedi. Lütfen panelden QR kod ile bağlantınızı yenileyip işlemi tekrar deneyin.`,
+        { absentCount, whatsappStatus }
+      );
+    }
+  }
+
   const results = [];
   const absentStudentIds = new Set<string>();
 
@@ -113,20 +148,27 @@ attendanceRouter.post("/bulk", requireRole("yonetici", "egitmen"), validateBody(
     const existing = await prisma.attendanceRecord.findFirst({
       where: { studentId: rec.studentId, sessionDate: rec.sessionDate, sessionId: rec.sessionId ?? null },
     });
+    // "yok" işaretlenen öğrenciler için, panelde girilen özel bilgilendirme metni (varsa)
+    // rapor tablosunda gösterilmek üzere kayıtla birlikte saklanır — "var" kayıtlarında not tutulmaz.
+    // {ogrenci_adi} yer tutucusu burada da veliye giden mesajla tutarlı şekilde gerçek isimle değiştirilir.
+    const notes =
+      rec.status === "yok" && req.body.message
+        ? sanitizeFreeText(req.body.message, stripSeedTag(student.fullName))
+        : null;
     const row = existing
       ? await prisma.attendanceRecord.update({
           where: { id: existing.id },
-          data: { status: rec.status, markedBy: sub },
+          data: { status: rec.status, markedBy: sub, notes },
         })
-      : await prisma.attendanceRecord.create({ data: { ...rec, markedBy: sub } });
+      : await prisma.attendanceRecord.create({ data: { ...rec, markedBy: sub, notes } });
     results.push(row);
-    absentStudentIds.add(rec.studentId); // notify-candidate set; artık "var" da mesaj alabilir (bkz. asağı)
+    if (rec.status === "yok") absentStudentIds.add(rec.studentId);
   }
 
-  // Her kaydedilen öğrencinin velisine, akademinin WhatsApp altyapısı üzerinden bildirim
-  // gönderilir (telefon numarası kayıtlıysa). Panelde özel bir mesaj (`req.body.message`)
-  // girildiyse o kullanılır (yer tutucu `{ogrenci_adi}` her öğrenci için değiştirilir);
-  // aksi halde eski davranış korunur: sadece "yok" işaretlenenlere sabit devamsızlık şablonu.
+  // Derse katılan ("var") öğrencilere hiçbir koşulda WhatsApp bildirimi gönderilmez — yalnızca
+  // "yok" işaretlenenler için işlem yapılır. Panelde özel bir not (`req.body.message`) girildiyse
+  // "özel bilgilendirme" şablonuyla (kilitli başlık/alt bilgi + serbest orta metin) gönderilir;
+  // aksi halde ders türüne göre otomatik devamsızlık şablonu kullanılır.
   let notifiedCount = 0;
   // Basarisiz gonderimler eskiden sadece konsola loglanip yanit her zaman "basarili"
   // donuyordu — yonetici/egitmen panelde hep yesil mesaj gorup mesajlarin gercekten
@@ -137,18 +179,17 @@ attendanceRouter.post("/bulk", requireRole("yonetici", "egitmen"), validateBody(
     if (!student) continue;
     const rec = req.body.records.find((r: { studentId: string }) => r.studentId === studentId)!;
 
+    const studentName = stripSeedTag(student.fullName);
     let message: string;
     if (req.body.message) {
-      message = req.body.message.replace(/\{ogrenci_adi\}/g, stripSeedTag(student.fullName));
-    } else if (rec.status === "yok") {
+      message = buildOzelBilgilendirmeMessage(studentName, rec.sessionDate, sanitizeFreeText(req.body.message, studentName));
+    } else {
       let dersTuru = "antrenman";
       if (rec.sessionId) {
         const session = await prisma.trainingSession.findUnique({ where: { id: rec.sessionId } });
         if (session) dersTuru = DERS_TURU_LABELS[session.sessionType] ?? session.sessionType;
       }
-      message = buildAutoAttendanceMessage(stripSeedTag(student.fullName), rec.sessionDate, dersTuru);
-    } else {
-      continue; // "var" + özel mesaj yok -> eski davranış: bildirim gönderilmez
+      message = buildAutoAttendanceMessage(studentName, rec.sessionDate, dersTuru);
     }
 
     const recipients: { label: string; phone: string }[] = getNotifyRecipients(student);
@@ -159,8 +200,8 @@ attendanceRouter.post("/bulk", requireRole("yonetici", "egitmen"), validateBody(
       if (result.success) {
         anySent = true;
       } else {
-        console.error(`[attendance] ${stripSeedTag(student.fullName)} icin bildirim gonderilemedi:`, result.error);
-        notifyErrors.push({ student: stripSeedTag(student.fullName), phone, error: result.error });
+        console.error(`[attendance] ${studentName} icin bildirim gonderilemedi:`, result.error);
+        notifyErrors.push({ student: studentName, phone, error: result.error });
       }
     }
     if (anySent) notifiedCount++;

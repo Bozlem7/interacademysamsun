@@ -7,6 +7,7 @@ import { studentInputSchema, studentUpdateSchema } from "./students.dto";
 import * as service from "./students.service";
 import { uploadRegistrationDocuments, deleteRegistrationDocuments } from "./studentDocuments.service";
 import { generatePaymentReportPdf } from "../payments/paymentReport.service";
+import { getStudentAttendanceReport } from "../attendance/attendanceReport.service";
 
 export const studentsRouter = Router();
 
@@ -114,4 +115,22 @@ studentsRouter.get("/:id/payment-report-pdf", async (req, res) => {
   res.setHeader("Content-Type", "application/pdf");
   res.setHeader("Content-Disposition", `inline; filename="${encodeURIComponent(fileName)}"`);
   res.send(Buffer.from(bytes));
+});
+
+// Öğrencinin tüm zamanların yoklama geçmişini (özet istatistik + kronolojik liste) döner.
+// yonetici kendi şubesindeki her öğrenci için, egitmen kendine atanmış öğrenci için, veli
+// yalnızca kendi çocuğu için isteyebilir — GET /:id ile aynı erişim kuralları.
+studentsRouter.get("/:id/attendance-report", async (req, res) => {
+  const { role, sub, studentId, branchId } = req.auth!;
+  if (role === "egitmen") {
+    const assigned = await service.isStudentAssignedToInstructor(req.params.id, sub);
+    if (!assigned) throw new ForbiddenError("Bu öğrenci size atanmamış");
+  } else if (role === "veli") {
+    if (studentId !== req.params.id) throw new ForbiddenError("Sadece kendi öğrencinizi görüntüleyebilirsiniz");
+  } else if (role === "yonetici") {
+    const existing = await service.getStudent(req.params.id);
+    if (existing.branchId !== branchId) throw new ForbiddenError("Bu öğrenci farklı bir şubeye ait");
+  }
+
+  res.json(await getStudentAttendanceReport(req.params.id));
 });

@@ -38,3 +38,9 @@ export class ValidationError extends AppError {
     super(422, message, "VALIDATION_ERROR");
   }
 }
+
+export class WhatsAppUnavailableError extends AppError {
+  constructor(message: string, public details?: unknown) {
+    super(409, message, "WHATSAPP_DISCONNECTED");
+  }
+}

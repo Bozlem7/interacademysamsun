@@ -69,8 +69,6 @@ Bu proje ayrı bir build/cache katmanı kullanmaz (Docker/PM2/Nginx yok) — fro
 
 ## Cron işleri
 
-`backend/src/modules/payments/payments.scheduler.ts` sunucu ayağa kalktığında iki job kaydeder:
-- Her ayın 1'i 00:05 — o ayın ödeme (payments) satırlarını üretir.
-- Her gün 09:00 — 16'sında (15 vadeli) ve ayın 1'inde (bir önceki ayın 30 vadeli) ödenmemiş kayıtlara WhatsApp gecikme bildirimi gönderir.
-
-`WHATSAPP_API_TOKEN` / `WHATSAPP_PHONE_NUMBER_ID` boşsa bildirimler sadece konsola loglanır (stub mod).
+- `backend/src/modules/payments/payments.scheduler.ts` — sunucu ayağa kalktığında, her ayın 1'i 00:05'te o ayın ödeme (payments) satırlarını üretir. (`WHATSAPP_API_TOKEN`/`WHATSAPP_PHONE_NUMBER_ID` boş olduğu için buradaki Cloud API tabanlı gecikme bildirimi devre dışı — aktif değil.)
+- `backend/jobs/paymentReminderCron.js` — WPPConnect oturumu bağlandıktan sonra devreye giren asıl aidat hatırlatma job'ı. Her gün 12:00'de tetiklenir, vade tarihinin tam **2 gün sonrasına** denk gelen (`dueDate + 2 gün = bugün`) ve hâlâ ödenmemiş kayıtları tarar; her mesaj öncesi 3-7 sn rastgele bekleme (jitter) ile gönderim 12:00-13:00 aralığına yayılır. `autoReminderSent`/`reminderCount` alanlarıyla aynı kayda mükerrer gönderim engellenir.
+- Yoklama (attendance) bildirimleri cron değil, `POST /attendance/bulk` çağrısında anlık gönderilir — yalnızca "Yok" işaretli öğrenciler için, ders türüne (antrenman/diyetisyen/psikolog) göre otomatik şablon veya panelde girilen özel mesajla.

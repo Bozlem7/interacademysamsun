@@ -4,6 +4,7 @@ import { Modal, ConfirmDialog } from "../../../components/common/Modal";
 import { tcErrorMessage } from "../../../lib/tcValidation";
 import { calcAge, formatPhone } from "../../../lib/format";
 import { DocumentUploadField } from "../../../components/forms/DocumentUploadField";
+import { AttendanceReportModal } from "./AttendanceReportModal";
 
 interface GroupOption {
   id: string;
@@ -176,6 +177,7 @@ export function StudentDetailModal({
   const [docDeleteConfirmOpen, setDocDeleteConfirmOpen] = useState(false);
   const [docDeleting, setDocDeleting] = useState(false);
   const [docDeletedMessage, setDocDeletedMessage] = useState("");
+  const [attendanceReportOpen, setAttendanceReportOpen] = useState(false);
 
   const DUPLICATE_TC_MESSAGE = "Bu T.C. Kimlik Numarası ile kayıtlı bir öğrenci zaten bulunmaktadır!";
 
@@ -359,6 +361,12 @@ export function StudentDetailModal({
               </div>
             </div>
             <div className="flex shrink-0 gap-2">
+              <button
+                onClick={() => setAttendanceReportOpen(true)}
+                className="rounded-lg border border-slate-300 bg-white px-3.5 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:bg-surface2 dark:text-slate-200 dark:hover:bg-surface"
+              >
+                📊 Yoklama Raporu
+              </button>
               {mode === "view" ? (
                 <button
                   onClick={() => setMode("edit")}
@@ -659,6 +667,12 @@ export function StudentDetailModal({
       confirmLabel={docDeleting ? "Siliniyor…" : "Evet, Kalıcı Olarak Sil"}
       onConfirm={deleteDocument}
       onCancel={() => setDocDeleteConfirmOpen(false)}
+    />
+
+    <AttendanceReportModal
+      open={attendanceReportOpen}
+      onClose={() => setAttendanceReportOpen(false)}
+      studentId={studentId}
     />
     </>
   );

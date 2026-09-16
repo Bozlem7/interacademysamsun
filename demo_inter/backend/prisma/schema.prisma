@@ -220,6 +220,9 @@ model AttendanceRecord {
   status        AttendanceStatus
   markedBy      String?           @map("marked_by")
   notifiedAt    DateTime?         @map("notified_at")
+  /// Yoklama alınırken velisine gönderilen özel bilgilendirme metni (ör. "diz sakatlığı geçmişi
+  /// nedeniyle ders dışı bırakıldı") — yoklama rapor tablosunda "Not / Açıklama" sütununda gösterilir.
+  notes         String?
   createdAt     DateTime          @default(now()) @map("created_at")
 
   student Student          @relation(fields: [studentId], references: [id], onDelete: Cascade)
