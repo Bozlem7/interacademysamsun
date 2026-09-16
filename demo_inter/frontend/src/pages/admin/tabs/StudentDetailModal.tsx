@@ -30,6 +30,9 @@ interface StudentDetail {
   fatherJob: string | null;
   emergencyName: string | null;
   emergencyPhone: string | null;
+  notifyMother: boolean;
+  notifyFather: boolean;
+  notifyGuardian: boolean;
   registrationPdfUrl: string | null;
   group: { id: string; name: string } | null;
 }
@@ -55,6 +58,9 @@ type EditableForm = {
   fatherJob: string;
   emergencyName: string;
   emergencyPhone: string;
+  notifyMother: boolean;
+  notifyFather: boolean;
+  notifyGuardian: boolean;
 };
 
 function toForm(d: StudentDetail): EditableForm {
@@ -79,6 +85,9 @@ function toForm(d: StudentDetail): EditableForm {
     fatherJob: d.fatherJob ?? "",
     emergencyName: d.emergencyName ?? "",
     emergencyPhone: d.emergencyPhone ?? "",
+    notifyMother: d.notifyMother ?? false,
+    notifyFather: d.notifyFather ?? false,
+    notifyGuardian: d.notifyGuardian ?? false,
   };
 }
 
@@ -198,6 +207,20 @@ export function StudentDetailModal({
   async function save() {
     if (!form || !studentId || !detail) return;
     setError("");
+
+    const hasMother = form.motherPhone.trim().length > 0;
+    const hasFather = form.fatherPhone.trim().length > 0;
+    const hasGuardian = form.emergencyPhone.trim().length > 0;
+    if (!hasMother && !hasFather && !hasGuardian) {
+      setError("En az bir iletişim numarası girilmelidir");
+      return;
+    }
+    const notifyAny = (form.notifyMother && hasMother) || (form.notifyFather && hasFather) || (form.notifyGuardian && hasGuardian);
+    if (!notifyAny) {
+      setError("Lütfen bildirim gönderilecek en az bir veli/yakın seçiniz (WhatsApp kutucuğu)");
+      return;
+    }
+
     if (form.tcNo) {
       const tcError = tcErrorMessage(form.tcNo);
       if (tcError) {
@@ -229,6 +252,9 @@ export function StudentDetailModal({
         fatherJob: form.fatherJob || undefined,
         emergencyName: form.emergencyName || undefined,
         emergencyPhone: form.emergencyPhone || undefined,
+        notifyMother: form.notifyMother,
+        notifyFather: form.notifyFather,
+        notifyGuardian: form.notifyGuardian,
       };
       if (form.tcNo) payload.tcNo = form.tcNo;
       if (!form.groupId) payload.groupId = null;
@@ -403,13 +429,16 @@ export function StudentDetailModal({
           {mode === "view" ? (
             <div className="grid grid-cols-2 gap-3 rounded-xl bg-slate-50 p-4 dark:bg-surface2 sm:grid-cols-3">
               <Field label="Anne Adı Soyadı" value={detail.motherName ?? ""} />
-              <Field label="Anne Telefon" value={formatPhone(detail.motherPhone)} />
+              <Field label="Anne Telefon" value={formatPhone(detail.motherPhone) + (detail.notifyMother ? " (WhatsApp açık)" : "")} />
               <Field label="Anne Meslek" value={detail.motherJob ?? ""} />
               <Field label="Baba Adı Soyadı" value={detail.fatherName ?? ""} />
-              <Field label="Baba Telefon" value={formatPhone(detail.fatherPhone)} />
+              <Field label="Baba Telefon" value={formatPhone(detail.fatherPhone) + (detail.notifyFather ? " (WhatsApp açık)" : "")} />
               <Field label="Baba Meslek" value={detail.fatherJob ?? ""} />
               <Field label="Acil Durum Kişisi" value={detail.emergencyName ?? ""} />
-              <Field label="Acil Durum Telefonu" value={formatPhone(detail.emergencyPhone)} />
+              <Field
+                label="Acil Durum Telefonu"
+                value={formatPhone(detail.emergencyPhone) + (detail.notifyGuardian ? " (WhatsApp açık)" : "")}
+              />
             </div>
           ) : (
             <div className="grid grid-cols-2 gap-2.5">
@@ -419,7 +448,26 @@ export function StudentDetailModal({
               </div>
               <div>
                 <div className={labelCls}>Anne Telefon</div>
-                <input className={inputCls} value={form.motherPhone} onChange={(e) => set("motherPhone", e.target.value)} />
+                <div className="flex items-center gap-2">
+                  <input
+                    className={`${inputCls} flex-1`}
+                    value={form.motherPhone}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      setForm((f) => (f ? { ...f, motherPhone: value, notifyMother: value.trim() ? f.notifyMother : false } : f));
+                    }}
+                  />
+                  <label className="flex shrink-0 items-center gap-1.5 text-xs font-semibold text-slate-500 dark:text-slate-300">
+                    <input
+                      type="checkbox"
+                      checked={form.notifyMother}
+                      disabled={!form.motherPhone.trim()}
+                      onChange={(e) => set("notifyMother", e.target.checked)}
+                      className="h-4 w-4 accent-brand disabled:cursor-not-allowed disabled:opacity-40"
+                    />
+                    WhatsApp
+                  </label>
+                </div>
               </div>
               <div>
                 <div className={labelCls}>Anne Meslek</div>
@@ -432,7 +480,26 @@ export function StudentDetailModal({
               </div>
               <div>
                 <div className={labelCls}>Baba Telefon</div>
-                <input className={inputCls} value={form.fatherPhone} onChange={(e) => set("fatherPhone", e.target.value)} />
+                <div className="flex items-center gap-2">
+                  <input
+                    className={`${inputCls} flex-1`}
+                    value={form.fatherPhone}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      setForm((f) => (f ? { ...f, fatherPhone: value, notifyFather: value.trim() ? f.notifyFather : false } : f));
+                    }}
+                  />
+                  <label className="flex shrink-0 items-center gap-1.5 text-xs font-semibold text-slate-500 dark:text-slate-300">
+                    <input
+                      type="checkbox"
+                      checked={form.notifyFather}
+                      disabled={!form.fatherPhone.trim()}
+                      onChange={(e) => set("notifyFather", e.target.checked)}
+                      className="h-4 w-4 accent-brand disabled:cursor-not-allowed disabled:opacity-40"
+                    />
+                    WhatsApp
+                  </label>
+                </div>
               </div>
               <div>
                 <div className={labelCls}>Baba Meslek</div>
@@ -445,7 +512,26 @@ export function StudentDetailModal({
               </div>
               <div>
                 <div className={labelCls}>Acil Durum Telefonu</div>
-                <input className={inputCls} value={form.emergencyPhone} onChange={(e) => set("emergencyPhone", e.target.value)} />
+                <div className="flex items-center gap-2">
+                  <input
+                    className={`${inputCls} flex-1`}
+                    value={form.emergencyPhone}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      setForm((f) => (f ? { ...f, emergencyPhone: value, notifyGuardian: value.trim() ? f.notifyGuardian : false } : f));
+                    }}
+                  />
+                  <label className="flex shrink-0 items-center gap-1.5 text-xs font-semibold text-slate-500 dark:text-slate-300">
+                    <input
+                      type="checkbox"
+                      checked={form.notifyGuardian}
+                      disabled={!form.emergencyPhone.trim()}
+                      onChange={(e) => set("notifyGuardian", e.target.checked)}
+                      className="h-4 w-4 accent-brand disabled:cursor-not-allowed disabled:opacity-40"
+                    />
+                    WhatsApp
+                  </label>
+                </div>
               </div>
             </div>
           )}
