@@ -1,5 +1,4 @@
 import { useRef, useState } from "react";
-import { jsPDF } from "jspdf";
 
 const MAX_FILES = 5;
 const PDF_MIME = "application/pdf";
@@ -42,6 +41,15 @@ function loadImageElement(src: string): Promise<HTMLImageElement> {
   });
 }
 
+// jsPDF (+ onun html2canvas/dompurify bağımlılıkları) tek başına ~400KB'lık ağır bir paket —
+// sadece bu buton tıklanınca gerekli. Statik import ana bundle'ı büyütüp her sayfa girişinde
+// (login ekranı dahil) indirtiyordu; dinamik import ile yalnızca gerçekten kullanılınca çekilir.
+let jsPdfModulePromise: Promise<typeof import("jspdf")> | null = null;
+function loadJsPdf() {
+  if (!jsPdfModulePromise) jsPdfModulePromise = import("jspdf");
+  return jsPdfModulePromise;
+}
+
 /** Tek bir görseli, A4 sayfaya ortalanmış şekilde tek sayfalık bir PDF'e çevirir. */
 async function convertImageToPdfFile(file: File): Promise<File> {
   const format = IMAGE_MIME_TO_JSPDF_FORMAT[file.type];
@@ -49,6 +57,7 @@ async function convertImageToPdfFile(file: File): Promise<File> {
 
   const dataUrl = await readFileAsDataURL(file);
   const img = await loadImageElement(dataUrl);
+  const { jsPDF } = await loadJsPdf();
 
   const orientation = img.width > img.height ? "l" : "p";
   const pdf = new jsPDF({ orientation, unit: "pt", format: "a4" });
