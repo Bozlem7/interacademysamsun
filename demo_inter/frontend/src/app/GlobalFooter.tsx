@@ -6,8 +6,11 @@ export function GlobalFooter() {
           <div className="rounded-lg bg-black px-3 py-2">
             <img src="/inter-logo-white.png" alt="Inter Academy" className="h-6 w-auto" />
           </div>
-          <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">
-            © {new Date().getFullYear()} Inter Academy. Tüm hakları saklıdır.
+          <span className="text-xs font-semibold leading-relaxed text-slate-500 dark:text-slate-400">
+            © {new Date().getFullYear()} Inter Academy Samsun. Tüm hakları saklıdır.
+            <br className="sm:hidden" />
+            <span className="hidden sm:inline"> | </span>
+            Inter marka ve logo hakları FC Internazionale Milano'ya aittir.
           </span>
         </div>
         <div className="flex gap-5 text-xs font-bold text-slate-500 dark:text-slate-400">

@@ -10,28 +10,23 @@ const TURKISH_MONTHS = [
   "Temmuz", "Ağustos", "Eylül", "Ekim", "Kasım", "Aralık",
 ];
 
-function stripSeedTag(fullName) {
-  return fullName.replace(/\s*\[seed\]\s*$/i, "").trim();
-}
-
-function formatDate(date) {
-  const day = String(date.getUTCDate()).padStart(2, "0");
-  const month = String(date.getUTCMonth() + 1).padStart(2, "0");
-  return `${day}.${month}.${date.getUTCFullYear()}`;
-}
-
+// WhatsApp (Baileys) kalın metni tek yıldız (*kalın*) ile işaretler — Markdown'daki çift
+// yıldız (**kalın**) WhatsApp'ta yorumlanmaz, olduğu gibi (yıldızlarla birlikte) görünür.
+// `donem_adi` ilgili ödemenin ait olduğu döneme göre dinamik üretilir (ör. "Eylül") —
+// sabit bir ay adı asla koda gömülmez, her çağrıda `payment.periodMonth`'tan hesaplanır.
+// Emoji'ler (⚽🇮🇹) doğrudan UTF-8 kaynak dosyasına yazılır; dosya zaten Türkçe karakterlerle
+// (ı, ş, ğ, ...) UTF-8 olarak kaydedildiğinden ve Baileys mesajı olduğu gibi UTF-8 ilettiğinden
+// ayrıca bir encode/escape işlemi gerekmez.
 function buildReminderMessage(payment) {
-  const studentName = stripSeedTag(payment.student.fullName);
-  const ayAdi = TURKISH_MONTHS[payment.periodMonth - 1];
-  return `Sayın Velimiz, sporcumuz ${studentName} adına ait ${ayAdi} dönemi aidat ödemesinin son günü ${formatDate(
-    payment.dueDate
-  )} idi. Sistem kayıtlarımıza göre ödemeniz henüz yansımamış görünmektedir.
+  const donemAdi = TURKISH_MONTHS[payment.periodMonth - 1];
+  return `Sayın Velimiz,
 
-Ödemenizi gerçekleştirdiyseniz lütfen bu mesajı dikkate almayınız ve dekontunuzu bu hat üzerinden bizimle paylaşınız. Henüz tamamlamadıysanız en kısa sürede ödemeyi gerçekleştirmenizi rica ederiz.
+Sporcumuzun *${donemAdi} ayına ait aidat ödemesi henüz yapılmamıştır.* Ödemenizi en kısa sürede gerçekleştirmenizi rica ederiz.
 
-Sağlıklı günler dileriz.
+Ödeme yapıldıysa lütfen bu mesajı dikkate almayınız.
 
-Inter Academy Samsun`;
+Teşekkür ederiz.
+*Inter Academy Samsun* ⚽🇮🇹`;
 }
 
 // Bugunun tarihinden (UTC gun baslangici) tam 2 gun once denk gelen takvim gununu dondurur.
@@ -105,15 +100,27 @@ async function checkOverduePaymentsAndNotify(referenceDate = new Date()) {
 }
 
 function startPaymentReminderCron() {
-  cron.schedule("0 12 * * *", async () => {
-    try {
-      await checkOverduePaymentsAndNotify();
-    } catch (error) {
-      console.error("[payment-reminder] Cron calisirken hata olustu:", error);
+  // Sunucu (VPS) saati UTC olduğu için timezone belirtilmeden "0 12 * * *" aslında
+  // 12:00 UTC'de, yani Türkiye saatiyle 15:00'te tetikleniyordu (+3 saat kayma).
+  // node-cron'a explicit "Europe/Istanbul" verilince zamanlayıcı kendisi DST/ofset
+  // farkını hesaba katıyor, sunucunun sistem saat dilimi ne olursa olsun 12:00 TR'de çalışır.
+  cron.schedule(
+    "0 12 * * *",
+    async () => {
+      console.log(`[Aidat Cron] Tetiklendi: ${new Date().toLocaleString("tr-TR", { timeZone: "Europe/Istanbul" })}`);
+      try {
+        await checkOverduePaymentsAndNotify();
+      } catch (error) {
+        console.error("[payment-reminder] Cron calisirken hata olustu:", error);
+      }
+    },
+    {
+      scheduled: true,
+      timezone: "Europe/Istanbul",
     }
-  });
+  );
 
-  console.log("[payment-reminder] Cron job kaydedildi: her gun 12:00 (vade tarihi + 2 gun)");
+  console.log("[payment-reminder] Cron job kaydedildi: her gun 12:00 (Europe/Istanbul, vade tarihi + 2 gun)");
 }
 
 module.exports = {

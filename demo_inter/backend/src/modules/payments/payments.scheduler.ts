@@ -14,12 +14,23 @@ import { generateMonthlyPayments } from "./payments.service";
  * Cloud API integration is set up in the future.
  */
 export function registerPaymentCronJobs() {
-  cron.schedule("5 0 1 * *", async () => {
-    try {
-      const result = await generateMonthlyPayments();
-      console.info("[cron] generateMonthlyPayments", result);
-    } catch (err) {
-      console.error("[cron] generateMonthlyPayments failed", err);
+  // Sunucu (VPS) saati UTC olduğu için timezone belirtilmeden "5 0 1 * *" aslında
+  // 00:05 UTC'de, yani Türkiye saatiyle 03:05'te tetikleniyordu — aidat hatırlatma
+  // cron'undaki (jobs/paymentReminderCron.js) aynı +3 saatlik kaymanın kardeşi.
+  cron.schedule(
+    "5 0 1 * *",
+    async () => {
+      console.log(`[Aidat Üretim Cron] Tetiklendi: ${new Date().toLocaleString("tr-TR", { timeZone: "Europe/Istanbul" })}`);
+      try {
+        const result = await generateMonthlyPayments();
+        console.info("[cron] generateMonthlyPayments", result);
+      } catch (err) {
+        console.error("[cron] generateMonthlyPayments failed", err);
+      }
+    },
+    {
+      scheduled: true,
+      timezone: "Europe/Istanbul",
     }
-  });
+  );
 }
