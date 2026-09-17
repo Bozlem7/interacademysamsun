@@ -10,6 +10,10 @@ const TURKISH_MONTHS = [
   "Temmuz", "Ağustos", "Eylül", "Ekim", "Kasım", "Aralık",
 ];
 
+function stripSeedTag(fullName) {
+  return fullName.replace(/\s*\[seed\]\s*$/i, "").trim();
+}
+
 // WhatsApp (Baileys) kalın metni tek yıldız (*kalın*) ile işaretler — Markdown'daki çift
 // yıldız (**kalın**) WhatsApp'ta yorumlanmaz, olduğu gibi (yıldızlarla birlikte) görünür.
 // `donem_adi` ilgili ödemenin ait olduğu döneme göre dinamik üretilir (ör. "Eylül") —
@@ -19,9 +23,10 @@ const TURKISH_MONTHS = [
 // ayrıca bir encode/escape işlemi gerekmez.
 function buildReminderMessage(payment) {
   const donemAdi = TURKISH_MONTHS[payment.periodMonth - 1];
+  const studentName = stripSeedTag(payment.student.fullName);
   return `Sayın Velimiz,
 
-Sporcumuzun *${donemAdi} ayına ait aidat ödemesi henüz yapılmamıştır.* Ödemenizi en kısa sürede gerçekleştirmenizi rica ederiz.
+Sporcumuz *${studentName}* için *${donemAdi} ayına ait aidat ödemesi henüz yapılmamıştır.* Ödemenizi en kısa sürede gerçekleştirmenizi rica ederiz.
 
 Ödeme yapıldıysa lütfen bu mesajı dikkate almayınız.
 
