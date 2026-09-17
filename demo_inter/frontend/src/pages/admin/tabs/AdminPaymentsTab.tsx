@@ -5,6 +5,7 @@ import { useAuthStore } from "../../../features/auth/authStore";
 import { getWhatsAppNotifyPrimaryRecipient, hasWhatsAppNotifyRecipient, StudentNotifyFields } from "../../../lib/notifyRecipients";
 import { useWhatsAppStore } from "../../../features/whatsapp/whatsappStore";
 import { AttendanceReportModal } from "./AttendanceReportModal";
+import { turkishCompare } from "../../../lib/turkishSort";
 
 interface PaymentRow {
   id: string;
@@ -95,10 +96,14 @@ export function AdminPaymentsTab() {
 
   const filteredPayments = useMemo(() => {
     const q = search.trim().toLocaleLowerCase("tr-TR");
-    if (!q) return payments;
-    return payments.filter(
-      (p) => p.student.fullName.toLocaleLowerCase("tr-TR").includes(q) || p.student.tcNoMasked.toLowerCase().includes(q)
-    );
+    const filtered = q
+      ? payments.filter(
+          (p) => p.student.fullName.toLocaleLowerCase("tr-TR").includes(q) || p.student.tcNoMasked.toLowerCase().includes(q)
+        )
+      : payments;
+    // Backend'in ORDER BY'ı Türkçe collation garantili değil — kesin doğru alfabetik sıra
+    // burada garanti edilir. Dönem/vade sırasını değil, öğrenci adını esas alır.
+    return [...filtered].sort((a, b) => turkishCompare(a.student.fullName, b.student.fullName));
   }, [payments, search]);
 
   return (

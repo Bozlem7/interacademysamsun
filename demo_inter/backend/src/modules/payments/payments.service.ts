@@ -94,7 +94,7 @@ export function listPayments(params: {
         student: { branchId: params.branchId },
       },
       include: { student: true },
-      orderBy: [{ periodYear: "desc" }, { periodMonth: "desc" }, { dueDay: "asc" }],
+      orderBy: [{ periodYear: "desc" }, { periodMonth: "desc" }, { dueDay: "asc" }, { student: { fullName: "asc" } }],
     })
     .then((rows) =>
       rows.map((p) => {

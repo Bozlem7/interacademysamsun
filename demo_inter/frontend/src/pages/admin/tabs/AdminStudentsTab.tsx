@@ -5,6 +5,7 @@ import { ConfirmDialog } from "../../../components/common/Modal";
 import { GroupWizardModal } from "./GroupWizardModal";
 import { StudentDetailModal } from "./StudentDetailModal";
 import { calcAge, formatPhone } from "../../../lib/format";
+import { sortByFullNameTr } from "../../../lib/turkishSort";
 
 interface StudentRow {
   id: string;
@@ -68,10 +69,12 @@ export function AdminStudentsTab() {
 
   const visibleStudents = useMemo(() => {
     const bucket = AGE_BUCKETS[ageFilter];
-    return students.filter((s) => {
-      const age = calcAge(s.dob);
-      return age >= bucket.min && age <= bucket.max;
-    });
+    return sortByFullNameTr(
+      students.filter((s) => {
+        const age = calcAge(s.dob);
+        return age >= bucket.min && age <= bucket.max;
+      })
+    );
   }, [students, ageFilter]);
 
   async function acceptPreReg(id: string) {

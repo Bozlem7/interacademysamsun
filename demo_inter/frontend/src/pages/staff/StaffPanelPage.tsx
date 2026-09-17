@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { sortByFullNameTr } from "../../lib/turkishSort";
 import { apiClient } from "../../lib/apiClient";
 import { useAuthStore } from "../../features/auth/authStore";
 import { SPECIALTY_THEME } from "../../lib/specialtyColors";
@@ -65,7 +66,11 @@ export function StaffPanelPage() {
       setRoster([]);
       return;
     }
-    apiClient.get("/attendance", { params: { groupId } }).then((r) => setRoster(r.data));
+    // Backend'in ORDER BY'ı Türkçe collation garantili değil — kesin doğru alfabetik sıra
+    // burada garanti edilir.
+    apiClient
+      .get("/attendance", { params: { groupId } })
+      .then((r) => setRoster(sortByFullNameTr(r.data)));
     setAttendanceSearch("");
   }, [groupId]);
 
@@ -75,7 +80,9 @@ export function StaffPanelPage() {
       setNoteStudentId("");
       return;
     }
-    apiClient.get("/attendance", { params: { groupId: noteGroupId } }).then((r) => setNoteRoster(r.data));
+    apiClient
+      .get("/attendance", { params: { groupId: noteGroupId } })
+      .then((r) => setNoteRoster(sortByFullNameTr(r.data)));
     setNoteStudentId("");
   }, [noteGroupId]);
 

@@ -77,7 +77,7 @@ attendanceRouter.get("/", requireRole("yonetici", "egitmen"), async (req, res) =
   const { branchId, isGlobalStaff } = req.auth!;
   const where: any = isGlobalStaff ? {} : { branchId };
   if (groupId) where.groupId = groupId;
-  const students = await prisma.student.findMany({ where, include: { group: true, branch: true } });
+  const students = await prisma.student.findMany({ where, include: { group: true, branch: true }, orderBy: { fullName: "asc" } });
 
   const sessionDate = date ? new Date(date) : new Date();
   const records = await prisma.attendanceRecord.findMany({

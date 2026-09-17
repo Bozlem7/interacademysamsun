@@ -5,6 +5,10 @@ export function listStudents(params: { search?: string; groupId?: string; branch
   const where: Prisma.StudentWhereInput = { branchId: params.branchId };
   if (params.search) where.fullName = { contains: params.search, mode: "insensitive" };
   if (params.groupId) where.groupId = params.groupId;
+  // Postgres'in varsayılan collation'ı (genelde "C"/binary) Türkçe harf sırasını (ı, İ, ş,
+  // ğ, ö, ü, ç) doğru sıralamaz — bu yüzden bu ORDER BY tek başına kesin doğru alfabetik
+  // sırayı garanti etmez, sadece kabaca bir ön sıralama sağlar. Kesin doğru Türkçe sıralama
+  // frontend'de `localeCompare(..., 'tr', { sensitivity: 'base' })` ile yapılıyor.
   return prisma.student.findMany({
     where,
     include: { group: true },
