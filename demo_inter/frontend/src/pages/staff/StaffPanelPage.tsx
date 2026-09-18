@@ -33,6 +33,17 @@ const QUICK_MESSAGE_TEMPLATES = [
   { label: "Mazeretsiz", text: "Bugünkü derse mazeretsiz olarak katılmamıştır." },
 ];
 
+const DEFAULT_MESSAGE_PLACEHOLDER = "[Buraya mesajınızı yazın veya bir şablon seçin]";
+
+// backend/src/modules/attendance/attendance.controller.ts içindeki buildOzelBilgilendirmeMessage
+// ile birebir aynı şablon — veliye GERÇEKTEN gidecek mesajın canlı önizlemesi burada üretilir.
+function buildMessagePreview(message: string): string {
+  const tarih = new Date().toLocaleDateString("tr-TR");
+  const gun = TURKISH_DAY_NAMES[new Date().getDay()];
+  const ozelNot = message.trim() || DEFAULT_MESSAGE_PLACEHOLDER;
+  return `Sayın Velimiz,\nSporcumuz [Öğrenci Adı] için ${tarih} (${gun}) tarihli bilgilendirme:\n\n${ozelNot}\n\n(Bu mesaj sistemimiz tarafından otomatik olarak iletilmiştir. Sorularınız için bu hat üzerinden yanıt verebilirsiniz.)\nInter Academy Samsun`;
+}
+
 export function StaffPanelPage() {
   const { displayName, specialty } = useAuthStore();
   const theme = SPECIALTY_THEME[specialty ?? "antrenor"];
@@ -91,6 +102,8 @@ export function StaffPanelPage() {
     if (!q) return roster;
     return roster.filter((s) => s.fullName.toLocaleLowerCase("tr-TR").includes(q));
   }, [roster, attendanceSearch]);
+
+  const messagePreview = useMemo(() => buildMessagePreview(attendanceMessage), [attendanceMessage]);
 
   function mark(studentId: string, status: "var" | "yok") {
     // Yalnızca ekrandaki durumu günceller — asıl kayıt "Yoklamayı Kaydet ve Bildir" ile yapılır.
@@ -227,15 +240,14 @@ export function StaffPanelPage() {
 
           {groupId && roster.length > 0 && (
             <div className="mt-4 overflow-hidden rounded-2xl border border-slate-200 dark:border-slate-800">
-              <div className="border-b border-slate-200 bg-slate-100 px-4 py-2.5 text-xs font-semibold text-slate-500 dark:border-slate-800 dark:bg-slate-800/60 dark:text-slate-400">
-                Sayın Velimiz, sporcumuz <span className="font-bold text-slate-700 dark:text-slate-200">[Öğrenci Adı]</span> için{" "}
-                <span className="font-bold text-slate-700 dark:text-slate-200">
-                  {new Date().toLocaleDateString("tr-TR")} ({TURKISH_DAY_NAMES[new Date().getDay()]})
-                </span>{" "}
-                tarihli bilgilendirme: <span className="italic">(yalnızca "Yok" işaretli öğrencilere gider)</span>
+              <div className="border-b border-slate-200 bg-slate-100 px-4 py-2 text-[11px] font-bold uppercase tracking-wide text-slate-500 dark:border-slate-800 dark:bg-slate-800/60 dark:text-slate-400">
+                Gönderilecek Mesaj — Önizleme <span className="italic normal-case">(yalnızca "Yok" işaretli öğrencilere gider)</span>
+              </div>
+              <div className="whitespace-pre-wrap bg-paper2 p-4 font-mono text-xs leading-relaxed text-slate-700 dark:bg-surface dark:text-slate-200">
+                {messagePreview}
               </div>
 
-              <div className="bg-paper2 p-4 dark:bg-surface">
+              <div className="border-t border-slate-200 bg-paper2 p-4 dark:border-slate-800 dark:bg-surface">
                 <div className="mb-2 text-xs font-bold text-slate-600 dark:text-slate-300">Hızlı Mesaj (isteğe bağlı)</div>
                 <div className="mb-3 flex flex-wrap gap-2">
                   {QUICK_MESSAGE_TEMPLATES.map((t) => (
@@ -265,10 +277,6 @@ export function StaffPanelPage() {
                   placeholder="Bir şablon seçin ya da kendi mesajınızı yazın… (boş bırakılırsa ders türüne göre otomatik devamsızlık mesajı gider)"
                   className={`w-full rounded-xl border border-slate-200 bg-paper2 p-3 text-sm text-slate-900 outline-none dark:border-slate-700 dark:bg-surface2 dark:text-white ${theme.focusRing}`}
                 />
-              </div>
-
-              <div className="border-t border-slate-200 bg-slate-100 px-4 py-2.5 text-xs italic text-slate-500 dark:border-slate-800 dark:bg-slate-800/60 dark:text-slate-400">
-                (Bu mesaj sistemimiz tarafından otomatik olarak iletilmiştir.) — <span className="font-bold not-italic">Inter Academy Samsun</span>
               </div>
             </div>
           )}
