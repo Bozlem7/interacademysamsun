@@ -37,7 +37,7 @@ export function AnnouncementsSection() {
     <section id="haberler" className="bg-slate-50 px-4 py-14 dark:bg-[#0b1020] sm:px-6">
       <div className="mx-auto grid max-w-6xl grid-cols-1 gap-8 md:grid-cols-2">
         <div>
-          <div className="mb-3 text-xs font-extrabold tracking-[1.2px] text-[#0057B8] dark:text-[#93c5fd]">GENEL ANTRENMAN PROGRAMI</div>
+          <h2 className="mb-3 text-xs font-extrabold tracking-[1.2px] text-[#0057B8] dark:text-[#93c5fd]">GENEL ANTRENMAN PROGRAMI</h2>
           <div className="overflow-hidden rounded-[18px] bg-paper2 dark:bg-surface">
             {rows.slice(0, 6).map((row, i) => (
               <div
@@ -56,7 +56,7 @@ export function AnnouncementsSection() {
         </div>
 
         <div>
-          <div className="mb-3 text-xs font-extrabold tracking-[1.2px] text-[#0057B8] dark:text-[#93c5fd]">DUYURULAR</div>
+          <h2 className="mb-3 text-xs font-extrabold tracking-[1.2px] text-[#0057B8] dark:text-[#93c5fd]">DUYURULAR</h2>
           <div className="flex flex-col gap-2.5">
             {announcements.map((a) => (
               <div key={a.id} className="rounded-2xl bg-paper2 p-4 dark:bg-surface">

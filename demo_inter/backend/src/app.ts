@@ -10,6 +10,13 @@ import { corsOriginHandler } from "./common/security/corsOrigin";
 export function createApp() {
   const app = express();
 
+  // Nginx reverse proxy arkasında çalışıyoruz — bu olmadan express-rate-limit (ve genel olarak
+  // req.ip) herkesi Nginx'in tek IP'si üzerinden görür, tek bir kullanıcının başarısız giriş
+  // denemesi TÜM kullanıcıları aynı anda kilitler. Nginx zaten X-Forwarded-For header'ı
+  // gönderiyor (bkz. proxy_set_header X-Forwarded-For), bu ayarla Express ona güvenip gerçek
+  // istemci IP'sini kullanır.
+  app.set("trust proxy", 1);
+
   app.use(helmet());
   // credentials:true bilerek kullanılmıyor — kimlik doğrulama JWT Bearer header ile yapılıyor,
   // cookie tabanlı bir oturum yok. Bu sayede CORS_ORIGIN=* (acil teşhis/staging) güvenle çalışır;

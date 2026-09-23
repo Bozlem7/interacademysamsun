@@ -40,9 +40,9 @@ export function TrainingScheduleSection() {
   return (
     <section id="antrenman-programi" className="mx-auto max-w-6xl px-4 py-14 sm:px-6">
       <div className="mb-2.5 text-xs font-extrabold tracking-[1.2px] text-[#0057B8] dark:text-[#93c5fd]">ANTRENMAN PROGRAMI</div>
-      <div className="text-[26px] font-extrabold leading-tight tracking-tight text-slate-900 dark:text-white sm:text-[32px]">
+      <h2 className="text-[26px] font-extrabold leading-tight tracking-tight text-slate-900 dark:text-white sm:text-[32px]">
         Yaş gruplarına göre haftalık plan
-      </div>
+      </h2>
       <div className="mt-3 text-xs font-semibold text-slate-500 dark:text-slate-500">
         Bu program yönetim panelinden güncellenir — görüntüleme amaçlıdır.
       </div>

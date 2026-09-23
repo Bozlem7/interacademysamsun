@@ -34,6 +34,7 @@ interface StudentDetail {
   notifyMother: boolean;
   notifyFather: boolean;
   notifyGuardian: boolean;
+  paymentDueDay: 15 | 30;
   registrationPdfUrl: string | null;
   group: { id: string; name: string } | null;
 }
@@ -44,6 +45,7 @@ type EditableForm = {
   dob: string;
   gender: "erkek" | "kiz";
   groupId: string;
+  paymentDueDay: 15 | 30;
   bloodType: string;
   heightCm: string;
   weightKg: string;
@@ -71,6 +73,7 @@ function toForm(d: StudentDetail): EditableForm {
     dob: d.dob?.slice(0, 10) ?? "",
     gender: d.gender ?? "erkek",
     groupId: d.group?.id ?? "",
+    paymentDueDay: d.paymentDueDay ?? 15,
     bloodType: d.bloodType ?? "",
     heightCm: d.heightCm != null ? String(d.heightCm) : "",
     weightKg: d.weightKg != null ? String(d.weightKg) : "",
@@ -415,6 +418,7 @@ export function StudentDetailModal({
               <Field label="Boy (cm)" value={detail.heightCm != null ? String(detail.heightCm) : ""} />
               <Field label="Kilo (kg)" value={detail.weightKg != null ? String(detail.weightKg) : ""} />
               <Field label="E-Posta" value={detail.email ?? ""} />
+              <Field label="Ödeme Günü" value={String(detail.paymentDueDay)} />
               <Field label="İkametgah Adresi" value={detail.address ?? ""} />
             </div>
           ) : (
@@ -458,6 +462,17 @@ export function StudentDetailModal({
                       {g.name}
                     </option>
                   ))}
+                </select>
+              </div>
+              <div>
+                <div className={labelCls}>Ödeme Günü</div>
+                <select
+                  className={inputCls}
+                  value={form.paymentDueDay}
+                  onChange={(e) => set("paymentDueDay", Number(e.target.value) as 15 | 30)}
+                >
+                  <option value={15}>Ödeme Günü: 15</option>
+                  <option value={30}>Ödeme Günü: 30</option>
                 </select>
               </div>
               <div>

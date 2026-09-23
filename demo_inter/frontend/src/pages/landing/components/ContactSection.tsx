@@ -4,9 +4,9 @@ export function ContactSection() {
   return (
     <section id="iletisim" className="mx-auto max-w-6xl px-4 py-14 sm:px-6">
       <div className="mb-2.5 text-xs font-extrabold tracking-[1.2px] text-[#0057B8] dark:text-[#93c5fd]">İLETİŞİM</div>
-      <div className="text-[26px] font-extrabold leading-tight tracking-tight text-slate-900 dark:text-white sm:text-[32px]">
+      <h2 className="text-[26px] font-extrabold leading-tight tracking-tight text-slate-900 dark:text-white sm:text-[32px]">
         Bize ulaşın
-      </div>
+      </h2>
       <div className="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <a
           href="tel:+905336007455"
