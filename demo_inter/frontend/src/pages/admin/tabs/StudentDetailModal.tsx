@@ -4,7 +4,7 @@ import { Modal, ConfirmDialog } from "../../../components/common/Modal";
 import { tcErrorMessage } from "../../../lib/tcValidation";
 import { calcAge, formatPhone } from "../../../lib/format";
 import { DocumentUploadField } from "../../../components/forms/DocumentUploadField";
-import { AttendanceReportModal } from "./AttendanceReportModal";
+import { AttendanceReportContent } from "./AttendanceReportModal";
 
 interface GroupOption {
   id: string;
@@ -377,7 +377,7 @@ export function StudentDetailModal({
             </div>
             <div className="flex shrink-0 gap-2">
               <button
-                onClick={() => setAttendanceReportOpen(true)}
+                onClick={() => setAttendanceReportOpen((v) => !v)}
                 className="rounded-lg border border-slate-300 bg-white px-3.5 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:bg-surface2 dark:text-slate-200 dark:hover:bg-surface"
               >
                 📊 Yoklama Raporu
@@ -403,6 +403,23 @@ export function StudentDetailModal({
               </button>
             </div>
           </div>
+
+          {attendanceReportOpen && (
+            <div className="mb-5 rounded-2xl border border-slate-200 bg-paper2 p-4 dark:border-slate-800 dark:bg-surface">
+              <div className="mb-4 flex items-center justify-between">
+                <div className="text-sm font-extrabold text-slate-900 dark:text-white">📊 Yoklama Raporu</div>
+                <button
+                  type="button"
+                  onClick={() => setAttendanceReportOpen(false)}
+                  aria-label="Kapat"
+                  className="flex h-8 w-8 items-center justify-center rounded-full text-lg font-bold text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700 dark:text-slate-500 dark:hover:bg-surface2 dark:hover:text-white"
+                >
+                  ✕
+                </button>
+              </div>
+              <AttendanceReportContent studentId={studentId} active={attendanceReportOpen} />
+            </div>
+          )}
 
           {error && <div className="mb-4 rounded-lg bg-red-50 p-3 text-sm text-red-600">{error}</div>}
 
@@ -694,12 +711,6 @@ export function StudentDetailModal({
       confirmLabel={docDeleting ? "Siliniyor…" : "Evet, Kalıcı Olarak Sil"}
       onConfirm={deleteDocument}
       onCancel={() => setDocDeleteConfirmOpen(false)}
-    />
-
-    <AttendanceReportModal
-      open={attendanceReportOpen}
-      onClose={() => setAttendanceReportOpen(false)}
-      studentId={studentId}
     />
     </>
   );

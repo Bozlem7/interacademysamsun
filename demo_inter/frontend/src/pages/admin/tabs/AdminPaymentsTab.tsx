@@ -232,6 +232,7 @@ export function AdminPaymentsTab() {
         open={!!attendanceReportTarget}
         onClose={() => setAttendanceReportTarget(null)}
         studentId={attendanceReportTarget?.id ?? null}
+        studentName={attendanceReportTarget?.name}
       />
     </div>
   );
