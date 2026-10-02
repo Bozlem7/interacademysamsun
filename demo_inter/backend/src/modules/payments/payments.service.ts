@@ -115,17 +115,46 @@ export function listPayments(params: {
  * Marks a payment as paid. Requires explicit double-confirmation (`confirm: true` from the
  * client-side confirm dialog) and is a one-way transition — enforced here AND by the
  * `trg_prevent_payment_downgrade` DB trigger as defense-in-depth.
+ *
+ * `paidAmount` lets the admin record a different amount than the period's nominal `amount`
+ * (full payment, discount, custom installment) — defaults to the existing amount so older
+ * callers that only send `{ confirm: true }` keep working unchanged. The payment update and the
+ * resulting income ledger entry (`FinanceTransaction`) are written atomically: either both
+ * succeed, or neither does.
  */
-export async function markPaymentPaid(paymentId: string, confirmedByUserId: string, confirm: boolean) {
+export async function markPaymentPaid(
+  paymentId: string,
+  confirmedByUserId: string,
+  confirm: boolean,
+  paidAmount?: number
+) {
   if (!confirm) throw new ValidationError("Ödeme onayı için çift onay (confirm) gereklidir");
 
   const payment = await prisma.payment.findUnique({ where: { id: paymentId } });
   if (!payment) throw new NotFoundError("Ödeme kaydı bulunamadı");
   if (payment.status === "odendi") throw new ConflictError("Bu dönem zaten ödenmiş olarak işaretli");
 
-  return prisma.payment.update({
-    where: { id: paymentId },
-    data: { status: "odendi", paidAt: new Date(), confirmedBy: confirmedByUserId },
+  const amount = paidAmount ?? Number(payment.amount);
+  if (!(amount > 0)) throw new ValidationError("Ödeme tutarı 0'dan büyük olmalıdır");
+
+  return prisma.$transaction(async (tx) => {
+    const updated = await tx.payment.update({
+      where: { id: paymentId },
+      data: { status: "odendi", paidAt: new Date(), confirmedBy: confirmedByUserId, amount },
+    });
+
+    await tx.financeTransaction.create({
+      data: {
+        type: "gelir",
+        description: `${payment.periodMonth}/${payment.periodYear} dönemi aidat tahsilatı`,
+        amount,
+        studentId: payment.studentId,
+        paymentId: payment.id,
+        createdBy: confirmedByUserId,
+      },
+    });
+
+    return updated;
   });
 }
 

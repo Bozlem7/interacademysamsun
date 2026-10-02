@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { apiClient } from "../../../lib/apiClient";
-import { ConfirmDialog } from "../../../components/common/Modal";
+import { Modal } from "../../../components/common/Modal";
 import { useAuthStore } from "../../../features/auth/authStore";
 import { getWhatsAppNotifyPrimaryRecipient, hasWhatsAppNotifyRecipient, StudentNotifyFields } from "../../../lib/notifyRecipients";
 import { useWhatsAppStore } from "../../../features/whatsapp/whatsappStore";
@@ -30,6 +30,8 @@ export function AdminPaymentsTab() {
   }, [username, canConfirmPayment]);
   const [payments, setPayments] = useState<PaymentRow[]>([]);
   const [confirmTarget, setConfirmTarget] = useState<PaymentRow | null>(null);
+  const [paidAmountInput, setPaidAmountInput] = useState("");
+  const [markPaidError, setMarkPaidError] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [remindingId, setRemindingId] = useState<string | null>(null);
   const [remindResult, setRemindResult] = useState<{ id: string; ok: boolean; text: string } | null>(null);
@@ -43,14 +45,25 @@ export function AdminPaymentsTab() {
 
   function openConfirm(p: PaymentRow) {
     if (!canConfirmPayment) return;
+    setPaidAmountInput(p.amount);
+    setMarkPaidError(null);
     setConfirmTarget(p);
   }
 
   async function markPaid() {
     if (!confirmTarget || !canConfirmPayment) return;
-    await apiClient.patch(`/payments/${confirmTarget.id}/status`, { confirm: true });
-    setConfirmTarget(null);
-    load();
+    const paidAmount = Number(paidAmountInput);
+    if (!(paidAmount > 0)) {
+      setMarkPaidError("Ödeme tutarı 0'dan büyük olmalıdır.");
+      return;
+    }
+    try {
+      await apiClient.patch(`/payments/${confirmTarget.id}/status`, { confirm: true, paidAmount });
+      setConfirmTarget(null);
+      load();
+    } catch (e: any) {
+      setMarkPaidError(e.response?.data?.error ?? "Ödeme işaretlenemedi.");
+    }
   }
 
   const whatsappStatus = useWhatsAppStore((s) => s.status);
@@ -121,7 +134,6 @@ export function AdminPaymentsTab() {
           <div className="text-xs font-bold text-slate-400">GECİKMİŞ ÖDEME</div>
           <div className="text-base font-extrabold text-red-600">{overdueCount}</div>
         </div>
-        <div className="ml-auto text-xs font-semibold text-slate-500 dark:text-slate-400">Sabit aylık aidat: 3.500 TL</div>
       </div>
 
       <input
@@ -219,14 +231,38 @@ export function AdminPaymentsTab() {
         {payments.length === 0 && <div className="p-6 text-sm text-slate-400">Bu döneme ait ödeme kaydı bulunamadı.</div>}
       </div>
 
-      <ConfirmDialog
-        open={!!confirmTarget}
-        title="Ödemeyi onayla"
-        body={`${confirmTarget?.student.fullName} için ${confirmTarget?.periodMonth}/${confirmTarget?.periodYear} dönemi "Ödendi" olarak işaretlenecek. Bu işlem geri alınamaz — dönem sona erene kadar tekrar "Ödenmedi" durumuna düşmez.`}
-        confirmLabel="Evet, Ödendi Olarak İşaretle"
-        onConfirm={markPaid}
-        onCancel={() => setConfirmTarget(null)}
-      />
+      <Modal open={!!confirmTarget} onClose={() => setConfirmTarget(null)} title="Ödemeyi onayla">
+        <div className="space-y-3.5">
+          <div className="text-sm leading-relaxed text-slate-600 dark:text-slate-400">
+            {confirmTarget?.student.fullName} için {confirmTarget?.periodMonth}/{confirmTarget?.periodYear} dönemi "Ödendi" olarak işaretlenecek. Tahsil
+            edilen tutarı (tam ödeme, indirim veya özel taksit) aşağıdan belirleyebilirsiniz. Bu işlem geri alınamaz — dönem sona erene kadar tekrar
+            "Ödenmedi" durumuna düşmez.
+          </div>
+          <div>
+            <label className="mb-1 block text-xs font-bold text-slate-500">Tahsil Edilen Tutar (TL)</label>
+            <input
+              type="number"
+              min="0"
+              step="0.01"
+              value={paidAmountInput}
+              onChange={(e) => setPaidAmountInput(e.target.value)}
+              className="w-full rounded-xl border border-slate-200 bg-paper2 p-3 text-sm outline-none focus:border-brand dark:border-slate-700 dark:bg-surface dark:text-white"
+            />
+          </div>
+          {markPaidError && <div className="text-xs font-semibold text-red-600">{markPaidError}</div>}
+          <div className="flex gap-2.5">
+            <button onClick={markPaid} className="flex-1 rounded-xl bg-red-600 py-3 text-sm font-extrabold text-white hover:bg-red-700">
+              Evet, Ödendi Olarak İşaretle
+            </button>
+            <button
+              onClick={() => setConfirmTarget(null)}
+              className="flex-1 rounded-xl bg-slate-100 py-3 text-sm font-bold text-slate-600 hover:bg-slate-200 dark:bg-surface2 dark:text-slate-300 dark:hover:bg-slate-700"
+            >
+              Vazgeç
+            </button>
+          </div>
+        </div>
+      </Modal>
 
       <AttendanceReportModal
         open={!!attendanceReportTarget}

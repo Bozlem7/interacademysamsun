@@ -5,6 +5,7 @@ import { AdminStaffTab } from "./tabs/AdminStaffTab";
 import { AdminPaymentsTab } from "./tabs/AdminPaymentsTab";
 import { AdminContentTab } from "./tabs/AdminContentTab";
 import { AdminScheduleTab } from "./tabs/AdminScheduleTab";
+import { AdminFinanceTab } from "./tabs/AdminFinanceTab";
 import { connectWhatsAppSocket, disconnectWhatsAppSocket } from "../../features/whatsapp/whatsappSocket";
 import { WhatsAppStatusWidget } from "../../features/whatsapp/WhatsAppStatusWidget";
 
@@ -12,6 +13,7 @@ const TABS = [
   { key: "students", label: "Öğrenci Yönetimi" },
   { key: "staff", label: "Eğitmen & Uzman" },
   { key: "payments", label: "Ödeme & WhatsApp" },
+  { key: "finance", label: "Finans" },
   { key: "content", label: "Site İçeriği" },
   { key: "schedule", label: "Antrenman Programı Yönetimi" },
 ] as const;
@@ -54,6 +56,7 @@ export function AdminPanelPage() {
       {tab === "students" && <AdminStudentsTab />}
       {tab === "staff" && <AdminStaffTab />}
       {tab === "payments" && <AdminPaymentsTab />}
+      {tab === "finance" && <AdminFinanceTab />}
       {tab === "content" && <AdminContentTab />}
       {tab === "schedule" && <AdminScheduleTab />}
     </div>

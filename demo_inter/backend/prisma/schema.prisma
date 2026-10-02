@@ -44,6 +44,11 @@ enum PaymentStatus {
   odendi
 }
 
+enum FinanceTransactionType {
+  gelir
+  gider
+}
+
 enum PreRegStatus {
   beklemede
   onaylandi
@@ -94,6 +99,7 @@ model User {
   createdAnnouncements Announcement[]
   updatedContentBlocks SiteContentBlock[]
   updatedFeeSettings   FeeSettings[]
+  financeTransactions  FinanceTransaction[]
 
   @@map("users")
 }
@@ -175,6 +181,7 @@ model Student {
   attendanceRecords  AttendanceRecord[]
   notes              StudentNote[]
   payments           Payment[]
+  financeTransactions FinanceTransaction[]
   preRegistration    PreRegistration?
 
   @@index([groupId])
@@ -260,11 +267,41 @@ model Payment {
 
   student  Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
   confirmer User?  @relation("ConfirmedBy", fields: [confirmedBy], references: [id])
+  financeTransaction FinanceTransaction?
 
   @@unique([studentId, periodYear, periodMonth])
   @@index([periodYear, periodMonth, dueDay])
   @@index([status])
   @@map("payments")
+}
+
+/// Birleşik gelir/gider defteri — öğrenci aidat tahsilatları (Payment'a bağlı), manuel gelirler
+/// (sponsorluk, ekipman satışı vb.) ve giderler (kira, malzeme, fatura vb.) tek tabloda tutulur.
+/// Finansal özet (Toplam Gelir/Gider/Net Kasa) burada tek bir GROUP BY ile hesaplanır.
+model FinanceTransaction {
+  id              String                 @id @default(uuid())
+  type            FinanceTransactionType
+  description     String
+  amount          Decimal                @db.Decimal(12, 2)
+  /// Gider için: Kira/Malzeme/Fatura/Diğer. Gelir için opsiyonel serbest etiket (ör. "Sponsorluk").
+  category        String?
+  transactionDate DateTime               @default(now()) @map("transaction_date")
+  studentId       String?                @map("student_id")
+  /// Bir Payment'tan türeyen aidat tahsilatı gelirlerini kaynağına bağlar (1:1) — aynı ödeme için
+  /// mükerrer gelir kaydı oluşmasını @unique ile engeller.
+  paymentId       String?                @unique @map("payment_id")
+  createdBy       String                 @map("created_by")
+  createdAt       DateTime               @default(now()) @map("created_at")
+
+  student   Student? @relation(fields: [studentId], references: [id], onDelete: SetNull)
+  payment   Payment? @relation(fields: [paymentId], references: [id], onDelete: SetNull)
+  creator   User     @relation(fields: [createdBy], references: [id])
+
+  @@index([transactionDate])
+  @@index([createdBy])
+  @@index([type])
+  @@index([studentId])
+  @@map("finance_transactions")
 }
 
 model FeeSettings {

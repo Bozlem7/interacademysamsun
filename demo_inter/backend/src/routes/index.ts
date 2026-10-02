@@ -8,6 +8,7 @@ import { adminInstructorsRouter } from "../modules/staff/adminInstructors.contro
 import { attendanceRouter } from "../modules/attendance/attendance.controller";
 import { notesRouter } from "../modules/notes/notes.controller";
 import { paymentsRouter, feeSettingsRouter } from "../modules/payments/payments.controller";
+import { financeRouter, expensesRouter, incomesRouter } from "../modules/finance/finance.controller";
 import { preRegistrationsRouter } from "../modules/preRegistrations/preRegistrations.controller";
 import { scheduleRouter } from "../modules/schedule/schedule.controller";
 import { contentRouter } from "../modules/content/content.controller";
@@ -36,6 +37,9 @@ apiRouter.use("/notes", notesRouter);
 apiRouter.use("/payments", paymentsRouter);
 apiRouter.use("/payments", paymentReminderRoutes);
 apiRouter.use("/fee-settings", feeSettingsRouter);
+apiRouter.use("/finance", financeRouter);
+apiRouter.use("/expenses", expensesRouter);
+apiRouter.use("/incomes", incomesRouter);
 apiRouter.use("/pre-registrations", preRegistrationsRouter);
 apiRouter.use("/schedule", scheduleRouter);
 apiRouter.use("/content", contentRouter);

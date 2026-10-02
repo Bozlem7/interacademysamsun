@@ -27,7 +27,7 @@ paymentsRouter.get("/", async (req, res) => {
   res.json(await service.listPayments(filters));
 });
 
-const markPaidSchema = z.object({ confirm: z.literal(true) });
+const markPaidSchema = z.object({ confirm: z.literal(true), paidAmount: z.number().positive().optional() });
 
 paymentsRouter.patch(
   "/:id/status",
@@ -39,7 +39,7 @@ paymentsRouter.patch(
     if (!existing) throw new NotFoundError("Ödeme kaydı bulunamadı");
     if (existing.student.branchId !== req.auth!.branchId) throw new ForbiddenError("Bu ödeme farklı bir şubeye ait");
 
-    const payment = await service.markPaymentPaid(req.params.id, req.auth!.sub, req.body.confirm);
+    const payment = await service.markPaymentPaid(req.params.id, req.auth!.sub, req.body.confirm, req.body.paidAmount);
     res.json(payment);
   }
 );
