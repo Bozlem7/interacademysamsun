@@ -25,6 +25,14 @@ function formatMoney(value: number | string) {
   return `${Number(value).toLocaleString("tr-TR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} TL`;
 }
 
+/** "02.10.2026 - 14:35" — audit panelinde/detayında tam zaman damgası için; liste satırlarında yalnızca tarih kullanılır. */
+function formatDateTime(iso: string) {
+  const d = new Date(iso);
+  const date = d.toLocaleDateString("tr-TR");
+  const time = d.toLocaleTimeString("tr-TR", { hour: "2-digit", minute: "2-digit" });
+  return `${date} - ${time}`;
+}
+
 function ExpenseFormModal({ open, onClose, onSaved }: { open: boolean; onClose: () => void; onSaved: () => void }) {
   const [description, setDescription] = useState("");
   const [amount, setAmount] = useState("");
@@ -179,12 +187,61 @@ function IncomeFormModal({ open, onClose, onSaved }: { open: boolean; onClose: (
   );
 }
 
+function TransactionDetailModal({ transaction, onClose }: { transaction: TransactionRow | null; onClose: () => void }) {
+  return (
+    <Modal open={!!transaction} onClose={onClose} title="İşlem Detayı">
+      {transaction && (
+        <div className="space-y-3">
+          <span
+            className={`inline-block rounded-full px-2 py-0.5 text-[10px] font-extrabold ${
+              transaction.type === "gelir"
+                ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400"
+                : "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"
+            }`}
+          >
+            {transaction.type === "gelir" ? "GELİR" : "GİDER"}
+          </span>
+          <div className="text-base font-extrabold text-slate-900 dark:text-white">{transaction.description}</div>
+          <div className={`text-xl font-extrabold ${transaction.type === "gelir" ? "text-emerald-600" : "text-red-600"}`}>
+            {transaction.type === "gelir" ? "+" : "-"}
+            {formatMoney(transaction.amount)}
+          </div>
+          <dl className="space-y-1.5 text-sm">
+            {transaction.studentName && (
+              <div className="flex justify-between gap-3">
+                <dt className="font-semibold text-slate-400">Öğrenci</dt>
+                <dd className="text-right font-bold text-slate-700 dark:text-slate-200">{transaction.studentName}</dd>
+              </div>
+            )}
+            {transaction.category && (
+              <div className="flex justify-between gap-3">
+                <dt className="font-semibold text-slate-400">Kategori</dt>
+                <dd className="text-right font-bold text-slate-700 dark:text-slate-200">{transaction.category}</dd>
+              </div>
+            )}
+            <div className="flex justify-between gap-3">
+              <dt className="font-semibold text-slate-400">Tarih / Saat</dt>
+              <dd className="text-right font-bold text-slate-700 dark:text-slate-200">{formatDateTime(transaction.transactionDate)}</dd>
+            </div>
+            <div className="flex justify-between gap-3">
+              <dt className="font-semibold text-slate-400">Ekleyen / Onaylayan</dt>
+              <dd className="text-right font-bold text-slate-700 dark:text-slate-200">{transaction.createdByName}</dd>
+            </div>
+          </dl>
+        </div>
+      )}
+    </Modal>
+  );
+}
+
 export function AdminFinanceTab() {
   const [summary, setSummary] = useState<Summary | null>(null);
   const [transactions, setTransactions] = useState<TransactionRow[]>([]);
   const [typeFilter, setTypeFilter] = useState<"" | "gelir" | "gider">("");
   const [expenseModalOpen, setExpenseModalOpen] = useState(false);
   const [incomeModalOpen, setIncomeModalOpen] = useState(false);
+  const [detailTarget, setDetailTarget] = useState<TransactionRow | null>(null);
+  const [recentActivity, setRecentActivity] = useState<TransactionRow[]>([]);
 
   function loadSummary() {
     apiClient.get("/finance/summary").then((r) => setSummary(r.data));
@@ -194,9 +251,15 @@ export function AdminFinanceTab() {
     apiClient.get("/finance/transactions", { params: { type: typeFilter || undefined, pageSize: 50 } }).then((r) => setTransactions(r.data.items));
   }
 
+  /** Filtreden bağımsız, her zaman en güncel işlemleri gösteren audit paneli/drawer içeriği. */
+  function loadRecentActivity() {
+    apiClient.get("/finance/transactions", { params: { pageSize: 8 } }).then((r) => setRecentActivity(r.data.items));
+  }
+
   function reload() {
     loadSummary();
     loadTransactions();
+    loadRecentActivity();
   }
 
   useEffect(reload, [typeFilter]);
@@ -251,37 +314,74 @@ export function AdminFinanceTab() {
         ))}
       </div>
 
-      <div className="overflow-hidden rounded-2xl border border-slate-200 bg-paper2 dark:border-slate-800 dark:bg-surface">
-        {transactions.map((t) => (
-          <div key={t.id} className="flex flex-wrap items-center gap-3.5 border-b border-slate-100 px-5 py-3.5 last:border-0 dark:border-slate-800">
-            <span
-              className={`rounded-full px-2 py-0.5 text-[10px] font-extrabold ${
-                t.type === "gelir" ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400" : "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"
-              }`}
-            >
-              {t.type === "gelir" ? "GELİR" : "GİDER"}
-            </span>
-            <div className="min-w-[200px] flex-1">
-              <div className="text-sm font-bold text-slate-800 dark:text-slate-100">
-                {t.description}
-                {t.studentName && <span className="font-normal text-slate-400"> · {t.studentName}</span>}
+      <div className="flex flex-col gap-5 lg:flex-row lg:items-start">
+        <div className="flex-1 overflow-hidden rounded-2xl border border-slate-200 bg-paper2 dark:border-slate-800 dark:bg-surface">
+          {transactions.map((t) => (
+            <div key={t.id} className="flex flex-wrap items-center gap-3.5 border-b border-slate-100 px-5 py-3.5 last:border-0 dark:border-slate-800">
+              <span
+                className={`rounded-full px-2 py-0.5 text-[10px] font-extrabold ${
+                  t.type === "gelir"
+                    ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400"
+                    : "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"
+                }`}
+              >
+                {t.type === "gelir" ? "GELİR" : "GİDER"}
+              </span>
+              <div className="min-w-[200px] flex-1">
+                <div className="text-sm font-bold text-slate-800 dark:text-slate-100">
+                  {t.description}
+                  {t.studentName && <span className="font-normal text-slate-400"> · {t.studentName}</span>}
+                </div>
+                <div className="text-xs text-slate-400">
+                  {new Date(t.transactionDate).toLocaleDateString("tr-TR")}
+                  {t.category && ` · ${t.category}`} · Kaydeden: {t.createdByName}
+                </div>
               </div>
-              <div className="text-xs text-slate-400">
-                {new Date(t.transactionDate).toLocaleDateString("tr-TR")}
-                {t.category && ` · ${t.category}`} · Kaydeden: {t.createdByName}
+              <div className={`text-sm font-extrabold ${t.type === "gelir" ? "text-emerald-600" : "text-red-600"}`}>
+                {t.type === "gelir" ? "+" : "-"}
+                {formatMoney(t.amount)}
               </div>
+              {/* Masaüstünde bu bilgiler zaten sağdaki "Son İşlemler & Detaylar" panelinde sürekli görünür —
+                  dar ekranda panel gizlendiği için tam audit detayına (saat + onaylayan) buradan erişilir. */}
+              <button
+                onClick={() => setDetailTarget(t)}
+                className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-bold text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:bg-surface2 dark:text-slate-200 dark:hover:bg-surface lg:hidden"
+              >
+                Detay
+              </button>
             </div>
-            <div className={`text-sm font-extrabold ${t.type === "gelir" ? "text-emerald-600" : "text-red-600"}`}>
-              {t.type === "gelir" ? "+" : "-"}
-              {formatMoney(t.amount)}
-            </div>
+          ))}
+          {transactions.length === 0 && <div className="p-6 text-sm text-slate-400">Henüz bir işlem kaydı bulunmuyor.</div>}
+        </div>
+
+        <aside className="hidden w-80 shrink-0 overflow-hidden rounded-2xl border border-slate-200 bg-paper2 dark:border-slate-800 dark:bg-surface lg:sticky lg:top-7 lg:block lg:max-h-[calc(100vh-3.5rem)] lg:overflow-y-auto">
+          <div className="border-b border-slate-100 px-5 py-3.5 text-sm font-extrabold text-slate-800 dark:border-slate-800 dark:text-slate-100">
+            Son İşlemler & Detaylar
           </div>
-        ))}
-        {transactions.length === 0 && <div className="p-6 text-sm text-slate-400">Henüz bir işlem kaydı bulunmuyor.</div>}
+          {recentActivity.map((t) => (
+            <button
+              key={t.id}
+              onClick={() => setDetailTarget(t)}
+              className="block w-full border-b border-slate-100 px-5 py-3 text-left last:border-0 hover:bg-slate-50 dark:border-slate-800 dark:hover:bg-surface2"
+            >
+              <div className="flex items-center justify-between gap-2">
+                <div className="truncate text-xs font-bold text-slate-800 dark:text-slate-100">{t.description}</div>
+                <div className={`shrink-0 text-xs font-extrabold ${t.type === "gelir" ? "text-emerald-600" : "text-red-600"}`}>
+                  {t.type === "gelir" ? "+" : "-"}
+                  {formatMoney(t.amount)}
+                </div>
+              </div>
+              <div className="text-[11px] text-slate-400">{formatDateTime(t.transactionDate)}</div>
+              <div className="text-[11px] font-semibold text-slate-400">Ekleyen / Onaylayan: {t.createdByName}</div>
+            </button>
+          ))}
+          {recentActivity.length === 0 && <div className="p-5 text-xs text-slate-400">Henüz bir işlem kaydı bulunmuyor.</div>}
+        </aside>
       </div>
 
       <ExpenseFormModal open={expenseModalOpen} onClose={() => setExpenseModalOpen(false)} onSaved={reload} />
       <IncomeFormModal open={incomeModalOpen} onClose={() => setIncomeModalOpen(false)} onSaved={reload} />
+      <TransactionDetailModal transaction={detailTarget} onClose={() => setDetailTarget(null)} />
     </div>
   );
 }
