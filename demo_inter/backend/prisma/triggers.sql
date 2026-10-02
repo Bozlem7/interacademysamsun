@@ -1,11 +1,14 @@
 -- Run this once after the initial `prisma migrate dev` (Prisma does not model triggers).
 -- Defense-in-depth: blocks any UPDATE that would move a payment from 'odendi' back to 'odenmedi',
--- even if a future bug in the API layer allowed it through.
+-- even if a future bug in the API layer allowed it through. The only exception is the explicit
+-- "Geri Al" flow (payments.service.ts → revertPayment), which opts in per-transaction via
+-- `set_config('app.allow_payment_revert', 'on', true)`.
 
 CREATE OR REPLACE FUNCTION prevent_payment_status_downgrade()
 RETURNS TRIGGER AS $$
 BEGIN
-  IF OLD.status = 'odendi' AND NEW.status = 'odenmedi' THEN
+  IF OLD.status = 'odendi' AND NEW.status = 'odenmedi'
+     AND coalesce(current_setting('app.allow_payment_revert', true), '') <> 'on' THEN
     RAISE EXCEPTION 'Odendi statusu tekrar odenmedi yapilamaz (payment id: %)', OLD.id;
   END IF;
   RETURN NEW;

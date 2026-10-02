@@ -39,7 +39,13 @@ paymentsRouter.patch(
     if (!existing) throw new NotFoundError("Ödeme kaydı bulunamadı");
     if (existing.student.branchId !== req.auth!.branchId) throw new ForbiddenError("Bu ödeme farklı bir şubeye ait");
 
-    const payment = await service.markPaymentPaid(req.params.id, req.auth!.sub, req.body.confirm, req.body.paidAmount);
+    const payment = await service.markPaymentPaid(
+      req.params.id,
+      req.auth!.sub,
+      req.body.confirm,
+      req.body.paidAmount,
+      req.auth!.username
+    );
     res.json(payment);
   }
 );

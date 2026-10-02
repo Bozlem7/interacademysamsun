@@ -49,6 +49,11 @@ enum FinanceTransactionType {
   gider
 }
 
+enum PaymentLogAction {
+  PAID
+  REVERTED
+}
+
 enum PreRegStatus {
   beklemede
   onaylandi
@@ -99,7 +104,10 @@ model User {
   createdAnnouncements Announcement[]
   updatedContentBlocks SiteContentBlock[]
   updatedFeeSettings   FeeSettings[]
-  financeTransactions  FinanceTransaction[]
+  financeTransactionsCreated FinanceTransaction[] @relation("FinanceCreatedBy")
+  financeTransactionsUpdated FinanceTransaction[] @relation("FinanceUpdatedBy")
+  financeTransactionsDeleted FinanceTransaction[] @relation("FinanceDeletedBy")
+  paymentLogs          StudentPaymentLog[]
 
   @@map("users")
 }
@@ -182,6 +190,7 @@ model Student {
   notes              StudentNote[]
   payments           Payment[]
   financeTransactions FinanceTransaction[]
+  paymentLogs        StudentPaymentLog[]
   preRegistration    PreRegistration?
 
   @@index([groupId])
@@ -267,7 +276,8 @@ model Payment {
 
   student  Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
   confirmer User?  @relation("ConfirmedBy", fields: [confirmedBy], references: [id])
-  financeTransaction FinanceTransaction?
+  financeTransactions FinanceTransaction[]
+  paymentLogs        StudentPaymentLog[]
 
   @@unique([studentId, periodYear, periodMonth])
   @@index([periodYear, periodMonth, dueDay])
@@ -287,21 +297,63 @@ model FinanceTransaction {
   category        String?
   transactionDate DateTime               @default(now()) @map("transaction_date")
   studentId       String?                @map("student_id")
-  /// Bir Payment'tan türeyen aidat tahsilatı gelirlerini kaynağına bağlar (1:1) — aynı ödeme için
-  /// mükerrer gelir kaydı oluşmasını @unique ile engeller.
-  paymentId       String?                @unique @map("payment_id")
+  /// Bir Payment'tan türeyen aidat tahsilatı gelirlerini kaynağına bağlar. Aynı ödeme için
+  /// mükerrer AKTİF gelir kaydı, migration'daki kısmi unique index (`payment_id WHERE
+  /// is_deleted = false`) ile engellenir — "Geri Al" sonrası tekrar ödendi yapılabilmesi için
+  /// iptal edilmiş eski kayıt kalırken yenisi açılabilmeli. Prisma kısmi index'i modelleyemiyor.
+  paymentId       String?                @map("payment_id")
   createdBy       String                 @map("created_by")
   createdAt       DateTime               @default(now()) @map("created_at")
 
+  /// Düzenleme geçmişi: yalnızca en son değişiklik anlık görüntüsü tutulur (tam versiyon geçmişi
+  /// değil) — Detay panelindeki "Düzenleyen X, (Eski: A TL, Yeni: B TL)" gösterimi için yeterli.
+  updatedBy      String?   @map("updated_by")
+  updatedAt      DateTime? @map("updated_at")
+  previousAmount Decimal?  @db.Decimal(12, 2) @map("previous_amount")
+
+  /// Soft delete: aktif toplam/liste sorgularından hariç tutulur, ama audit akışında
+  /// "[Silindi]" olarak görünmeye devam eder — mali kayıtlar asla fiziksel olarak silinmez.
+  isDeleted Boolean   @default(false) @map("is_deleted")
+  deletedBy String?   @map("deleted_by")
+  deletedAt DateTime? @map("deleted_at")
+
   student   Student? @relation(fields: [studentId], references: [id], onDelete: SetNull)
   payment   Payment? @relation(fields: [paymentId], references: [id], onDelete: SetNull)
-  creator   User     @relation(fields: [createdBy], references: [id])
+  creator   User     @relation("FinanceCreatedBy", fields: [createdBy], references: [id])
+  updater   User?    @relation("FinanceUpdatedBy", fields: [updatedBy], references: [id])
+  deleter   User?    @relation("FinanceDeletedBy", fields: [deletedBy], references: [id])
 
   @@index([transactionDate])
   @@index([createdBy])
   @@index([type])
   @@index([studentId])
+  @@index([isDeleted])
+  @@index([createdAt])
+  @@index([paymentId])
   @@map("finance_transactions")
+}
+
+/// Ödeme durum değişikliklerinin append-only denetim kaydı ("Ödendi" / "Geri Alındı").
+/// `adminName` işlem anındaki kullanıcı adının kopyasıdır — kullanıcı sonradan silinse bile
+/// geçmiş kayıt okunabilir kalır.
+model StudentPaymentLog {
+  id         String           @id @default(uuid())
+  studentId  String           @map("student_id")
+  paymentId  String?          @map("payment_id")
+  adminId    String?          @map("admin_id")
+  adminName  String           @map("admin_name")
+  actionType PaymentLogAction @map("action_type")
+  amount     Decimal          @db.Decimal(12, 2)
+  createdAt  DateTime         @default(now()) @map("created_at")
+
+  student Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  payment Payment? @relation(fields: [paymentId], references: [id], onDelete: SetNull)
+  admin   User?    @relation(fields: [adminId], references: [id], onDelete: SetNull)
+
+  @@index([createdAt])
+  @@index([studentId])
+  @@index([actionType])
+  @@map("student_payment_logs")
 }
 
 model FeeSettings {

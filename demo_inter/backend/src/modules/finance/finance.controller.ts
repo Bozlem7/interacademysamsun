@@ -48,13 +48,37 @@ financeRouter.get("/summary", async (req, res) => {
 });
 
 financeRouter.get("/transactions", async (req, res) => {
-  const { from, to, type, page, pageSize } = req.query as Record<string, string>;
+  const { from, to, type, page, pageSize, search } = req.query as Record<string, string>;
   const result = await service.listFinanceTransactions({
     type: type === "gelir" || type === "gider" ? type : undefined,
     from: from ? new Date(from) : undefined,
     to: to ? new Date(to) : undefined,
+    search: search?.trim() || undefined,
     page: page ? Math.max(1, Number(page)) : 1,
     pageSize: pageSize ? Math.min(100, Math.max(1, Number(pageSize))) : 20,
   });
   res.json(result);
+});
+
+const updateSchema = z
+  .object({
+    description: z.string().trim().min(1).optional(),
+    amount: z.number().positive().optional(),
+    category: z.string().trim().min(1).nullable().optional(),
+    transactionDate: z.coerce.date().optional(),
+  })
+  .refine((v) => Object.values(v).some((x) => x !== undefined), { message: "Değiştirilecek en az bir alan gönderilmelidir" });
+
+financeRouter.put("/transactions/:id", validateBody(updateSchema), async (req, res) => {
+  res.json(await service.updateFinanceTransaction(req.params.id, req.body, req.auth!.sub));
+});
+
+financeRouter.delete("/transactions/:id", async (req, res) => {
+  await service.softDeleteFinanceTransaction(req.params.id, req.auth!.sub);
+  res.status(204).end();
+});
+
+financeRouter.get("/audit-logs", async (req, res) => {
+  const limit = Math.min(100, Math.max(1, Number(req.query.limit) || 20));
+  res.json(await service.getFinanceAuditLog(limit));
 });

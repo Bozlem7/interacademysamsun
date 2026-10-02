@@ -1,12 +1,14 @@
 import { Router } from "express";
 import multer from "multer";
-import { requireAuth, requireRole } from "../../common/middleware/auth";
+import { z } from "zod";
+import { requireAuth, requireRole, requirePaymentConfirmationAccess } from "../../common/middleware/auth";
 import { validateBody } from "../../common/middleware/validate";
 import { ForbiddenError, ValidationError } from "../../common/errors/AppError";
 import { studentInputSchema, studentUpdateSchema } from "./students.dto";
 import * as service from "./students.service";
 import { uploadRegistrationDocuments, deleteRegistrationDocuments } from "./studentDocuments.service";
 import { generatePaymentReportPdf } from "../payments/paymentReport.service";
+import { listPaymentLogs, revertPayment } from "../payments/payments.service";
 import { getStudentAttendanceReport } from "../attendance/attendanceReport.service";
 
 export const studentsRouter = Router();
@@ -47,6 +49,42 @@ studentsRouter.get("/check-tc/:tcNo", requireRole("yonetici"), async (req, res) 
   const excludeStudentId = typeof req.query.excludeStudentId === "string" ? req.query.excludeStudentId : undefined;
   res.json({ exists: await service.tcExists(req.params.tcNo, excludeStudentId) });
 });
+
+// Ödeme hareketleri ("Ödendi" / "Geri Alındı") — `?limit=5` mini widget için, `?page=&pageSize=`
+// tam geçmiş için. `/:id`'den önce tanımlı olmalı, yoksa "payment-logs" bir öğrenci id'si sanılır.
+studentsRouter.get("/payment-logs", requireRole("yonetici"), async (req, res) => {
+  const { limit, page, pageSize, search, action } = req.query as Record<string, string | undefined>;
+  const size = Number(limit ?? pageSize) || 20;
+  res.json(
+    await listPaymentLogs({
+      branchId: req.auth!.branchId,
+      page: Math.max(1, Number(page) || 1),
+      pageSize: Math.min(100, Math.max(1, size)),
+      search: search?.trim() || undefined,
+      actionType: action === "PAID" || action === "REVERTED" ? action : undefined,
+    })
+  );
+});
+
+const revertPaymentSchema = z.object({ paymentId: z.string().min(1), confirm: z.literal(true) });
+
+studentsRouter.post(
+  "/:id/payment/revert",
+  requireRole("yonetici"),
+  requirePaymentConfirmationAccess(),
+  validateBody(revertPaymentSchema),
+  async (req, res) => {
+    res.json(
+      await revertPayment({
+        studentId: req.params.id,
+        paymentId: req.body.paymentId,
+        branchId: req.auth!.branchId,
+        adminId: req.auth!.sub,
+        adminUsername: req.auth!.username,
+      })
+    );
+  }
+);
 
 studentsRouter.get("/:id", async (req, res) => {
   const { role, studentId, branchId, isGlobalStaff } = req.auth!;

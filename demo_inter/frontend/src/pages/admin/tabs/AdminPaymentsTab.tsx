@@ -6,6 +6,7 @@ import { getWhatsAppNotifyPrimaryRecipient, hasWhatsAppNotifyRecipient, StudentN
 import { useWhatsAppStore } from "../../../features/whatsapp/whatsappStore";
 import { AttendanceReportModal } from "./AttendanceReportModal";
 import { turkishCompare } from "../../../lib/turkishSort";
+import { PaymentActivityWidget, formatDateTime, formatTL } from "./PaymentActivityWidget";
 
 interface PaymentRow {
   id: string;
@@ -15,6 +16,7 @@ interface PaymentRow {
   dueDate: string;
   amount: string;
   status: "odenmedi" | "odendi";
+  paidAt: string | null;
   student: { id: string; fullName: string; tcNoMasked: string } & StudentNotifyFields;
 }
 
@@ -37,11 +39,37 @@ export function AdminPaymentsTab() {
   const [remindResult, setRemindResult] = useState<{ id: string; ok: boolean; text: string } | null>(null);
   const [downloadingReportId, setDownloadingReportId] = useState<string | null>(null);
   const [attendanceReportTarget, setAttendanceReportTarget] = useState<{ id: string; name: string } | null>(null);
+  const [revertTarget, setRevertTarget] = useState<PaymentRow | null>(null);
+  const [revertError, setRevertError] = useState<string | null>(null);
+  const [reverting, setReverting] = useState(false);
+  // Her "Ödendi" / "Geri Al" işleminden sonra artırılır — Son Ödeme Hareketleri widget'ını tazeler.
+  const [activityRefreshKey, setActivityRefreshKey] = useState(0);
 
   function load() {
     apiClient.get("/payments").then((r) => setPayments(r.data));
   }
   useEffect(load, []);
+
+  function openRevert(p: PaymentRow) {
+    if (!canConfirmPayment) return;
+    setRevertError(null);
+    setRevertTarget(p);
+  }
+
+  async function revertPaid() {
+    if (!revertTarget || !canConfirmPayment || reverting) return;
+    setReverting(true);
+    try {
+      await apiClient.post(`/students/${revertTarget.student.id}/payment/revert`, { paymentId: revertTarget.id, confirm: true });
+      setRevertTarget(null);
+      load();
+      setActivityRefreshKey((k) => k + 1);
+    } catch (e: any) {
+      setRevertError(e.response?.data?.error?.message ?? "Ödeme geri alınamadı.");
+    } finally {
+      setReverting(false);
+    }
+  }
 
   function openConfirm(p: PaymentRow) {
     if (!canConfirmPayment) return;
@@ -61,8 +89,9 @@ export function AdminPaymentsTab() {
       await apiClient.patch(`/payments/${confirmTarget.id}/status`, { confirm: true, paidAmount });
       setConfirmTarget(null);
       load();
+      setActivityRefreshKey((k) => k + 1);
     } catch (e: any) {
-      setMarkPaidError(e.response?.data?.error ?? "Ödeme işaretlenemedi.");
+      setMarkPaidError(e.response?.data?.error?.message ?? "Ödeme işaretlenemedi.");
     }
   }
 
@@ -134,6 +163,7 @@ export function AdminPaymentsTab() {
           <div className="text-xs font-bold text-slate-400">GECİKMİŞ ÖDEME</div>
           <div className="text-base font-extrabold text-red-600">{overdueCount}</div>
         </div>
+        <PaymentActivityWidget refreshKey={activityRefreshKey} />
       </div>
 
       <input
@@ -195,6 +225,15 @@ export function AdminPaymentsTab() {
                   {p.status === "odendi" ? "Ödendi" : "Ödenmedi"}
                 </span>
               )}
+              {canConfirmPayment && p.status === "odendi" && (
+                <button
+                  onClick={() => openRevert(p)}
+                  title="Ödemeyi geri al"
+                  className="flex items-center gap-1 rounded-lg border border-orange-300 bg-orange-50 px-3 py-2 text-xs font-bold text-orange-700 hover:bg-orange-100 dark:border-orange-500/40 dark:bg-orange-500/10 dark:text-orange-300 dark:hover:bg-orange-500/20"
+                >
+                  <span aria-hidden>↶</span> Geri Al
+                </button>
+              )}
               {canRemind && p.status === "odenmedi" && (
                 <button
                   onClick={() => sendReminder(p)}
@@ -235,8 +274,8 @@ export function AdminPaymentsTab() {
         <div className="space-y-3.5">
           <div className="text-sm leading-relaxed text-slate-600 dark:text-slate-400">
             {confirmTarget?.student.fullName} için {confirmTarget?.periodMonth}/{confirmTarget?.periodYear} dönemi "Ödendi" olarak işaretlenecek. Tahsil
-            edilen tutarı (tam ödeme, indirim veya özel taksit) aşağıdan belirleyebilirsiniz. Bu işlem geri alınamaz — dönem sona erene kadar tekrar
-            "Ödenmedi" durumuna düşmez.
+            edilen tutarı (tam ödeme, indirim veya özel taksit) aşağıdan belirleyebilirsiniz. Hatalı işaretleme olursa "Geri Al" ile
+            düzeltebilirsiniz; işlem ödeme hareketleri geçmişine kaydedilir.
           </div>
           <div>
             <label className="mb-1 block text-xs font-bold text-slate-500">Tahsil Edilen Tutar (TL)</label>
@@ -256,6 +295,45 @@ export function AdminPaymentsTab() {
             </button>
             <button
               onClick={() => setConfirmTarget(null)}
+              className="flex-1 rounded-xl bg-slate-100 py-3 text-sm font-bold text-slate-600 hover:bg-slate-200 dark:bg-surface2 dark:text-slate-300 dark:hover:bg-slate-700"
+            >
+              Vazgeç
+            </button>
+          </div>
+        </div>
+      </Modal>
+
+      <Modal open={!!revertTarget} onClose={() => !reverting && setRevertTarget(null)} title="Ödemeyi Geri Al">
+        <div className="space-y-3.5">
+          <div className="text-sm leading-relaxed text-slate-600 dark:text-slate-400">
+            Bu öğrencinin ödeme durumunu tekrar 'Ödenmedi' yapacak ve kaydedilen tutarı gelirlerden/kasadan düşeceksiniz. Emin misiniz?
+          </div>
+          {revertTarget && (
+            <dl className="grid grid-cols-[auto,1fr] gap-x-4 gap-y-1.5 rounded-xl bg-slate-50 p-3.5 text-sm dark:bg-surface2">
+              <dt className="font-bold text-slate-500">Öğrenci</dt>
+              <dd className="font-bold text-slate-800 dark:text-slate-100">{revertTarget.student.fullName}</dd>
+              <dt className="font-bold text-slate-500">Dönem</dt>
+              <dd className="text-slate-700 dark:text-slate-200">
+                {revertTarget.periodMonth}/{revertTarget.periodYear}
+              </dd>
+              <dt className="font-bold text-slate-500">Ödenen Tutar</dt>
+              <dd className="font-extrabold text-slate-800 dark:text-slate-100">{formatTL(revertTarget.amount)}</dd>
+              <dt className="font-bold text-slate-500">Ödeme Tarihi</dt>
+              <dd className="text-slate-700 dark:text-slate-200">{revertTarget.paidAt ? formatDateTime(revertTarget.paidAt) : "—"}</dd>
+            </dl>
+          )}
+          {revertError && <div className="text-xs font-semibold text-red-600">{revertError}</div>}
+          <div className="flex gap-2.5">
+            <button
+              onClick={revertPaid}
+              disabled={reverting}
+              className="flex-1 rounded-xl bg-red-600 py-3 text-sm font-extrabold text-white hover:bg-red-700 disabled:opacity-60"
+            >
+              {reverting ? "Geri Alınıyor…" : "Evet, Geri Al"}
+            </button>
+            <button
+              onClick={() => setRevertTarget(null)}
+              disabled={reverting}
               className="flex-1 rounded-xl bg-slate-100 py-3 text-sm font-bold text-slate-600 hover:bg-slate-200 dark:bg-surface2 dark:text-slate-300 dark:hover:bg-slate-700"
             >
               Vazgeç
