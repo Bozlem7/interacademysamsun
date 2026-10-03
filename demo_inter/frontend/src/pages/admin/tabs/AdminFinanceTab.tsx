@@ -534,8 +534,8 @@ export function AdminFinanceTab() {
       <TransactionDetailModal transaction={detailTarget} onClose={() => setDetailTarget(null)} />
       <ConfirmDialog
         open={!!deleteTarget}
-        title="Kaydı sil"
-        body={`"${deleteTarget?.description}" (${deleteTarget ? formatMoney(deleteTarget.amount) : ""}) kasadan düşülecek. Kayıt kalıcı olarak silinmez; "Son İşlemler" akışında kimin sildiği bilgisiyle görünmeye devam eder.`}
+        title="Kaydı Sil"
+        body={`Bu ${deleteTarget?.type === "gider" ? "gider" : "gelir"} kaydını silmek istediğinize emin misiniz? "${deleteTarget?.description}" (${deleteTarget ? formatMoney(deleteTarget.amount) : ""}) kasadan düşülecek; kayıt "Son İşlemler" akışında kimin sildiği bilgisiyle görünmeye devam eder.`}
         confirmLabel="Evet, Sil"
         onConfirm={confirmDelete}
         onCancel={() => setDeleteTarget(null)}
