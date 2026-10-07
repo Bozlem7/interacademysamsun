@@ -3,7 +3,7 @@ import { z } from "zod";
 import { prisma } from "../../config/prisma";
 import { requireAuth, requireRole } from "../../common/middleware/auth";
 import { validateBody } from "../../common/middleware/validate";
-import { ForbiddenError, WhatsAppUnavailableError } from "../../common/errors/AppError";
+import { ConflictError, ForbiddenError, WhatsAppUnavailableError } from "../../common/errors/AppError";
 import { stripSeedTag } from "../../common/text/displayName";
 // Baileys tabanlı gercek gonderim servisi (proje kokunde duz JS, src/ disinda).
 const { sendTextMessage } = require("../../../services/whatsappService");
@@ -72,10 +72,12 @@ attendanceRouter.use(requireAuth);
 // in that branch + group (attendance needs the whole class roster, not just the
 // instructor's individually assigned students). Diyetisyen/psikolog (isGlobalStaff)
 // şube bağımsız çalıştığından branchId filtresi uygulanmaz, tüm şubeler döner.
+// Askıya alınmış öğrenciler listeye girmez — Not Ekleme ekranı da öğrenci listesini buradan aldığı
+// için aynı filtre orayı da kapsar.
 attendanceRouter.get("/", requireRole("yonetici", "egitmen"), async (req, res) => {
   const { groupId, date } = req.query as { groupId?: string; date?: string };
   const { branchId, isGlobalStaff } = req.auth!;
-  const where: any = isGlobalStaff ? {} : { branchId };
+  const where: any = isGlobalStaff ? { status: "ACTIVE" } : { branchId, status: "ACTIVE" };
   if (groupId) where.groupId = groupId;
   const students = await prisma.student.findMany({ where, include: { group: true, branch: true }, orderBy: { fullName: "asc" } });
 
@@ -137,6 +139,9 @@ attendanceRouter.post("/bulk", requireRole("yonetici", "egitmen"), validateBody(
     const student = await prisma.student.findUnique({ where: { id: rec.studentId } });
     if (!student || (!isGlobalStaff && student.branchId !== branchId)) {
       throw new ForbiddenError(`Öğrenci ${rec.studentId} bu şubeye ait değil`);
+    }
+    if (student.status === "SUSPENDED") {
+      throw new ConflictError(`${stripSeedTag(student.fullName)} askıya alınmış durumda, yoklaması alınamaz`);
     }
     // Yoklama, eğitmenin kendisine bireysel atanmış öğrencilerle sınırlı değildir —
     // seçtiği sınıftaki tüm öğrenciler için yoklama alabilir.

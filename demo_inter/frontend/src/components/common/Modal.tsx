@@ -145,11 +145,18 @@ export function ErrorDialog({
   );
 }
 
+const CONFIRM_TONE_CLASSES = {
+  danger: "bg-red-600 text-white hover:bg-red-700",
+  warning: "bg-amber-500 text-slate-950 hover:bg-amber-400",
+  success: "bg-emerald-600 text-white hover:bg-emerald-700",
+} as const;
+
 export function ConfirmDialog({
   open,
   title,
   body,
   confirmLabel = "Onayla",
+  tone = "danger",
   onConfirm,
   onCancel,
 }: {
@@ -157,6 +164,7 @@ export function ConfirmDialog({
   title: string;
   body: string;
   confirmLabel?: string;
+  tone?: keyof typeof CONFIRM_TONE_CLASSES;
   onConfirm: () => void;
   onCancel: () => void;
 }) {
@@ -185,7 +193,7 @@ export function ConfirmDialog({
           <button
             ref={confirmButtonRef}
             onClick={onConfirm}
-            className="flex-1 rounded-xl bg-red-600 py-3 text-sm font-extrabold text-white hover:bg-red-700"
+            className={`flex-1 rounded-xl py-3 text-sm font-extrabold ${CONFIRM_TONE_CLASSES[tone]}`}
           >
             {confirmLabel}
           </button>

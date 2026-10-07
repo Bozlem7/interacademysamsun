@@ -3,7 +3,7 @@ import { z } from "zod";
 import { prisma } from "../../config/prisma";
 import { requireAuth, requireRole } from "../../common/middleware/auth";
 import { validateBody } from "../../common/middleware/validate";
-import { ForbiddenError, NotFoundError, ValidationError } from "../../common/errors/AppError";
+import { ConflictError, ForbiddenError, NotFoundError, ValidationError } from "../../common/errors/AppError";
 
 export const notesRouter = Router();
 
@@ -48,6 +48,9 @@ const noteSchema = z.object({
 notesRouter.post("/", requireRole("egitmen"), validateBody(noteSchema), async (req, res) => {
   const { sub, branchId, isGlobalStaff } = req.auth!;
   await assertSameBranchAsInstructor(req.body.studentId, branchId, isGlobalStaff);
+  // Geçmiş notlar görüntülenmeye devam eder, ancak askıdaki öğrenciye yeni not girilemez.
+  const { status } = await prisma.student.findUniqueOrThrow({ where: { id: req.body.studentId }, select: { status: true } });
+  if (status === "SUSPENDED") throw new ConflictError("Askıya alınmış öğrenciye not eklenemez");
 
   const staffProfile = await prisma.staffProfile.findUnique({ where: { userId: sub } });
   if (!staffProfile) throw new ForbiddenError("Eğitmen profili bulunamadı");

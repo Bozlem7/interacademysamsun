@@ -54,7 +54,9 @@ export async function generateMonthlyPayments(referenceDate: Date = new Date()) 
   const month = referenceDate.getUTCMonth() + 1;
   const amount = await getMonthlyFee();
 
-  const students = await prisma.student.findMany({ select: { id: true, paymentDueDay: true } });
+  // Askıdaki öğrencilere yeni dönem borcu açılmaz; aktif edildiklerinde içinde bulunulan dönem
+  // students.service.reactivateStudent'ta tamamlanır.
+  const students = await prisma.student.findMany({ where: { status: "ACTIVE" }, select: { id: true, paymentDueDay: true } });
 
   let created = 0;
   for (const student of students) {
@@ -83,6 +85,8 @@ export function listPayments(params: {
   status?: string;
   studentId?: string;
   branchId: string;
+  /** Yönetici ödeme listesi ve KPI'ları için askıdaki öğrencileri dışlar; veli kendi geçmişini görmeye devam eder. */
+  activeStudentsOnly?: boolean;
 }) {
   return prisma.payment
     .findMany({
@@ -91,7 +95,7 @@ export function listPayments(params: {
         periodMonth: params.periodMonth,
         status: params.status as any,
         studentId: params.studentId,
-        student: { branchId: params.branchId },
+        student: { branchId: params.branchId, ...(params.activeStudentsOnly ? { status: "ACTIVE" as const } : {}) },
       },
       include: { student: true },
       orderBy: [{ periodYear: "desc" }, { periodMonth: "desc" }, { dueDay: "asc" }, { student: { fullName: "asc" } }],
@@ -299,6 +303,7 @@ export async function runOverdueNotificationCheck(referenceDate: Date = new Date
       status: "odenmedi",
       dueDate: { lt: startOfToday },
       overdueNotifiedAt: null,
+      student: { status: "ACTIVE" },
     },
     include: { student: true },
   });

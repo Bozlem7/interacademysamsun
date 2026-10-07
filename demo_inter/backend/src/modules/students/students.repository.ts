@@ -1,8 +1,8 @@
 import { prisma } from "../../config/prisma";
-import { Prisma } from "@prisma/client";
+import { Prisma, StudentStatus } from "@prisma/client";
 
-export function listStudents(params: { search?: string; groupId?: string; branchId: string }) {
-  const where: Prisma.StudentWhereInput = { branchId: params.branchId };
+export function listStudents(params: { search?: string; groupId?: string; branchId: string; status?: StudentStatus }) {
+  const where: Prisma.StudentWhereInput = { branchId: params.branchId, status: params.status };
   if (params.search) where.fullName = { contains: params.search, mode: "insensitive" };
   if (params.groupId) where.groupId = params.groupId;
   // Postgres'in varsayılan collation'ı (genelde "C"/binary) Türkçe harf sırasını (ı, İ, ş,
@@ -14,6 +14,34 @@ export function listStudents(params: { search?: string; groupId?: string; branch
     include: { group: true },
     orderBy: { fullName: "asc" },
   });
+}
+
+export async function listSuspendedStudents(params: { branchId: string; search?: string; page: number; pageSize: number }) {
+  const where: Prisma.StudentWhereInput = { branchId: params.branchId, status: "SUSPENDED" };
+  if (params.search) where.fullName = { contains: params.search, mode: "insensitive" };
+  const [rows, total] = await Promise.all([
+    prisma.student.findMany({
+      where,
+      include: { group: true },
+      orderBy: { suspendedAt: "desc" },
+      skip: (params.page - 1) * params.pageSize,
+      take: params.pageSize,
+    }),
+    prisma.student.count({ where }),
+  ]);
+  return { rows, total };
+}
+
+/**
+ * Statü koşullu update: eşzamanlı iki istekten yalnızca biri geçer, zaten hedef statüdeki
+ * öğrenci için count 0 döner.
+ */
+export function setStudentStatus(
+  id: string,
+  from: StudentStatus,
+  data: { status: StudentStatus; suspendedAt: Date | null; suspendedBy: string | null }
+) {
+  return prisma.student.updateMany({ where: { id, status: from }, data });
 }
 
 export function findStudentById(id: string) {

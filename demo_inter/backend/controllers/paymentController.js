@@ -20,6 +20,10 @@ async function remindPayment(req, res) {
       return res.status(404).json({ success: false, error: "Odeme kaydi bulunamadi." });
     }
 
+    if (payment.student.status === "SUSPENDED") {
+      return res.status(409).json({ success: false, error: "Askıya alınmış öğrenci için hatırlatma gönderilemez." });
+    }
+
     const recipients = getNotifyRecipients(payment.student);
     if (recipients.length === 0) {
       return res.status(400).json({ success: false, error: "Bildirim icin isaretli ve telefonu olan bir veli/yakin bulunamadi." });

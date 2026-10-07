@@ -64,6 +64,8 @@ async function checkOverduePaymentsAndNotify(referenceDate = new Date()) {
       dueDate: targetDueDate,
       status: "odenmedi",
       autoReminderSent: false,
+      // Askıya alınmış öğrencilerin velilerine otomatik hatırlatma gönderilmez.
+      student: { status: "ACTIVE" },
     },
     include: { student: true },
   });

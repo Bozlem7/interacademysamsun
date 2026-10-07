@@ -21,6 +21,7 @@ paymentsRouter.get("/", async (req, res) => {
     periodMonth: periodMonth ? Number(periodMonth) : undefined,
     status,
     branchId,
+    activeStudentsOnly: role === "yonetici",
   };
   if (role === "veli") filters.studentId = studentId;
 

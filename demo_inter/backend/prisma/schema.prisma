@@ -70,6 +70,13 @@ enum Gender {
   kiz
 }
 
+/// SUSPENDED: kaydı silinmeden günlük operasyonlardan (yoklama, not girişi, aidat takibi,
+/// WhatsApp bildirimleri) çıkarılmış öğrenci. Geçmiş kayıtları (ödeme, yoklama, not) korunur.
+enum StudentStatus {
+  ACTIVE
+  SUSPENDED
+}
+
 model Branch {
   id        String   @id @default(uuid())
   name      String
@@ -180,6 +187,10 @@ model Student {
   groupId          String?  @map("group_id")
   parentUserId     String?  @unique @map("parent_user_id")
   paymentDueDay    Int      @map("payment_due_day")
+  status           StudentStatus @default(ACTIVE)
+  suspendedAt      DateTime? @map("suspended_at")
+  /// Askıya alan yöneticinin kullanıcı adının kopyası — kullanıcı sonradan silinse bile okunabilir kalır.
+  suspendedBy      String?  @map("suspended_by")
   createdAt        DateTime @default(now()) @map("created_at")
   updatedAt        DateTime @updatedAt @map("updated_at")
 
@@ -195,6 +206,7 @@ model Student {
 
   @@index([groupId])
   @@index([branchId])
+  @@index([branchId, status])
   @@map("students")
 }
 

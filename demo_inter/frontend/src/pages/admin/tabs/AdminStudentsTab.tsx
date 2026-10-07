@@ -6,6 +6,14 @@ import { GroupWizardModal } from "./GroupWizardModal";
 import { StudentDetailModal } from "./StudentDetailModal";
 import { calcAge, formatPhone } from "../../../lib/format";
 import { sortByFullNameTr } from "../../../lib/turkishSort";
+import {
+  StudentStatus,
+  SUSPEND_CONFIRM_BODY,
+  SuspendedBadge,
+  reactivateButtonCls,
+  reactivateConfirmBody,
+  suspendButtonCls,
+} from "./studentSuspension";
 
 interface StudentRow {
   id: string;
@@ -15,6 +23,7 @@ interface StudentRow {
   group?: { id: string; name: string } | null;
   motherPhone?: string | null;
   fatherPhone?: string | null;
+  status: StudentStatus;
 }
 interface PreRegRow {
   id: string;
@@ -47,12 +56,17 @@ export function AdminStudentsTab() {
   const [inboxOpen, setInboxOpen] = useState(false);
   const [preRegs, setPreRegs] = useState<PreRegRow[]>([]);
   const [deleteTarget, setDeleteTarget] = useState<StudentRow | null>(null);
+  const [statusTarget, setStatusTarget] = useState<StudentRow | null>(null);
+  const [errorMessage, setErrorMessage] = useState("");
   const [groupWizardOpen, setGroupWizardOpen] = useState(false);
   const [successMessage, setSuccessMessage] = useState("");
   const [selectedStudentId, setSelectedStudentId] = useState<string | null>(null);
 
   function loadStudents() {
-    apiClient.get("/students", { params: { search, groupId: groupFilter || undefined } }).then((r) => setStudents(r.data));
+    // status=ALL: askıdaki öğrenciler de "Pasif" rozetiyle listede kalır.
+    apiClient
+      .get("/students", { params: { search, groupId: groupFilter || undefined, status: "ALL" } })
+      .then((r) => setStudents(r.data));
   }
   function loadGroups() {
     apiClient.get("/groups").then((r) => setGroups(r.data));
@@ -76,6 +90,7 @@ export function AdminStudentsTab() {
       })
     );
   }, [students, ageFilter]);
+  const suspendedCount = visibleStudents.filter((s) => s.status === "SUSPENDED").length;
 
   async function acceptPreReg(id: string) {
     const { data } = await apiClient.get(`/pre-registrations/${id}/prefill`);
@@ -94,6 +109,22 @@ export function AdminStudentsTab() {
     await apiClient.delete(`/students/${deleteTarget.id}`);
     setDeleteTarget(null);
     loadStudents();
+  }
+
+  async function doToggleStatus() {
+    if (!statusTarget) return;
+    const target = statusTarget;
+    const suspending = target.status === "ACTIVE";
+    setStatusTarget(null);
+    try {
+      const { data: updated } = await apiClient.patch(`/students/${target.id}/${suspending ? "suspend" : "reactivate"}`);
+      setStudents((prev) => prev.map((s) => (s.id === updated.id ? { ...s, ...updated } : s)));
+      setSuccessMessage(suspending ? `${target.fullName} askıya alındı.` : `${target.fullName} tekrar aktif edildi.`);
+      setTimeout(() => setSuccessMessage(""), 4000);
+    } catch (e: any) {
+      setErrorMessage(e.response?.data?.error?.message ?? "Öğrenci durumu güncellenemedi.");
+      setTimeout(() => setErrorMessage(""), 4000);
+    }
   }
 
   function onGroupCreated() {
@@ -119,12 +150,22 @@ export function AdminStudentsTab() {
           ✓ {successMessage}
         </div>
       )}
+      {errorMessage && (
+        <div className="mb-4 rounded-xl bg-red-50 px-4 py-3 text-sm font-bold text-red-700 dark:bg-red-900/20 dark:text-red-400">
+          {errorMessage}
+        </div>
+      )}
 
       {/* Üst Kontrol ve Filtre Çubuğu */}
       <div className="mb-4 flex flex-wrap items-center gap-2.5">
         <span className="whitespace-nowrap rounded-full bg-slate-100 px-3.5 py-2 text-xs font-extrabold text-slate-600 dark:bg-surface2 dark:text-slate-300">
           Toplam Öğrenci: {visibleStudents.length}
         </span>
+        {suspendedCount > 0 && (
+          <span className="whitespace-nowrap rounded-full bg-amber-100 px-3.5 py-2 text-xs font-extrabold text-amber-700 dark:bg-amber-500/15 dark:text-amber-400">
+            Pasif: {suspendedCount}
+          </span>
+        )}
         <input
           value={search}
           onChange={(e) => setSearch(e.target.value)}
@@ -171,9 +212,9 @@ export function AdminStudentsTab() {
 
       {/* Tablo */}
       <div className="overflow-x-auto rounded-2xl border border-slate-200 bg-paper2 dark:border-slate-800 dark:bg-surface">
-        <div className="min-w-[760px]">
+        <div className="min-w-[840px]">
           {/* Tablo Başlık Şeridi */}
-          <div className="grid grid-cols-[0.3fr_1.1fr_1.6fr_0.6fr_0.9fr_1.3fr_0.8fr] gap-3 bg-slate-200 px-5 py-3 text-[11px] font-extrabold uppercase tracking-wide text-slate-600 dark:bg-surface2 dark:text-slate-300">
+          <div className="grid grid-cols-[0.3fr_1.1fr_1.6fr_0.6fr_0.9fr_1.3fr_1.2fr] gap-3 bg-slate-200 px-5 py-3 text-[11px] font-extrabold uppercase tracking-wide text-slate-600 dark:bg-surface2 dark:text-slate-300">
             <div>#</div>
             <div>T.C. No</div>
             <div>Ad Soyad</div>
@@ -187,11 +228,20 @@ export function AdminStudentsTab() {
             <div
               key={s.id}
               onClick={() => setSelectedStudentId(s.id)}
-              className="grid cursor-pointer grid-cols-[0.3fr_1.1fr_1.6fr_0.6fr_0.9fr_1.3fr_0.8fr] items-center gap-3 border-b border-slate-100 px-5 py-3.5 transition hover:bg-slate-50 last:border-0 dark:border-slate-800 dark:hover:bg-slate-800/40"
+              className="grid cursor-pointer grid-cols-[0.3fr_1.1fr_1.6fr_0.6fr_0.9fr_1.3fr_1.2fr] items-center gap-3 border-b border-slate-100 px-5 py-3.5 transition hover:bg-slate-50 last:border-0 dark:border-slate-800 dark:hover:bg-slate-800/40"
             >
               <div className="text-xs font-bold text-slate-400">{index + 1}</div>
               <div className="font-mono text-xs text-slate-400">{s.tcNoMasked}</div>
-              <div className="text-sm font-bold text-slate-900 dark:text-white">{s.fullName}</div>
+              <div className="flex items-center gap-2">
+                <span
+                  className={`text-sm font-bold ${
+                    s.status === "SUSPENDED" ? "text-slate-400 dark:text-slate-500" : "text-slate-900 dark:text-white"
+                  }`}
+                >
+                  {s.fullName}
+                </span>
+                {s.status === "SUSPENDED" && <SuspendedBadge />}
+              </div>
               <div className="text-sm text-slate-600 dark:text-slate-300">{calcAge(s.dob)}</div>
               <div>
                 {s.group ? (
@@ -203,7 +253,16 @@ export function AdminStudentsTab() {
                 )}
               </div>
               <div className="text-sm tabular-nums text-slate-600 dark:text-slate-300">{formatPhone(s.motherPhone || s.fatherPhone)}</div>
-              <div className="text-right">
+              <div className="flex justify-end gap-1.5">
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setStatusTarget(s);
+                  }}
+                  className={s.status === "SUSPENDED" ? reactivateButtonCls : suspendButtonCls}
+                >
+                  {s.status === "SUSPENDED" ? "Aktif Et" : "⚠ Askıya Al"}
+                </button>
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
@@ -273,6 +332,16 @@ export function AdminStudentsTab() {
         confirmLabel="Evet, Sil"
         onConfirm={doDelete}
         onCancel={() => setDeleteTarget(null)}
+      />
+
+      <ConfirmDialog
+        open={!!statusTarget}
+        title={statusTarget?.status === "SUSPENDED" ? "Öğrenciyi aktif et" : "Öğrenciyi askıya al"}
+        body={statusTarget?.status === "SUSPENDED" ? reactivateConfirmBody(statusTarget.fullName) : SUSPEND_CONFIRM_BODY}
+        confirmLabel={statusTarget?.status === "SUSPENDED" ? "Evet, Aktif Et" : "Evet, Askıya Al"}
+        tone={statusTarget?.status === "SUSPENDED" ? "success" : "warning"}
+        onConfirm={doToggleStatus}
+        onCancel={() => setStatusTarget(null)}
       />
     </div>
   );

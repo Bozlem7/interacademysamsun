@@ -41,6 +41,18 @@ async function saveAttendanceAndNotify(req, res) {
       return res.status(400).json({ success: false, error: "records alani bos olamaz." });
     }
 
+    // Askıya alınmış öğrencilerin yoklaması alınmaz ve velilerine bildirim gönderilmez.
+    const suspended = await prisma.student.findMany({
+      where: { id: { in: records.map((r) => r.studentId) }, status: "SUSPENDED" },
+      select: { fullName: true },
+    });
+    if (suspended.length > 0) {
+      return res.status(409).json({
+        success: false,
+        error: `Askıya alınmış öğrencilerin yoklaması alınamaz: ${suspended.map((s) => stripSeedTag(s.fullName)).join(", ")}`,
+      });
+    }
+
     const savedRecords = [];
     const absentStudentIds = new Set();
 

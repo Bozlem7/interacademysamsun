@@ -39,9 +39,26 @@ studentsRouter.use(requireAuth);
 
 // yonetici: full CRUD + list, scoped to the active session branch. egitmen/veli: single-record
 // read with ownership + branch checks handled in route.
+// `status`: varsayılan ACTIVE — askıdaki öğrenciler grup sihirbazı gibi operasyonel listelere
+// girmez. Öğrenci Yönetimi tablosu "Pasif" rozetini gösterebilmek için `status=ALL` ister.
 studentsRouter.get("/", requireRole("yonetici"), async (req, res) => {
-  const { search, groupId } = req.query as { search?: string; groupId?: string };
-  res.json(await service.listStudents(req.auth!.branchId, search, groupId));
+  const { search, groupId, status } = req.query as { search?: string; groupId?: string; status?: string };
+  const statusFilter = status === "ALL" ? undefined : status === "SUSPENDED" ? "SUSPENDED" : "ACTIVE";
+  res.json(await service.listStudents(req.auth!.branchId, search, groupId, statusFilter));
+});
+
+// "Askıya Alınanlar" sekmesi — sayfalı, en son askıya alınan en üstte. `/:id`'den önce tanımlı
+// olmalı, yoksa "suspended" bir öğrenci id'si sanılır.
+studentsRouter.get("/suspended", requireRole("yonetici"), async (req, res) => {
+  const { page, pageSize, search } = req.query as Record<string, string | undefined>;
+  res.json(
+    await service.listSuspendedStudents({
+      branchId: req.auth!.branchId,
+      search: search?.trim() || undefined,
+      page: Math.max(1, Number(page) || 1),
+      pageSize: Math.min(100, Math.max(1, Number(pageSize) || 20)),
+    })
+  );
 });
 
 // Form üzerinde TCKN girildiğinde (submit'ten önce) canlı mükerrerlik kontrolü için.
@@ -113,6 +130,18 @@ studentsRouter.delete("/:id", requireRole("yonetici"), async (req, res) => {
   if (existing.branchId !== req.auth!.branchId) throw new ForbiddenError("Bu öğrenci farklı bir şubeye ait");
   await service.deleteStudent(req.params.id);
   res.status(204).send();
+});
+
+studentsRouter.patch("/:id/suspend", requireRole("yonetici"), async (req, res) => {
+  const existing = await service.getStudent(req.params.id);
+  if (existing.branchId !== req.auth!.branchId) throw new ForbiddenError("Bu öğrenci farklı bir şubeye ait");
+  res.json(await service.suspendStudent(req.params.id, req.auth!.sub, req.auth!.username));
+});
+
+studentsRouter.patch("/:id/reactivate", requireRole("yonetici"), async (req, res) => {
+  const existing = await service.getStudent(req.params.id);
+  if (existing.branchId !== req.auth!.branchId) throw new ForbiddenError("Bu öğrenci farklı bir şubeye ait");
+  res.json(await service.reactivateStudent(req.params.id));
 });
 
 // Kesin kayıt evrakları: 1-5 taranmış görsel ve/veya bir PDF alır, tek bir "Kayıt Bilgileri

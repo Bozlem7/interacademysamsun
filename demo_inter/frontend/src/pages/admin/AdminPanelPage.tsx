@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useAuthStore } from "../../features/auth/authStore";
 import { AdminStudentsTab } from "./tabs/AdminStudentsTab";
+import { AdminSuspendedStudentsTab } from "./tabs/AdminSuspendedStudentsTab";
 import { AdminStaffTab } from "./tabs/AdminStaffTab";
 import { AdminPaymentsTab } from "./tabs/AdminPaymentsTab";
 import { AdminContentTab } from "./tabs/AdminContentTab";
@@ -11,6 +12,7 @@ import { WhatsAppStatusWidget } from "../../features/whatsapp/WhatsAppStatusWidg
 
 const TABS = [
   { key: "students", label: "Öğrenci Yönetimi" },
+  { key: "suspended", label: "Askıya Alınanlar" },
   { key: "staff", label: "Eğitmen & Uzman" },
   { key: "payments", label: "Ödeme & WhatsApp" },
   { key: "finance", label: "Finans" },
@@ -54,6 +56,7 @@ export function AdminPanelPage() {
       </div>
 
       {tab === "students" && <AdminStudentsTab />}
+      {tab === "suspended" && <AdminSuspendedStudentsTab />}
       {tab === "staff" && <AdminStaffTab />}
       {tab === "payments" && <AdminPaymentsTab />}
       {tab === "finance" && <AdminFinanceTab />}

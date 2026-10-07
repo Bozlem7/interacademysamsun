@@ -1,4 +1,5 @@
 import crypto from "node:crypto";
+import { StudentStatus } from "@prisma/client";
 import { prisma } from "../../config/prisma";
 import { encryptTc, hashTc, maskTc, decryptTc } from "../../common/security/tc";
 import { hashPassword } from "../../common/security/password";
@@ -37,9 +38,38 @@ function toPublicStudent(student: any) {
   };
 }
 
-export async function listStudents(branchId: string, search?: string, groupId?: string) {
-  const rows = await repo.listStudents({ branchId, search, groupId });
+export async function listStudents(branchId: string, search?: string, groupId?: string, status?: StudentStatus) {
+  const rows = await repo.listStudents({ branchId, search, groupId, status });
   return rows.map(toPublicStudent);
+}
+
+export async function listSuspendedStudents(params: { branchId: string; search?: string; page: number; pageSize: number }) {
+  const { rows, total } = await repo.listSuspendedStudents(params);
+  return { total, page: params.page, pageSize: params.pageSize, items: rows.map(toPublicStudent) };
+}
+
+/** Öğrenciyi silmeden yoklama, not girişi, aidat takibi ve WhatsApp bildirimlerinden çıkarır. */
+export async function suspendStudent(id: string, adminId: string, adminUsername?: string) {
+  // Eski token'larda kullanıcı adı yok — o durumda DB'den okunur.
+  const suspendedBy =
+    adminUsername ??
+    (await prisma.user.findUnique({ where: { id: adminId }, select: { username: true } }))?.username ??
+    "bilinmiyor";
+  const { count } = await repo.setStudentStatus(id, "ACTIVE", { status: "SUSPENDED", suspendedAt: new Date(), suspendedBy });
+  if (count === 0) throw new ConflictError("Öğrenci zaten askıya alınmış durumda");
+  return getStudent(id);
+}
+
+/**
+ * Askıdaki öğrenciyi tekrar aktif eder. Askıdayken aylık aidat üretimi atlandığı için içinde
+ * bulunulan dönemin ödeme satırı burada (idempotent upsert ile) tamamlanır — öğrenci ödeme
+ * listesine bu ayın aidatıyla geri döner.
+ */
+export async function reactivateStudent(id: string) {
+  const { count } = await repo.setStudentStatus(id, "SUSPENDED", { status: "ACTIVE", suspendedAt: null, suspendedBy: null });
+  if (count === 0) throw new ConflictError("Öğrenci zaten aktif durumda");
+  await generatePaymentForNewStudent(id);
+  return getStudent(id);
 }
 
 export async function getStudent(id: string) {
