@@ -39,12 +39,10 @@ studentsRouter.use(requireAuth);
 
 // yonetici: full CRUD + list, scoped to the active session branch. egitmen/veli: single-record
 // read with ownership + branch checks handled in route.
-// `status`: varsayılan ACTIVE — askıdaki öğrenciler grup sihirbazı gibi operasyonel listelere
-// girmez. Öğrenci Yönetimi tablosu "Pasif" rozetini gösterebilmek için `status=ALL` ister.
+// Yalnızca ACTIVE öğrenciler — askıdakiler sadece GET /students/suspended üzerinden listelenir.
 studentsRouter.get("/", requireRole("yonetici"), async (req, res) => {
-  const { search, groupId, status } = req.query as { search?: string; groupId?: string; status?: string };
-  const statusFilter = status === "ALL" ? undefined : status === "SUSPENDED" ? "SUSPENDED" : "ACTIVE";
-  res.json(await service.listStudents(req.auth!.branchId, search, groupId, statusFilter));
+  const { search, groupId } = req.query as { search?: string; groupId?: string };
+  res.json(await service.listStudents(req.auth!.branchId, search, groupId));
 });
 
 // "Askıya Alınanlar" sekmesi — sayfalı, en son askıya alınan en üstte. `/:id`'den önce tanımlı

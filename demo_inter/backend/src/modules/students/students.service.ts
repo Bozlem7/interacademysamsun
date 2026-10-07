@@ -1,5 +1,4 @@
 import crypto from "node:crypto";
-import { StudentStatus } from "@prisma/client";
 import { prisma } from "../../config/prisma";
 import { encryptTc, hashTc, maskTc, decryptTc } from "../../common/security/tc";
 import { hashPassword } from "../../common/security/password";
@@ -38,8 +37,8 @@ function toPublicStudent(student: any) {
   };
 }
 
-export async function listStudents(branchId: string, search?: string, groupId?: string, status?: StudentStatus) {
-  const rows = await repo.listStudents({ branchId, search, groupId, status });
+export async function listStudents(branchId: string, search?: string, groupId?: string) {
+  const rows = await repo.listStudents({ branchId, search, groupId });
   return rows.map(toPublicStudent);
 }
 

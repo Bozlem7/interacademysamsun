@@ -57,14 +57,22 @@ describe("Öğrenci Askıya Alma", () => {
 
     const activeList = await request(app).get("/api/students").set("Authorization", `Bearer ${token}`);
     expect(activeList.body.map((s: any) => s.id)).not.toContain(student.id);
-    const allList = await request(app).get("/api/students").query({ status: "ALL" }).set("Authorization", `Bearer ${token}`);
-    expect(allList.body.map((s: any) => s.id)).toContain(student.id);
+    // Eski "status" parametresiyle de askıdaki öğrenci ana listeye sızmamalı.
+    for (const status of ["ALL", "SUSPENDED"]) {
+      const res = await request(app).get("/api/students").query({ status }).set("Authorization", `Bearer ${token}`);
+      expect(res.body.map((s: any) => s.id)).not.toContain(student.id);
+    }
 
     const reactivate = await request(app).patch(`/api/students/${student.id}/reactivate`).set("Authorization", `Bearer ${token}`);
     expect(reactivate.status).toBe(200);
     expect(reactivate.body.status).toBe("ACTIVE");
     expect(reactivate.body.suspendedAt).toBeNull();
     expect(reactivate.body.suspendedBy).toBeNull();
+
+    const afterReactivate = await request(app).get("/api/students").set("Authorization", `Bearer ${token}`);
+    expect(afterReactivate.body.map((s: any) => s.id)).toContain(student.id);
+    const suspendedAfter = await request(app).get("/api/students/suspended").set("Authorization", `Bearer ${token}`);
+    expect(suspendedAfter.body.total).toBe(0);
 
     // Aktif etme, içinde bulunulan dönemin aidat kaydını tamamlar.
     const now = new Date();

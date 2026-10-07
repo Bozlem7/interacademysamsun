@@ -68,7 +68,7 @@ export function AdminSuspendedStudentsTab() {
     setReactivateTarget(null);
     try {
       await apiClient.patch(`/students/${target.id}/reactivate`);
-      setMessage({ ok: true, text: `${target.fullName} tekrar aktif edildi.` });
+      setMessage({ ok: true, text: `${target.fullName} tekrar aktif edildi ve "Öğrenci Yönetimi" listesine taşındı.` });
       // Sayfadaki son kayıt aktif edildiyse bir önceki sayfaya dön.
       if (data && data.items.length === 1 && page > 1) setPage((p) => p - 1);
       else setRefreshKey((k) => k + 1);

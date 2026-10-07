@@ -1,8 +1,8 @@
 import { prisma } from "../../config/prisma";
 import { Prisma, StudentStatus } from "@prisma/client";
 
-export function listStudents(params: { search?: string; groupId?: string; branchId: string; status?: StudentStatus }) {
-  const where: Prisma.StudentWhereInput = { branchId: params.branchId, status: params.status };
+export function listStudents(params: { search?: string; groupId?: string; branchId: string }) {
+  const where: Prisma.StudentWhereInput = { branchId: params.branchId, status: "ACTIVE" };
   if (params.search) where.fullName = { contains: params.search, mode: "insensitive" };
   if (params.groupId) where.groupId = params.groupId;
   // Postgres'in varsayılan collation'ı (genelde "C"/binary) Türkçe harf sırasını (ı, İ, ş,
