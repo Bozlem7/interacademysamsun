@@ -35,7 +35,7 @@ export function AdminScheduleTab() {
   const [successMessage, setSuccessMessage] = useState("");
 
   function load() {
-    apiClient.get("/schedule").then((r) => setRows(r.data));
+    apiClient.get("/schedule/mine").then((r) => setRows(r.data));
     apiClient.get("/groups").then((r) => {
       setGroups(r.data);
       if (r.data[0]) setNewRow((n) => ({ ...n, groupId: r.data[0].id }));

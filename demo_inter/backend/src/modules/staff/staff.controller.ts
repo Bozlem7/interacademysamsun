@@ -5,7 +5,9 @@ import { requireAuth, requireRole } from "../../common/middleware/auth";
 import { validateBody } from "../../common/middleware/validate";
 import { hashPassword } from "../../common/security/password";
 import { encryptTc, hashTc, tcNoSchema } from "../../common/security/tc";
-import { ConflictError, ForbiddenError, NotFoundError } from "../../common/errors/AppError";
+import { Prisma } from "@prisma/client";
+import { ConflictError, NotFoundError } from "../../common/errors/AppError";
+import { assertStaffAccessible, resolveStaffBranchId, staffVisibleTo } from "./staffScope";
 
 export const staffRouter = Router();
 
@@ -13,7 +15,8 @@ staffRouter.use(requireAuth, requireRole("yonetici"));
 
 staffRouter.get("/", async (req, res) => {
   const staff = await prisma.user.findMany({
-    where: { role: "egitmen", staffProfile: { branchId: req.auth!.branchId } },
+    // Kendi şubesi + ortak havuz (diyetisyen/psikolog).
+    where: { role: "egitmen", staffProfile: staffVisibleTo(req.auth!.branchId) },
     include: { staffProfile: true },
     orderBy: { createdAt: "desc" },
   });
@@ -26,6 +29,7 @@ staffRouter.get("/", async (req, res) => {
       phone: s.staffProfile?.phone,
       specialty: s.staffProfile?.specialty,
       metaNote: s.staffProfile?.metaNote,
+      scope: s.staffProfile?.branchId ? "BRANCH" : "SHARED",
     }))
   );
 });
@@ -48,11 +52,11 @@ const staffSchema = z.object({
   phone: z.string().optional(),
   specialty: z.enum(["antrenor", "diyetisyen", "psikolog"]),
   metaNote: z.string().optional(),
-  branchId: z.string().uuid("Şube seçimi zorunludur"),
+  // branchId istemciden alınmaz: antrenör → oturumdaki aktif şube, diyetisyen/psikolog → null (ortak havuz).
 });
 
 staffRouter.post("/", validateBody(staffSchema), async (req, res) => {
-  const { fullName, tcNo, phone, specialty, metaNote, branchId } = req.body;
+  const { fullName, tcNo, phone, specialty, metaNote } = req.body as z.infer<typeof staffSchema>;
   const username = usernameFromName(fullName);
 
   const existing = await prisma.user.findUnique({ where: { username } });
@@ -69,7 +73,12 @@ staffRouter.post("/", validateBody(staffSchema), async (req, res) => {
       passwordHash,
       role: "egitmen",
       staffProfile: {
-        create: { fullName, phone, specialty, metaNote, branchId, tcNoEncrypted: encryptTc(tcNo), tcNoHash: tcHash },
+        create: {
+          fullName, phone, specialty, metaNote,
+          branchId: resolveStaffBranchId(specialty, req.auth!.branchId),
+          tcNoEncrypted: encryptTc(tcNo),
+          tcNoHash: tcHash,
+        },
       },
     },
     include: { staffProfile: true },
@@ -80,6 +89,7 @@ staffRouter.post("/", validateBody(staffSchema), async (req, res) => {
     username: user.username,
     fullName: user.staffProfile?.fullName,
     specialty: user.staffProfile?.specialty,
+    scope: user.staffProfile?.branchId ? "BRANCH" : "SHARED",
   });
 });
 
@@ -88,21 +98,22 @@ const staffUpdateSchema = staffSchema.partial().omit({ tcNo: true });
 staffRouter.put("/:id", validateBody(staffUpdateSchema), async (req, res) => {
   const user = await prisma.user.findUnique({ where: { id: req.params.id }, include: { staffProfile: true } });
   if (!user || !user.staffProfile) throw new NotFoundError("Personel bulunamadı");
-  if (user.staffProfile.branchId !== req.auth!.branchId) throw new ForbiddenError("Bu personel farklı bir şubeye ait");
+  assertStaffAccessible(user.staffProfile, req.auth!.branchId);
 
-  await prisma.staffProfile.update({
-    where: { userId: user.id },
-    data: req.body,
-  });
+  // Uzmanlık türü değişirse kapsam (branchId) da yeniden hesaplanır; DB CHECK constraint ihlal edilmez.
+  const data: Prisma.StaffProfileUpdateInput = { ...req.body };
+  if (req.body.specialty) {
+    const branchId = resolveStaffBranchId(req.body.specialty, req.auth!.branchId);
+    data.branch = branchId ? { connect: { id: branchId } } : { disconnect: true };
+  }
+  await prisma.staffProfile.update({ where: { userId: user.id }, data });
   res.json({ ok: true });
 });
 
 staffRouter.delete("/:id", async (req, res) => {
   const user = await prisma.user.findUnique({ where: { id: req.params.id }, include: { staffProfile: true } });
   if (!user) throw new NotFoundError("Personel bulunamadı");
-  if (user.staffProfile && user.staffProfile.branchId !== req.auth!.branchId) {
-    throw new ForbiddenError("Bu personel farklı bir şubeye ait");
-  }
+  if (user.staffProfile) assertStaffAccessible(user.staffProfile, req.auth!.branchId);
   await prisma.user.delete({ where: { id: req.params.id } });
   res.status(204).send();
 });

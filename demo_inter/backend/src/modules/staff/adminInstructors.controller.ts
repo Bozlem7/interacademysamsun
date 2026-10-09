@@ -5,7 +5,8 @@ import { requireAuth, requireRole } from "../../common/middleware/auth";
 import { validateBody } from "../../common/middleware/validate";
 import { hashPassword } from "../../common/security/password";
 import { encryptTc, hashTc, maskTc, decryptTc, tcNoSchema } from "../../common/security/tc";
-import { ConflictError, ForbiddenError, NotFoundError } from "../../common/errors/AppError";
+import { assertStaffAccessible, resolveStaffBranchId } from "./staffScope";
+import { ConflictError, NotFoundError } from "../../common/errors/AppError";
 
 // Admin-only eğitmen detay & düzenleme ekranı — RBAC: yalnızca yonetici.
 export const adminInstructorsRouter = Router();
@@ -20,9 +21,7 @@ async function loadInstructor(id: string, branchId: string) {
   if (!user || user.role !== "egitmen" || !user.staffProfile) {
     throw new NotFoundError("Eğitmen bulunamadı");
   }
-  if (user.staffProfile.branchId !== branchId) {
-    throw new ForbiddenError("Bu eğitmen farklı bir şubeye ait");
-  }
+  assertStaffAccessible(user.staffProfile, branchId);
   return user;
 }
 
@@ -61,6 +60,8 @@ adminInstructorsRouter.put("/:id", validateBody(updateSchema), async (req, res) 
 
   const profileData: Record<string, unknown> = { fullName, phone, specialty, metaNote };
   Object.keys(profileData).forEach((k) => profileData[k] === undefined && delete profileData[k]);
+  // Uzmanlık türü değişirse kapsam da değişir (antrenör ↔ ortak havuz); CHECK constraint korunur.
+  if (specialty) profileData.branchId = resolveStaffBranchId(specialty, req.auth!.branchId);
 
   if (tcNo) {
     const tcHash = hashTc(tcNo);

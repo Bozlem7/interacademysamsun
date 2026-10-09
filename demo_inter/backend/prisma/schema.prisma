@@ -122,7 +122,9 @@ model User {
 model StaffProfile {
   id            String         @id @default(uuid())
   userId        String         @unique @map("user_id")
-  branchId      String         @map("branch_id")
+  /// NULL = ortak havuz (diyetisyen/psikolog tüm şubelerde görünür). Antrenör için zorunlu.
+  /// Kural DB'de CHECK constraint (staff_branch_scope_chk) ile de zorlanır.
+  branchId      String?        @map("branch_id")
   fullName      String         @map("full_name")
   phone         String?
   specialty     StaffSpecialty
@@ -133,7 +135,7 @@ model StaffProfile {
   updatedAt     DateTime       @updatedAt @map("updated_at")
 
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
-  branch Branch @relation(fields: [branchId], references: [id])
+  branch Branch? @relation(fields: [branchId], references: [id])
 
   @@index([specialty])
   @@index([branchId])

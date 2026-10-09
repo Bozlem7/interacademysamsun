@@ -102,7 +102,7 @@ async function createStaff(opts: {
           fullName: opts.fullName,
           phone: randomPhone(),
           specialty: opts.specialty,
-          branchId: opts.branchId,
+          branchId: opts.specialty === "antrenor" ? opts.branchId : null, // diyetisyen/psikolog ortak havuz
           tcNoEncrypted: encryptTc(tcNo),
           tcNoHash: hashTc(tcNo),
         },

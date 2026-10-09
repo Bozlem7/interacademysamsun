@@ -48,6 +48,9 @@ export function AdminStudentsTab() {
   const [inboxOpen, setInboxOpen] = useState(false);
   const [preRegs, setPreRegs] = useState<PreRegRow[]>([]);
   const [deleteTarget, setDeleteTarget] = useState<StudentRow | null>(null);
+  // Grup silme: önce ön kontrol (öğrenci sayısı), sonra ona uygun onay penceresi.
+  const [groupDelete, setGroupDelete] = useState<{ id: string; name: string; studentCount: number; sessionCount: number } | null>(null);
+  const [groupDeleting, setGroupDeleting] = useState(false);
   const [suspendTarget, setSuspendTarget] = useState<StudentRow | null>(null);
   const [errorMessage, setErrorMessage] = useState("");
   const [groupWizardOpen, setGroupWizardOpen] = useState(false);
@@ -115,6 +118,49 @@ export function AdminStudentsTab() {
     }
   }
 
+  async function startGroupDelete() {
+    if (!groupFilter) return;
+    try {
+      const { data } = await apiClient.get(`/groups/${groupFilter}/delete-preview`);
+      setGroupDelete(data);
+    } catch (e: any) {
+      setErrorMessage(e.response?.data?.error?.message ?? "Grup bilgisi alınamadı.");
+      setTimeout(() => setErrorMessage(""), 4000);
+    }
+  }
+
+  async function confirmGroupDelete() {
+    if (!groupDelete || groupDeleting) return;
+    const target = groupDelete;
+    setGroupDeleting(true);
+    try {
+      // Öğrenci varsa kullanıcı uyarıyı zaten onayladı → force=true; yoksa parametresiz (sunucu doğrular).
+      await apiClient.delete(`/groups/${target.id}`, { params: target.studentCount > 0 ? { force: true } : undefined });
+      setGroupDelete(null);
+      setGroupFilter("");
+      loadGroups();
+      loadStudents();
+      setSuccessMessage(
+        target.studentCount > 0
+          ? `"${target.name}" grubu silindi; ${target.studentCount} öğrenci grupsuz duruma alındı.`
+          : `"${target.name}" grubu silindi.`
+      );
+      setTimeout(() => setSuccessMessage(""), 4000);
+    } catch (e: any) {
+      setGroupDelete(null);
+      const status = e.response?.status;
+      // 409: ön kontrolden sonra gruba öğrenci eklenmiş → listeyi yenile, kullanıcı tekrar denesin.
+      if (status === 409 || status === 404) {
+        loadGroups();
+        loadStudents();
+      }
+      setErrorMessage(e.response?.data?.error?.message ?? "Grup silinemedi. Lütfen tekrar deneyin.");
+      setTimeout(() => setErrorMessage(""), 5000);
+    } finally {
+      setGroupDeleting(false);
+    }
+  }
+
   function onGroupCreated() {
     loadGroups();
     loadStudents();
@@ -163,6 +209,14 @@ export function AdminStudentsTab() {
             </option>
           ))}
         </select>
+        {groupFilter && (
+          <button
+            onClick={startGroupDelete}
+            className="whitespace-nowrap rounded-xl bg-red-600 px-4 py-3 text-sm font-extrabold text-white hover:bg-red-700"
+          >
+            Grubu Sil
+          </button>
+        )}
         <select value={ageFilter} onChange={(e) => setAgeFilter(Number(e.target.value))} className={selectCls}>
           {AGE_BUCKETS.map((b, i) => (
             <option key={b.label} value={i}>
@@ -306,6 +360,25 @@ export function AdminStudentsTab() {
         confirmLabel="Evet, Sil"
         onConfirm={doDelete}
         onCancel={() => setDeleteTarget(null)}
+      />
+
+      <ConfirmDialog
+        open={!!groupDelete}
+        title={groupDelete && groupDelete.studentCount > 0 ? "Dikkat: Grupta öğrenci var" : "Grubu sil"}
+        body={
+          !groupDelete
+            ? ""
+            : groupDelete.studentCount > 0
+              ? `Bu grupta kayıtlı ${groupDelete.studentCount} adet öğrenci bulunmaktadır. Grubu silerseniz öğrenciler boşa çıkarılacaktır (herhangi bir gruba atanmamış duruma geçeceklerdir).${
+                  groupDelete.sessionCount > 0 ? ` Grubun ${groupDelete.sessionCount} antrenman programı kaydı da silinecektir.` : ""
+                } Yine de silmek istiyor musunuz?`
+              : `"${groupDelete.name}" grubunu silmek istediğinize emin misiniz?${
+                  groupDelete.sessionCount > 0 ? ` Grubun ${groupDelete.sessionCount} antrenman programı kaydı da silinecektir.` : ""
+                }`
+        }
+        confirmLabel={groupDelete && groupDelete.studentCount > 0 ? "Evet, Sil" : "Sil"}
+        onConfirm={confirmGroupDelete}
+        onCancel={() => setGroupDelete(null)}
       />
 
       <ConfirmDialog

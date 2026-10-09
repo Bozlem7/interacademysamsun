@@ -3,7 +3,6 @@ import { apiClient } from "../../../lib/apiClient";
 import { Modal } from "../../../components/common/Modal";
 import { tcErrorMessage } from "../../../lib/tcValidation";
 import { InstructorDetailModal } from "./InstructorDetailModal";
-import { fetchBranches, Branch } from "../../../features/branch/branchApi";
 import { SPECIALTY_LABEL, SPECIALTY_BADGE_CLASS, SPECIALTY_BORDER_CLASS } from "../../../lib/specialtyColors";
 
 interface StaffRow {
@@ -13,18 +12,17 @@ interface StaffRow {
   specialty: "antrenor" | "diyetisyen" | "psikolog";
   phone?: string;
   isActive: boolean;
+  scope?: "BRANCH" | "SHARED";
 }
 
 export function AdminStaffTab() {
   const [staff, setStaff] = useState<StaffRow[]>([]);
-  const [branches, setBranches] = useState<Branch[]>([]);
   const [formOpen, setFormOpen] = useState(false);
   const [form, setForm] = useState({
     fullName: "",
     tcNo: "",
     phone: "",
     specialty: "antrenor" as StaffRow["specialty"],
-    branchId: "",
   });
   const [error, setError] = useState("");
   const [detailId, setDetailId] = useState<string | null>(null);
@@ -33,16 +31,9 @@ export function AdminStaffTab() {
     apiClient.get("/staff").then((r) => setStaff(r.data));
   }
   useEffect(load, []);
-  useEffect(() => {
-    fetchBranches().then(setBranches);
-  }, []);
 
   async function save() {
     setError("");
-    if (!form.branchId) {
-      setError("Şube seçimi zorunludur");
-      return;
-    }
     const tcError = tcErrorMessage(form.tcNo);
     if (tcError) {
       setError(tcError);
@@ -51,7 +42,7 @@ export function AdminStaffTab() {
     try {
       await apiClient.post("/staff", form);
       setFormOpen(false);
-      setForm({ fullName: "", tcNo: "", phone: "", specialty: "antrenor", branchId: "" });
+      setForm({ fullName: "", tcNo: "", phone: "", specialty: "antrenor" });
       load();
     } catch (e: any) {
       setError(e.response?.data?.error?.message ?? "Kayıt başarısız");
@@ -92,6 +83,11 @@ export function AdminStaffTab() {
             <span className={`mb-3 inline-block rounded-full px-2.5 py-1 text-[11px] font-bold ${SPECIALTY_BADGE_CLASS[p.specialty]}`}>
               {SPECIALTY_LABEL[p.specialty]}
             </span>
+            {p.scope === "SHARED" && (
+              <span className="mb-3 ml-1.5 inline-block rounded-full bg-indigo-100 px-2.5 py-1 text-[11px] font-bold text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300">
+                Ortak (tüm şubeler)
+              </span>
+            )}
             <div className="mb-3 text-xs text-slate-500 dark:text-slate-400">
               Kullanıcı adı: <strong className="text-slate-700 dark:text-slate-200">{p.username}</strong>
               {p.phone && <div>Telefon: {p.phone}</div>}
@@ -119,23 +115,6 @@ export function AdminStaffTab() {
 
       <Modal open={formOpen} onClose={() => setFormOpen(false)} title="Yeni Eğitmen / Uzman">
         {error && <div className="mb-3 rounded-lg bg-red-50 p-3 text-sm text-red-600">{error}</div>}
-        <label className="mb-1.5 block text-xs font-bold text-slate-500 dark:text-slate-400">Bayi Seçimi</label>
-        <div className="mb-3 flex gap-2">
-          {branches.map((b) => (
-            <button
-              key={b.id}
-              type="button"
-              onClick={() => setForm({ ...form, branchId: b.id })}
-              className={`flex-1 rounded-xl border-2 py-2.5 text-sm font-bold transition-colors ${
-                form.branchId === b.id
-                  ? "border-brand bg-brand text-white"
-                  : "border-slate-200 bg-paper2 text-slate-600 dark:border-slate-700 dark:bg-surface2 dark:text-slate-300"
-              }`}
-            >
-              {b.name}
-            </button>
-          ))}
-        </div>
         <input
           className="mb-2.5 w-full rounded-xl border border-slate-200 bg-paper2 p-3 text-sm text-slate-900 dark:border-slate-700 dark:bg-surface2 dark:text-white"
           placeholder="Ad Soyad"

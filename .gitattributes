@@ -1,2 +1,5 @@
 # Auto detect text files and perform LF normalization
 * text=auto
+
+# Kabuk betikleri Linux sunucuda çalışır — CRLF ile "bad interpreter" hatası verir.
+*.sh text eol=lf

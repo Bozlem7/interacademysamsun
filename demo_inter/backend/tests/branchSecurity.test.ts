@@ -1,7 +1,7 @@
 import request from "supertest";
 import { createApp } from "../src/app";
 import { prisma } from "../src/config/prisma";
-import { createAdmin, createBranch, createGroup, createInstructor, createStudent } from "./helpers/fixtures";
+import { createAdmin, generateTc, createBranch, createGroup, createInstructor, createStudent } from "./helpers/fixtures";
 
 const app = createApp();
 
@@ -100,5 +100,60 @@ describe("Bayi / Şube Güvenliği ve Yetkilendirme", () => {
 
     const res = await request(app).get(`/api/students/${studentB.id}`).set("Authorization", `Bearer ${tokenA}`);
     expect(res.status).toBe(403);
+  });
+
+  test("diyetisyen ortak havuza yazılır; her iki şubenin personel listesinde görünür, antrenör yalnızca kendi şubesinde", async () => {
+    const branchA = await createBranch("PoolA");
+    const branchB = await createBranch("PoolB");
+    const { username, password } = await createAdmin();
+    const trainerA = await createInstructor(branchA.id, "Antrenor PoolA");
+
+    const loginA = await request(app).post("/api/auth/admin-login").send({ username, password, branchCode: branchA.code });
+    const tokenA = loginA.body.token;
+    const loginB = await request(app).post("/api/auth/admin-login").send({ username, password, branchCode: branchB.code });
+    const tokenB = loginB.body.token;
+
+    const created = await request(app)
+      .post("/api/staff")
+      .set("Authorization", `Bearer ${tokenA}`)
+      .send({ fullName: `Diyetisyen Pool${Date.now()}`, tcNo: generateTc(), specialty: "diyetisyen" });
+    expect(created.status).toBe(201);
+    expect(created.body.scope).toBe("SHARED");
+    const profile = await prisma.staffProfile.findFirst({ where: { userId: created.body.id } });
+    expect(profile?.branchId).toBeNull();
+
+    const listA = (await request(app).get("/api/staff").set("Authorization", `Bearer ${tokenA}`)).body.map((x: any) => x.id);
+    const listB = (await request(app).get("/api/staff").set("Authorization", `Bearer ${tokenB}`)).body.map((x: any) => x.id);
+    expect(listA).toContain(created.body.id);
+    expect(listB).toContain(created.body.id);
+    expect(listA).toContain(trainerA.user.id);
+    expect(listB).not.toContain(trainerA.user.id);
+  });
+
+  test("antrenman şubeye özeldir: başka şubenin grubuna ekleme 403, başka şubenin antrenmanını silme 404, listede izolasyon", async () => {
+    const branchA = await createBranch("SessA");
+    const branchB = await createBranch("SessB");
+    const { username, password } = await createAdmin();
+    const groupA = await createGroup(branchA.id);
+    const groupB = await createGroup(branchB.id);
+    const sessionB = await prisma.trainingSession.create({
+      data: { groupId: groupB.id, dayOfWeek: 1, startTime: new Date("1970-01-01T17:00:00.000Z"), sessionType: "saha" },
+    });
+
+    const login = await request(app).post("/api/auth/admin-login").send({ username, password, branchCode: branchA.code });
+    const auth = { Authorization: `Bearer ${login.body.token}` };
+
+    const cross = await request(app).post("/api/schedule").set(auth).send({ groupId: groupB.id, dayOfWeek: 2, startTime: "18:00", sessionType: "saha" });
+    expect(cross.status).toBe(403);
+
+    const own = await request(app).post("/api/schedule").set(auth).send({ groupId: groupA.id, dayOfWeek: 2, startTime: "18:00", sessionType: "saha" });
+    expect(own.status).toBe(201);
+
+    const del = await request(app).delete(`/api/schedule/${sessionB.id}`).set(auth);
+    expect(del.status).toBe(404);
+
+    const mine = (await request(app).get("/api/schedule/mine").set(auth)).body.map((x: any) => x.id);
+    expect(mine).toContain(own.body.id);
+    expect(mine).not.toContain(sessionB.id);
   });
 });

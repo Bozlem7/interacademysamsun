@@ -94,7 +94,7 @@ async function seedMockData() {
                 fullName: def.fullName,
                 phone: randomPhone(staffSeedCounter),
                 specialty: def.specialty,
-                branchId: branch.id,
+                branchId: def.specialty === "antrenor" ? branch.id : null, // diyetisyen/psikolog ortak havuz
                 tcNoEncrypted: encryptTc(tcNo),
                 tcNoHash: hashTc(tcNo),
               },
