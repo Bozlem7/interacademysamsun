@@ -130,6 +130,25 @@ describe("cyclePeriodContaining (15'inden 15'ine dönem)", () => {
   });
 });
 
+describe("yeni dönem tutarı = öğrencinin son ödediği tutar", () => {
+  test("devirde açılan satır son ödenen tutarla gelir; hiç ödemesi olmayan genel aidatı alır", async () => {
+    const branch = await createBranch("LastPaidBranch");
+    const paidBefore = await studentWithDay(branch.id, 15);
+    const never = await studentWithDay(branch.id, 15);
+    const d = (m: number) => new Date(Date.UTC(2096, m - 1, 15));
+    // Eski ödemeler: 2096/3 = 4000, 2096/4 = 6500 (en son); 2096/5 ödenmemiş (tutar 3500) — son ÖDENEN 6500 olmalı.
+    await prisma.payment.create({ data: { studentId: paidBefore.id, periodYear: 2096, periodMonth: 3, dueDay: 15, dueDate: d(3), amount: 4000, status: "odendi", paidAt: new Date() } });
+    await prisma.payment.create({ data: { studentId: paidBefore.id, periodYear: 2096, periodMonth: 4, dueDay: 15, dueDate: d(4), amount: 6500, status: "odendi", paidAt: new Date() } });
+    await prisma.payment.create({ data: { studentId: paidBefore.id, periodYear: 2096, periodMonth: 5, dueDay: 15, dueDate: d(5), amount: 3500 } });
+
+    await rolloverBillingCycle(at(2096, 6, 15));
+
+    const get = (id: string) => prisma.payment.findUniqueOrThrow({ where: { studentId_periodYear_periodMonth: { studentId: id, periodYear: 2096, periodMonth: 6 } } });
+    expect(Number((await get(paidBefore.id)).amount)).toBe(6500);
+    expect(Number((await get(never.id)).amount)).toBe(3500);
+  });
+});
+
 describe("devirde biten dönemin anlık görüntüsü (snapshot)", () => {
   test("biten döneme ait satırı olmayan öğrenciye 'Ödenmedi' yazılır; mevcut Ödendi/Ödenmedi kayıtlar aynen kalır", async () => {
     const branch = await createBranch("SnapshotBranch");

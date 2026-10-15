@@ -49,7 +49,7 @@ const dueDateFor = (month: number, dueDay: number) => new Date(Date.UTC(YEAR, mo
 type Action =
   | { kind: "A" | "E"; studentId: string; name: string; dueDay: number; paidPaymentId: string; emptySepId?: string; amount: string }
   | { kind: "C"; studentId: string; name: string; dueDay: number; sepId: string; octId: string; sepAmount: string; octAmount: string }
-  | { kind: "B" | "N" | "O"; studentId: string; name: string; dueDay: number }
+  | { kind: "B" | "N" | "O"; studentId: string; name: string; dueDay: number; lastPaid?: number }
   | { kind: "X"; studentId: string; name: string; deleteIds: string[]; moveToOctId?: string; note: string };
 
 async function main() {
@@ -90,7 +90,7 @@ async function main() {
     if (!p9 && !p10) actions.push({ kind: "N", ...base });
     else if (!p9 && p10!.status === "odendi") actions.push({ kind: "A", ...base, paidPaymentId: p10!.id, amount: String(p10!.amount) });
     else if (!p9) actions.push({ kind: "B", ...base });
-    else if (!p10) actions.push({ kind: "O", ...base });
+    else if (!p10) actions.push({ kind: "O", ...base, lastPaid: p9.status === "odendi" ? Number(p9.amount) : undefined });
     else if (p10.status === "odendi") {
       if (p9.status === "odenmedi") actions.push({ kind: "E", ...base, paidPaymentId: p10.id, emptySepId: p9.id, amount: String(p10.amount) });
       else actions.push({ kind: "C", ...base, sepId: p9.id, octId: p10.id, sepAmount: String(p9.amount), octAmount: String(p10.amount) });
@@ -133,8 +133,9 @@ async function main() {
   if (!APPLY) return;
 
   await prisma.$transaction(async (tx) => {
-    const addPayment = (studentId: string, month: number, dueDay: number) =>
-      tx.payment.create({ data: { studentId, periodYear: YEAR, periodMonth: month, dueDay, dueDate: dueDateFor(month, dueDay), amount: fee } });
+    // Yeni "Ödenmedi" satırı, öğrencinin son ödediği tutarla açılır (bilinmiyorsa genel aidat); ödeme alırken düzeltilebilir.
+    const addPayment = (studentId: string, month: number, dueDay: number, amount: number = fee) =>
+      tx.payment.create({ data: { studentId, periodYear: YEAR, periodMonth: month, dueDay, dueDate: dueDateFor(month, dueDay), amount } });
 
     for (const a of actions) {
       if (a.kind === "X") {
@@ -154,14 +155,14 @@ async function main() {
         await tx.payment.update({ where: { id: a.paidPaymentId }, data: { periodMonth: SEP, dueDate: dueDateFor(SEP, a.dueDay) } });
         // Gelir kaydı açıklaması da doğru döneme işaret etsin (kayıtlar silinmez, sadece etiket düzelir).
         await tx.financeTransaction.updateMany({ where: { paymentId: a.paidPaymentId }, data: { description: `${SEP}/${YEAR} dönemi aidat tahsilatı` } });
-        await addPayment(a.studentId, OCT, a.dueDay);
+        await addPayment(a.studentId, OCT, a.dueDay, Number(a.amount));
       } else if (a.kind === "B") {
         await addPayment(a.studentId, SEP, a.dueDay);
       } else if (a.kind === "N") {
         await addPayment(a.studentId, SEP, a.dueDay);
         await addPayment(a.studentId, OCT, a.dueDay);
       } else if (a.kind === "O") {
-        await addPayment(a.studentId, OCT, a.dueDay);
+        await addPayment(a.studentId, OCT, a.dueDay, a.lastPaid);
       }
     }
   });

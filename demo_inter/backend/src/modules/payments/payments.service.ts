@@ -21,6 +21,24 @@ async function getMonthlyFee(): Promise<number> {
 }
 
 /**
+ * Öğrencilerin EN SON ödedikleri dönemin tutarı (öğrenciye özel fiyat). Yeni dönem satırları bu tutarla
+ * açılır; hiç ödemesi olmayan öğrenci genel aylık aidatı (varsayılan 3.500 TL) alır. Tutar her zaman
+ * ödeme alınırken düzeltilebilir.
+ */
+async function lastPaidAmountMap(client: typeof prisma | TxClient, studentIds: string[]) {
+  const map = new Map<string, number>();
+  if (studentIds.length === 0) return map;
+  const rows = await client.payment.findMany({
+    where: { studentId: { in: studentIds }, status: "odendi" },
+    orderBy: [{ periodYear: "desc" }, { periodMonth: "desc" }],
+    distinct: ["studentId"],
+    select: { studentId: true, amount: true },
+  });
+  for (const r of rows) map.set(r.studentId, Number(r.amount));
+  return map;
+}
+
+/**
  * Verilen anın hangi faturalama dönemine düştüğünü döndürür. Dönem, öğrencinin ödeme gününden bir
  * sonraki ayın ödeme gününe kadar sürer ve ADINI başladığı aydan alır: ödeme günü 15 ise
  * 15 Eylül 00:00 – 15 Ekim 00:00 arası her an (ör. 1–14 Ekim dahil) "Eylül" dönemidir.
@@ -38,7 +56,7 @@ export async function generatePaymentForNewStudent(studentId: string) {
   const student = await prisma.student.findUnique({ where: { id: studentId } });
   if (!student) throw new NotFoundError("Öğrenci bulunamadı");
 
-  const amount = await getMonthlyFee();
+  const amount = (await lastPaidAmountMap(prisma, [studentId])).get(studentId) ?? (await getMonthlyFee());
   const { year, month } = cyclePeriodContaining(new Date(), student.paymentDueDay);
 
   await prisma.payment.upsert({
@@ -116,6 +134,10 @@ export async function rolloverBillingCycle(referenceDate: Date = new Date()) {
       select: { id: true, paymentDueDay: true },
     });
 
+    // Her öğrencinin yeni satırı, en son ödediği tutarla açılır (yoksa genel aidat).
+    const lastPaid = await lastPaidAmountMap(tx, students.map((s) => s.id));
+    const amountFor = (studentId: string) => lastPaid.get(studentId) ?? amount;
+
     // 1) Biten dönemin anlık görüntüsü: o dönem için hiç satırı olmayan öğrenciye "Ödenmedi" satırı yazılır.
     //    Mevcut satırlar (Ödendi/Ödenmedi) zaten biten dönemin kalıcı durumudur ve olduğu gibi kalır —
     //    böylece ödemeyen öğrenci "Ödenmeyen Aylar" geçmişinden asla düşmez.
@@ -128,7 +150,7 @@ export async function rolloverBillingCycle(referenceDate: Date = new Date()) {
         periodMonth: endedMonth,
         dueDay: s.paymentDueDay,
         dueDate: computeDueDate(endedYear, endedMonth, s.paymentDueDay),
-        amount,
+        amount: amountFor(s.id),
       })),
       skipDuplicates: true,
     });
@@ -141,7 +163,7 @@ export async function rolloverBillingCycle(referenceDate: Date = new Date()) {
         periodMonth: nextMonth,
         dueDay: s.paymentDueDay,
         dueDate: computeDueDate(nextYear, nextMonth, s.paymentDueDay),
-        amount,
+        amount: amountFor(s.id),
       })),
       skipDuplicates: true,
     });
