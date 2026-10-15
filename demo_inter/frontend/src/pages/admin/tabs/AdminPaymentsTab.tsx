@@ -36,7 +36,8 @@ interface UnpaidMonth {
   dueDate: string;
 }
 
-function UnpaidMonthsBadge({ p }: { p: PaymentRow }) {
+/** `onPick` verilirse (yalnızca ödeme onay yetkisi olan yönetici) her ay rozeti tıklanabilir olur. */
+function UnpaidMonthsBadge({ p, onPick }: { p: PaymentRow; onPick?: (m: UnpaidMonth) => void }) {
   if (p.status === "odenmedi") {
     // Backend, dönemi BİTMİŞ ödenmemiş ayları Türkçe adıyla döndürür (Ekim ancak 15 Kasım'da girer).
     // Yalnızca güncel dönem ödenmemişse rozet çıkmaz — satırın "Ödenmedi" durumu zaten bunu gösterir.
@@ -50,14 +51,26 @@ function UnpaidMonthsBadge({ p }: { p: PaymentRow }) {
           </span>
         )}
         <span className="text-[11px] font-extrabold text-red-700 dark:text-red-400">Ödenmeyen Aylar:</span>
-        {months.map((m) => (
-          <span
-            key={m.paymentId}
-            className="rounded-full bg-red-100 px-2 py-0.5 text-[10px] font-extrabold text-red-700 dark:bg-red-900/30 dark:text-red-400"
-          >
-            {m.label}
-          </span>
-        ))}
+        {months.map((m) =>
+          onPick ? (
+            <button
+              key={m.paymentId}
+              type="button"
+              onClick={() => onPick(m)}
+              title={`${m.label} borcunu tahsil et`}
+              className="cursor-pointer rounded-full bg-red-100 px-2 py-0.5 text-[10px] font-extrabold text-red-700 underline decoration-dotted underline-offset-2 hover:bg-red-200 dark:bg-red-900/30 dark:text-red-400 dark:hover:bg-red-900/50"
+            >
+              {m.label}
+            </button>
+          ) : (
+            <span
+              key={m.paymentId}
+              className="rounded-full bg-red-100 px-2 py-0.5 text-[10px] font-extrabold text-red-700 dark:bg-red-900/30 dark:text-red-400"
+            >
+              {m.label}
+            </span>
+          )
+        )}
       </div>
     );
   }
@@ -86,6 +99,11 @@ export function AdminPaymentsTab() {
   const [amountInputs, setAmountInputs] = useState<Record<string, string>>({});
   const [markPaidError, setMarkPaidError] = useState<string | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [monthSettleTarget, setMonthSettleTarget] = useState<{ studentId: string; studentName: string; month: UnpaidMonth } | null>(null);
+  const [monthSettleAmount, setMonthSettleAmount] = useState("");
+  const [monthSettleNote, setMonthSettleNote] = useState("");
+  const [monthSettleError, setMonthSettleError] = useState<string | null>(null);
+  const [monthSettling, setMonthSettling] = useState(false);
   const [search, setSearch] = useState("");
   const [remindingId, setRemindingId] = useState<string | null>(null);
   const [remindResult, setRemindResult] = useState<{ id: string; ok: boolean; text: string } | null>(null);
@@ -135,6 +153,38 @@ export function AdminPaymentsTab() {
     for (const m of months) amounts[m.paymentId] = String(m.amount);
     setAmountInputs(amounts);
     setConfirmTarget(p);
+  }
+
+  // Geçmiş (ödenmemiş) bir ayı tek başına tahsil eden pencere — rozetteki ay adına tıklanınca açılır.
+  function openMonthSettle(p: PaymentRow, m: UnpaidMonth) {
+    if (!canConfirmPayment) return;
+    setMonthSettleError(null);
+    setMonthSettleAmount(String(m.amount));
+    setMonthSettleNote("");
+    setMonthSettleTarget({ studentId: p.student.id, studentName: p.student.fullName, month: m });
+  }
+
+  async function submitMonthSettle() {
+    if (!monthSettleTarget || !canConfirmPayment || monthSettling) return;
+    const amount = Number(monthSettleAmount);
+    if (!(amount > 0)) {
+      setMonthSettleError("Ödenen tutar 0'dan büyük olmalıdır.");
+      return;
+    }
+    setMonthSettling(true);
+    try {
+      await apiClient.post("/payments/settle", {
+        items: [{ paymentId: monthSettleTarget.month.paymentId, amount, ...(monthSettleNote.trim() ? { note: monthSettleNote.trim() } : {}) }],
+        confirm: true,
+      });
+      setMonthSettleTarget(null);
+      load(); // liste yenilenir: ay "Ödenmeyen Aylar" rozetinden kalkar
+      setActivityRefreshKey((k) => k + 1);
+    } catch (e: any) {
+      setMonthSettleError(e.response?.data?.error?.message ?? "Ödeme kaydedilemedi.");
+    } finally {
+      setMonthSettling(false);
+    }
   }
 
   function toggleSelected(id: string) {
@@ -306,7 +356,7 @@ export function AdminPaymentsTab() {
                 </div>
               )}
               <div className="flex min-w-[120px] flex-1 items-center self-center">
-                <UnpaidMonthsBadge p={p} />
+                <UnpaidMonthsBadge p={p} onPick={canConfirmPayment ? (m) => openMonthSettle(p, m) : undefined} />
               </div>
               {canConfirmPayment ? (
                 <button
@@ -421,7 +471,60 @@ export function AdminPaymentsTab() {
         </div>
       </Modal>
 
-      <Modal open={!!revertTarget} onClose={() => !reverting && setRevertTarget(null)} title="Ödemeyi Geri Al">
+      <Modal open={!!monthSettleTarget} onClose={() => !monthSettling && setMonthSettleTarget(null)} title="Geçmiş Ay Borcunu Tahsil Et">
+        <div className="space-y-3.5">
+          <dl className="grid grid-cols-[auto,1fr] gap-x-4 gap-y-1.5 rounded-xl bg-slate-50 p-3.5 text-sm dark:bg-surface2">
+            <dt className="font-bold text-slate-500">Öğrenci</dt>
+            <dd className="font-bold text-slate-800 dark:text-slate-100">{monthSettleTarget?.studentName}</dd>
+            <dt className="font-bold text-slate-500">Dönem</dt>
+            <dd className="font-extrabold text-red-700 dark:text-red-400">{monthSettleTarget?.month.label} Borcu</dd>
+          </dl>
+          <div>
+            <label className="mb-1 block text-xs font-bold text-slate-500">Ödenen Tutar (TL)</label>
+            <input
+              type="number"
+              min="0"
+              step="0.01"
+              value={monthSettleAmount}
+              onChange={(e) => setMonthSettleAmount(e.target.value)}
+              className="w-full rounded-xl border border-slate-200 bg-paper2 p-3 text-sm outline-none focus:border-brand dark:border-slate-700 dark:bg-surface dark:text-white"
+            />
+          </div>
+          <div>
+            <label className="mb-1 block text-xs font-bold text-slate-500">Not (isteğe bağlı)</label>
+            <textarea
+              rows={2}
+              maxLength={300}
+              value={monthSettleNote}
+              onChange={(e) => setMonthSettleNote(e.target.value)}
+              placeholder="Bu ay için not düşebilirsiniz…"
+              className="w-full rounded-xl border border-slate-200 bg-paper2 p-3 text-sm outline-none focus:border-brand dark:border-slate-700 dark:bg-surface dark:text-white"
+            />
+          </div>
+          <div className="text-xs text-slate-500">
+            Tutar bugünün tarihiyle Finans / Gelir kaydına yazılır ve ödeme hareketleri geçmişinde görünür.
+          </div>
+          {monthSettleError && <div className="text-xs font-semibold text-red-600">{monthSettleError}</div>}
+          <div className="flex gap-2.5">
+            <button
+              onClick={submitMonthSettle}
+              disabled={monthSettling}
+              className="flex-1 rounded-xl bg-green-600 py-3 text-sm font-extrabold text-white hover:bg-green-700 disabled:opacity-60"
+            >
+              {monthSettling ? "Kaydediliyor…" : "Ödendi Olarak Kaydet"}
+            </button>
+            <button
+              onClick={() => setMonthSettleTarget(null)}
+              disabled={monthSettling}
+              className="flex-1 rounded-xl bg-slate-100 py-3 text-sm font-bold text-slate-600 hover:bg-slate-200 dark:bg-surface2 dark:text-slate-300 dark:hover:bg-slate-700"
+            >
+              Vazgeç
+            </button>
+          </div>
+        </div>
+      </Modal>
+
+      <Modal open={!!revertTarget}onClose={() => !reverting && setRevertTarget(null)} title="Ödemeyi Geri Al">
         <div className="space-y-3.5">
           <div className="text-sm leading-relaxed text-slate-600 dark:text-slate-400">
             Bu öğrencinin ödeme durumunu tekrar 'Ödenmedi' yapacak ve kaydedilen tutarı gelirlerden/kasadan düşeceksiniz. Emin misiniz?

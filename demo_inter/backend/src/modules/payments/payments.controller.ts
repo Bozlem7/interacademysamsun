@@ -52,7 +52,7 @@ paymentsRouter.patch(
 );
 
 const settleSchema = z.object({
-  items: z.array(z.object({ paymentId: z.string().uuid(), amount: z.number().positive() })).min(1),
+  items: z.array(z.object({ paymentId: z.string().uuid(), amount: z.number().positive(), note: z.string().max(300).optional() })).min(1),
   confirm: z.literal(true),
 });
 

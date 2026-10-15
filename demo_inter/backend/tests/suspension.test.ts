@@ -1,7 +1,7 @@
 import request from "supertest";
 import { createApp } from "../src/app";
 import { prisma } from "../src/config/prisma";
-import { rolloverBillingCycle } from "../src/modules/payments/payments.service";
+import { cyclePeriodContaining, rolloverBillingCycle } from "../src/modules/payments/payments.service";
 import { createAdmin, createBranch, createGroup, createInstructor, createStudent } from "./helpers/fixtures";
 
 // Baileys ESM paketi Jest'in CommonJS ortamında yüklenemiyor; bu testler gerçek WhatsApp
@@ -78,7 +78,7 @@ describe("Öğrenci Askıya Alma", () => {
     const now = new Date();
     const payment = await prisma.payment.findUnique({
       where: {
-        studentId_periodYear_periodMonth: { studentId: student.id, periodYear: now.getUTCFullYear(), periodMonth: now.getUTCMonth() + 1 },
+        studentId_periodYear_periodMonth: { studentId: student.id, periodYear: cyclePeriodContaining(now, 15).year, periodMonth: cyclePeriodContaining(now, 15).month },
       },
     });
     expect(payment).not.toBeNull();

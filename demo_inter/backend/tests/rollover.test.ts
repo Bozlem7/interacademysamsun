@@ -1,5 +1,6 @@
 import { prisma } from "../src/config/prisma";
-import { listPayments, rolloverBillingCycle, settlePayments } from "../src/modules/payments/payments.service";
+import { cyclePeriodContaining, listPayments, rolloverBillingCycle, settlePayments } from "../src/modules/payments/payments.service";
+import { getFinanceSummary } from "../src/modules/finance/finance.service";
 import { createAdmin, createBranch, createStudent } from "./helpers/fixtures";
 
 // Baileys ESM paketi Jest'in CommonJS ortamında yüklenemiyor; bu testler gerçek WhatsApp
@@ -101,6 +102,83 @@ describe("rolloverBillingCycle", () => {
     const res = await rolloverBillingCycle(new Date(Date.UTC(2099, 8, 14, 21, 0, 0)));
     expect(res.skipped).toBe(false);
     expect(await prisma.payment.count({ where: { studentId: s.id, periodYear: 2099, periodMonth: 9 } })).toBe(1);
+  });
+});
+
+describe("cyclePeriodContaining (15'inden 15'ine dönem)", () => {
+  test("ödeme günü 15: 15 Eylül – 14 Ekim arası her an 'Eylül' dönemidir", () => {
+    for (const d of [at(2026, 9, 15), at(2026, 9, 30), at(2026, 10, 1), at(2026, 10, 14)]) {
+      expect(cyclePeriodContaining(d, 15)).toEqual({ year: 2026, month: 9 });
+    }
+    expect(cyclePeriodContaining(at(2026, 10, 15), 15)).toEqual({ year: 2026, month: 10 });
+  });
+
+  test("Türkiye gece yarısı sınırı: 15 Ekim 00:00 TR (14 Ekim 21:00 UTC) yeni dönemdir, 23:59 TR eski dönemdir", () => {
+    expect(cyclePeriodContaining(new Date(Date.UTC(2026, 9, 14, 21, 0, 0)), 15)).toEqual({ year: 2026, month: 10 });
+    expect(cyclePeriodContaining(new Date(Date.UTC(2026, 9, 14, 20, 59, 59)), 15)).toEqual({ year: 2026, month: 9 });
+  });
+
+  test("yıl başı: 5 Ocak ödeme günü 15 → önceki yılın Aralık dönemi", () => {
+    expect(cyclePeriodContaining(at(2027, 1, 5), 15)).toEqual({ year: 2026, month: 12 });
+  });
+
+  test("ödeme günü 30: 30 Eylül – 29 Ekim arası 'Eylül'; Şubat'ta ödeme günü son güne kırpılır", () => {
+    expect(cyclePeriodContaining(at(2026, 10, 29), 30)).toEqual({ year: 2026, month: 9 });
+    expect(cyclePeriodContaining(at(2026, 10, 30), 30)).toEqual({ year: 2026, month: 10 });
+    expect(cyclePeriodContaining(at(2099, 2, 28), 30)).toEqual({ year: 2099, month: 2 });
+    expect(cyclePeriodContaining(at(2099, 2, 27), 30)).toEqual({ year: 2099, month: 1 });
+  });
+});
+
+describe("devirde biten dönemin anlık görüntüsü (snapshot)", () => {
+  test("biten döneme ait satırı olmayan öğrenciye 'Ödenmedi' yazılır; mevcut Ödendi/Ödenmedi kayıtlar aynen kalır", async () => {
+    const branch = await createBranch("SnapshotBranch");
+    const noRow = await studentWithDay(branch.id, 15);
+    const paid = await studentWithDay(branch.id, 15);
+    const unpaid = await studentWithDay(branch.id, 15);
+    const d = (m: number) => new Date(Date.UTC(2097, m - 1, 15));
+    await prisma.payment.create({ data: { studentId: paid.id, periodYear: 2097, periodMonth: 8, dueDay: 15, dueDate: d(8), amount: 6500, status: "odendi", paidAt: new Date() } });
+    await prisma.payment.create({ data: { studentId: unpaid.id, periodYear: 2097, periodMonth: 8, dueDay: 15, dueDate: d(8), amount: 3500 } });
+
+    // 15 Eylül 2097 devri: biten dönem Ağustos, yeni dönem Eylül.
+    await rolloverBillingCycle(at(2097, 9, 15));
+
+    const get = (id: string, m: number) => prisma.payment.findUnique({ where: { studentId_periodYear_periodMonth: { studentId: id, periodYear: 2097, periodMonth: m } } });
+    expect((await get(noRow.id, 8))?.status).toBe("odenmedi"); // snapshot ile eklendi
+    expect((await get(paid.id, 8))?.status).toBe("odendi");
+    expect(Number((await get(paid.id, 8))?.amount)).toBe(6500);
+    expect((await get(unpaid.id, 8))?.status).toBe("odenmedi");
+    for (const s of [noRow, paid, unpaid]) expect((await get(s.id, 9))?.status).toBe("odenmedi"); // yeni dönem herkeste Ödenmedi
+
+    // Snapshot ile eklenen Ağustos satırı öğrencinin borç listesinde (tahsilat penceresi) görünür.
+    const rows = await listPayments({ branchId: branch.id, studentId: noRow.id });
+    expect(rows[0].pendingMonths.map((m) => m.label)).toContain("Ağustos 2097");
+  });
+});
+
+describe("geçmiş ay tahsilatı → Finans", () => {
+  test("not ile tahsil edilen geçmiş ay bugünün tarihiyle gelire yazılır, Net Kasa'ya yansır, listeden düşer", async () => {
+    const branch = await createBranch("SettleFinanceBranch");
+    const { user } = await createAdmin();
+    const student = await studentWithDay(branch.id, 15);
+    const sep = await prisma.payment.create({ data: { studentId: student.id, periodYear: 2025, periodMonth: 9, dueDay: 15, dueDate: new Date(Date.UTC(2025, 8, 15)), amount: 3500 } });
+
+    const before = await getFinanceSummary({});
+    const t0 = Date.now();
+    await settlePayments({ items: [{ paymentId: sep.id, amount: 5200, note: "Elden alındı" }], branchId: branch.id, confirm: true, adminId: user.id, adminUsername: "muhammet" });
+    const after = await getFinanceSummary({});
+
+    expect(after.netBalance - before.netBalance).toBe(5200);
+    const income = await prisma.financeTransaction.findFirstOrThrow({ where: { paymentId: sep.id, isDeleted: false } });
+    expect(income.createdBy).toBe(user.id);
+    expect(income.description).toContain("9/2025");
+    expect(income.description).toContain("Elden alındı");
+    expect(Math.abs(income.transactionDate.getTime() - t0)).toBeLessThan(60_000); // geçmiş dönem de BUGÜNÜN tarihiyle yazılır
+    expect(await prisma.studentPaymentLog.count({ where: { paymentId: sep.id, actionType: "PAID" } })).toBe(1);
+
+    const rows = await listPayments({ branchId: branch.id, studentId: student.id });
+    expect(rows[0].unpaidMonths).toEqual([]);
+    expect(rows[0].pendingMonths).toEqual([]);
   });
 });
 

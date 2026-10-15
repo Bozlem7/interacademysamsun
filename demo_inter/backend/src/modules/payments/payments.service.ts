@@ -20,15 +20,26 @@ async function getMonthlyFee(): Promise<number> {
   return Number(settings?.monthlyFee ?? 3500);
 }
 
-/** Called once when a new student is registered — creates the payment row for the current period immediately. */
+/**
+ * Verilen anın hangi faturalama dönemine düştüğünü döndürür. Dönem, öğrencinin ödeme gününden bir
+ * sonraki ayın ödeme gününe kadar sürer ve ADINI başladığı aydan alır: ödeme günü 15 ise
+ * 15 Eylül 00:00 – 15 Ekim 00:00 arası her an (ör. 1–14 Ekim dahil) "Eylül" dönemidir.
+ * Gün sınırı Europe/Istanbul takvim gününe göre hesaplanır; kısa aylarda ödeme günü ayın son gününe kırpılır.
+ */
+export function cyclePeriodContaining(date: Date, dueDay: number): { year: number; month: number } {
+  const { year, month, day } = istanbulDateParts(date);
+  const startDay = Math.min(dueDay, lastDayOfMonth(year, month));
+  if (day >= startDay) return { year, month };
+  return month === 1 ? { year: year - 1, month: 12 } : { year, month: month - 1 };
+}
+
+/** Called once when a new student is registered — creates the payment row for the current billing cycle immediately. */
 export async function generatePaymentForNewStudent(studentId: string) {
   const student = await prisma.student.findUnique({ where: { id: studentId } });
   if (!student) throw new NotFoundError("Öğrenci bulunamadı");
 
-  const now = new Date();
   const amount = await getMonthlyFee();
-  const year = now.getUTCFullYear();
-  const month = now.getUTCMonth() + 1;
+  const { year, month } = cyclePeriodContaining(new Date(), student.paymentDueDay);
 
   await prisma.payment.upsert({
     where: { studentId_periodYear_periodMonth: { studentId, periodYear: year, periodMonth: month } },
@@ -68,6 +79,7 @@ const ROLLOVER_LOCK_KEY = 727401;
  * Faturalama döngüsü devri — her gün 00:00'da (Europe/Istanbul) çalışır.
  * - Ayın 15'i: ödeme günü 15 olan aktif öğrencilerin o ayın dönem kaydı (15 Ekim → 10/2026) "Ödenmedi" açılır.
  * - Ayın 30'u (veya 30'dan kısa ayların son günü): ödeme günü 30 olan öğrenciler için aynısı.
+ * - Yeni dönemi açmadan önce biten dönemin kaydı olmayan öğrencilere "Ödenmedi" satırı yazılır (snapshot).
  *
  * Güvenlik: kayıtlar `createMany({ skipDuplicates })` ile eklenir, yani (öğrenci, yıl, ay) için zaten
  * var olan kayıt — örn. önceden "Ödendi" olarak girilmiş peşin ödeme — ASLA ezilmez. İşlem tek
@@ -99,6 +111,24 @@ export async function rolloverBillingCycle(referenceDate: Date = new Date()) {
       select: { id: true, paymentDueDay: true },
     });
 
+    // 1) Biten dönemin anlık görüntüsü: o dönem için hiç satırı olmayan öğrenciye "Ödenmedi" satırı yazılır.
+    //    Mevcut satırlar (Ödendi/Ödenmedi) zaten biten dönemin kalıcı durumudur ve olduğu gibi kalır —
+    //    böylece ödemeyen öğrenci "Ödenmeyen Aylar" geçmişinden asla düşmez.
+    const endedMonth = month === 1 ? 12 : month - 1;
+    const endedYear = month === 1 ? year - 1 : year;
+    const { count: snapshotCreated } = await tx.payment.createMany({
+      data: students.map((s) => ({
+        studentId: s.id,
+        periodYear: endedYear,
+        periodMonth: endedMonth,
+        dueDay: s.paymentDueDay,
+        dueDate: computeDueDate(endedYear, endedMonth, s.paymentDueDay),
+        amount,
+      })),
+      skipDuplicates: true,
+    });
+
+    // 2) Yeni dönem: herkes için "Ödenmedi" (zaten var olan kayıt ezilmez).
     const { count } = await tx.payment.createMany({
       data: students.map((s) => ({
         studentId: s.id,
@@ -111,7 +141,14 @@ export async function rolloverBillingCycle(referenceDate: Date = new Date()) {
       skipDuplicates: true,
     });
 
-    return { skipped: false as const, cycles, term: { year: nextYear, month: nextMonth }, studentsProcessed: students.length, created: count };
+    return {
+      skipped: false as const,
+      cycles,
+      term: { year: nextYear, month: nextMonth },
+      studentsProcessed: students.length,
+      snapshotCreated,
+      created: count,
+    };
   });
 }
 
@@ -249,7 +286,7 @@ export async function markPaymentPaid(
  * tıklamayı/isteği engeller.
  */
 export async function settlePayments(params: {
-  items: { paymentId: string; amount: number }[];
+  items: { paymentId: string; amount: number; note?: string }[];
   branchId: string;
   confirm: boolean;
   adminId: string;
@@ -258,6 +295,7 @@ export async function settlePayments(params: {
   if (!params.confirm) throw new ValidationError("Ödeme onayı için çift onay (confirm) gereklidir");
   if (params.items.length === 0) throw new ValidationError("En az bir dönem seçilmelidir");
   const amounts = new Map(params.items.map((i) => [i.paymentId, i.amount]));
+  const notes = new Map(params.items.map((i) => [i.paymentId, i.note?.trim() || undefined]));
   if (amounts.size !== params.items.length) throw new ValidationError("Aynı dönem birden fazla kez gönderilemez");
   if (params.items.some((i) => !(i.amount > 0))) throw new ValidationError("Ödeme tutarı 0'dan büyük olmalıdır");
   const ids = [...amounts.keys()];
@@ -273,7 +311,7 @@ export async function settlePayments(params: {
     const ordered = [...payments].sort((a, b) => a.periodYear - b.periodYear || a.periodMonth - b.periodMonth);
     const results = [];
     for (const payment of ordered) {
-      results.push(await applyPaid(tx, payment, amounts.get(payment.id)!, params.adminId, adminName));
+      results.push(await applyPaid(tx, payment, amounts.get(payment.id)!, params.adminId, adminName, notes.get(payment.id)));
     }
     return { settled: results.length, totalAmount: results.reduce((s, r) => s + Number(r.amount), 0), payments: results };
   });
@@ -285,7 +323,8 @@ async function applyPaid(
   payment: { id: string; studentId: string; periodMonth: number; periodYear: number },
   amount: number,
   adminId: string,
-  adminName: string
+  adminName: string,
+  note?: string
 ) {
   // Statü koşullu update: eşzamanlı iki istekten yalnızca biri geçer.
   const { count } = await tx.payment.updateMany({
@@ -297,7 +336,9 @@ async function applyPaid(
   await tx.financeTransaction.create({
     data: {
       type: "gelir",
-      description: `${payment.periodMonth}/${payment.periodYear} dönemi aidat tahsilatı`,
+      // İşlem tarihi (transactionDate) varsayılan olarak "şimdi"dir: geçmiş bir dönemin tahsilatı da
+      // bugünün tarihiyle Finans/Net Kasa'ya yazılır. Not varsa açıklamaya eklenir.
+      description: `${payment.periodMonth}/${payment.periodYear} dönemi aidat tahsilatı${note ? ` — Not: ${note}` : ""}`,
       amount,
       studentId: payment.studentId,
       paymentId: payment.id,
