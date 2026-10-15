@@ -93,8 +93,20 @@ function UnpaidMonthsBadge({ p, onPick, onOpenAll }: { p: PaymentRow; onPick?: (
   return null;
 }
 
+/**
+ * "Gecikmiş Ödeme": vade gününden 2 gün sonra, saat 12:00'deki (Europe/Istanbul) otomatik WhatsApp
+ * hatırlatmasından sonra başlar — vade günü hemen gecikmiş sayılmaz. `dueDate` UTC gece yarısıdır;
+ * 12:00 TR = 09:00 UTC olduğundan eşik: vade + 2 gün + 9 saat.
+ */
+const OVERDUE_AFTER_MS = 2 * 24 * 60 * 60 * 1000 + 9 * 60 * 60 * 1000;
+function isPastReminder(dueDate: string) {
+  return new Date(dueDate).getTime() + OVERDUE_AFTER_MS <= Date.now();
+}
+
+/** Satırın kendi dönemi ya da öğrencinin dönemi bitmiş ödenmemiş aylarından biri bu eşiği geçtiyse gecikmiştir. */
 function isOverdue(p: PaymentRow) {
-  return p.status === "odenmedi" && new Date(p.dueDate) < new Date();
+  if (p.status !== "odenmedi") return false;
+  return isPastReminder(p.dueDate) || (p.unpaidMonths ?? []).some((m) => isPastReminder(m.dueDate));
 }
 
 export function AdminPaymentsTab() {
