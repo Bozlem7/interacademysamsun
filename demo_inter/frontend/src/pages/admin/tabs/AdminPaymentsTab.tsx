@@ -34,16 +34,14 @@ interface UnpaidMonth {
   dueDate: string;
 }
 
+const TR_MONTHS = ["Ocak", "Şubat", "Mart", "Nisan", "Mayıs", "Haziran", "Temmuz", "Ağustos", "Eylül", "Ekim", "Kasım", "Aralık"];
+
 function UnpaidMonthsBadge({ p }: { p: PaymentRow }) {
-  const others = (p.unpaidMonths ?? []).filter((m) => m.paymentId !== p.id);
   if (p.status === "odenmedi") {
-    if (others.length === 0) {
-      return (
-        <span className="rounded-lg bg-amber-100 px-2.5 py-1 text-[11px] font-extrabold text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">
-          Günü Geldi / Ödenmedi
-        </span>
-      );
-    }
+    // Backend, öğrencinin tüm "Ödenmedi" dönemlerini (Türkçe ay adıyla) döndürür; güncel ay dahil.
+    const months: UnpaidMonth[] = p.unpaidMonths?.length
+      ? p.unpaidMonths
+      : [{ paymentId: p.id, month: p.periodMonth, year: p.periodYear, label: `${TR_MONTHS[p.periodMonth - 1]} ${p.periodYear}`, amount: Number(p.amount), dueDate: p.dueDate }];
     return (
       <div className="flex flex-wrap items-center gap-1.5">
         {p.isEarlyPaid && (
@@ -52,7 +50,7 @@ function UnpaidMonthsBadge({ p }: { p: PaymentRow }) {
           </span>
         )}
         <span className="text-[11px] font-extrabold text-red-700 dark:text-red-400">Ödenmeyen Aylar:</span>
-        {p.unpaidMonths.map((m) => (
+        {months.map((m) => (
           <span
             key={m.paymentId}
             className="rounded-full bg-red-100 px-2 py-0.5 text-[10px] font-extrabold text-red-700 dark:bg-red-900/30 dark:text-red-400"

@@ -101,7 +101,7 @@ const ROLLOVER_LOCK_KEY = 727401;
 
 /**
  * Faturalama döngüsü devri — her gün 00:00'da (Europe/Istanbul) çalışır.
- * - Ayın 15'i: ödeme günü 15 olan aktif öğrencilerin bir SONRAKİ dönem (ay+1) kaydı "Ödenmedi" açılır.
+ * - Ayın 15'i: ödeme günü 15 olan aktif öğrencilerin o ayın dönem kaydı (15 Ekim → 10/2026) "Ödenmedi" açılır.
  * - Ayın 30'u (veya 30'dan kısa ayların son günü): ödeme günü 30 olan öğrenciler için aynısı.
  *
  * Güvenlik: kayıtlar `createMany({ skipDuplicates })` ile eklenir, yani (öğrenci, yıl, ay) için zaten
@@ -118,8 +118,10 @@ export async function rolloverBillingCycle(referenceDate: Date = new Date()) {
   if (day === 30 || (day === lastDay && lastDay < 30)) cycles.push(30);
   if (cycles.length === 0) return { skipped: true as const, reason: "not-a-rollover-day", cycles, created: 0 };
 
-  const nextMonth = month === 12 ? 1 : month + 1;
-  const nextYear = month === 12 ? year + 1 : year;
+  // 15'inde başlayan dönem o ayın dönemidir (15 Ekim → "10/2026"); Ekim dönemini önceden ödeyenlerin
+  // kaydı zaten vardır ve skipDuplicates sayesinde "Ödendi" olarak korunur.
+  const nextMonth = month;
+  const nextYear = year;
   const amount = await getMonthlyFee();
 
   return prisma.$transaction(async (tx) => {
