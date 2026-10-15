@@ -17,8 +17,10 @@ interface PaymentRow {
   amount: string;
   status: "odenmedi" | "odendi";
   paidAt: string | null;
-  /** Öğrencinin tüm ödenmemiş dönemleri (eskiden yeniye) — backend birikmiş borç özeti. */
+  /** Dönemi bitmiş ve ödenmemiş aylar (eskiden yeniye) — "Ödenmeyen Aylar" rozeti. */
   unpaidMonths: UnpaidMonth[];
+  /** Güncel dönem dahil tüm ödenmemiş dönemler — "Ödendi" penceresindeki tahsilat listesi. */
+  pendingMonths: UnpaidMonth[];
   totalDueAmount: number;
   /** Vadesi gelmemiş bir dönem zaten ödenmiş (peşin ödeme). */
   isEarlyPaid: boolean;
@@ -34,14 +36,12 @@ interface UnpaidMonth {
   dueDate: string;
 }
 
-const TR_MONTHS = ["Ocak", "Şubat", "Mart", "Nisan", "Mayıs", "Haziran", "Temmuz", "Ağustos", "Eylül", "Ekim", "Kasım", "Aralık"];
-
 function UnpaidMonthsBadge({ p }: { p: PaymentRow }) {
   if (p.status === "odenmedi") {
-    // Backend, öğrencinin tüm "Ödenmedi" dönemlerini (Türkçe ay adıyla) döndürür; güncel ay dahil.
-    const months: UnpaidMonth[] = p.unpaidMonths?.length
-      ? p.unpaidMonths
-      : [{ paymentId: p.id, month: p.periodMonth, year: p.periodYear, label: `${TR_MONTHS[p.periodMonth - 1]} ${p.periodYear}`, amount: Number(p.amount), dueDate: p.dueDate }];
+    // Backend, dönemi BİTMİŞ ödenmemiş ayları Türkçe adıyla döndürür (Ekim ancak 15 Kasım'da girer).
+    // Yalnızca güncel dönem ödenmemişse rozet çıkmaz — satırın "Ödenmedi" durumu zaten bunu gösterir.
+    const months: UnpaidMonth[] = p.unpaidMonths ?? [];
+    if (months.length === 0) return null;
     return (
       <div className="flex flex-wrap items-center gap-1.5">
         {p.isEarlyPaid && (
@@ -127,7 +127,7 @@ export function AdminPaymentsTab() {
     if (!canConfirmPayment) return;
     setMarkPaidError(null);
     // Varsayılan: tüm birikmiş borç seçili (toplam bakiyeyi kapat); yönetici istediği ayı çıkarabilir.
-    const months = p.unpaidMonths?.length ? p.unpaidMonths : [];
+    const months = p.pendingMonths?.length ? p.pendingMonths : [];
     const ids = months.map((m) => m.paymentId);
     setSelectedIds(new Set(ids.includes(p.id) ? ids : [...ids, p.id]));
     // Her ayın tutarı varsayılan (nominal) değerle dolu gelir; yönetici ay bazında düzeltebilir.
@@ -148,8 +148,8 @@ export function AdminPaymentsTab() {
 
   // Modalda listelenecek dönemler: öğrencinin tüm ödenmemiş ayları (yoksa yalnızca tıklanan satır).
   const modalMonths: UnpaidMonth[] = confirmTarget
-    ? confirmTarget.unpaidMonths?.length
-      ? confirmTarget.unpaidMonths
+    ? confirmTarget.pendingMonths?.length
+      ? confirmTarget.pendingMonths
       : [{ paymentId: confirmTarget.id, month: confirmTarget.periodMonth, year: confirmTarget.periodYear, label: `${confirmTarget.periodMonth}/${confirmTarget.periodYear}`, amount: Number(confirmTarget.amount), dueDate: confirmTarget.dueDate }]
     : [];
   const selectedMonths = modalMonths.filter((m) => selectedIds.has(m.paymentId));
@@ -384,7 +384,7 @@ export function AdminPaymentsTab() {
             hiçbiri). Hatalı işaretleme olursa "Geri Al" ile düzeltebilirsiniz; işlem ödeme hareketleri geçmişine kaydedilir.
           </div>
           <div className="space-y-1.5 rounded-xl bg-slate-50 p-3 dark:bg-surface2">
-            <div className="text-xs font-bold text-slate-500">Ödenmeyen Aylar</div>
+            <div className="text-xs font-bold text-slate-500">Ödenecek Dönemler</div>
             {modalMonths.map((m) => (
               <label key={m.paymentId} className="flex cursor-pointer items-center gap-2 text-sm text-slate-700 dark:text-slate-200">
                 <input type="checkbox" checked={selectedIds.has(m.paymentId)} onChange={() => toggleSelected(m.paymentId)} />

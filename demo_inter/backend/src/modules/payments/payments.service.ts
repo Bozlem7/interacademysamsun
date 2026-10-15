@@ -140,7 +140,7 @@ export function listPayments(params: {
       const balances = await getStudentBalances([...new Set(rows.map((r) => r.studentId))]);
       return rows.map((p) => {
         const { tcNoEncrypted, tcNoHash, ...restStudent } = p.student;
-        const balance = balances.get(p.studentId) ?? { unpaidMonths: [], totalDueAmount: 0, isEarlyPaid: false };
+        const balance = balances.get(p.studentId) ?? { unpaidMonths: [], pendingMonths: [], totalDueAmount: 0, isEarlyPaid: false };
         return {
           ...p,
           ...balance,
@@ -155,20 +155,18 @@ export function listPayments(params: {
 }
 
 /**
- * Öğrenci başına birikmiş borç özeti — dönem filtresinden bağımsız, tüm "Ödenmedi" dönemleri:
- * - unpaidMonths: ödenmemiş dönemler (eskiden yeniye), her biri kendi payment id'si ve tutarıyla
- * - totalDueAmount: bu dönemlerin tutar toplamı (birikmiş + güncel dönem)
+ * Öğrenci başına birikmiş borç özeti — dönem filtresinden bağımsız. Dönem 15'inden 15'ine (veya
+ * 30'undan 30'una) sürer: "Eylül" = 15 Eylül–15 Ekim. Bir dönem ancak BİTTİKTEN sonra "ödenmeyen ay"
+ * sayılır (Ekim dönemi 15 Kasım'da); içinde bulunulan dönem yalnızca satır durumunda "Ödenmedi" görünür.
+ * - unpaidMonths: dönemi bitmiş ve hâlâ ödenmemiş aylar (eskiden yeniye) — "Ödenmeyen Aylar" rozeti
+ * - pendingMonths: güncel dönem dahil tüm "Ödenmedi" dönemler — "Ödendi" penceresindeki tahsilat listesi
+ * - totalDueAmount: pendingMonths tutar toplamı
  * - isEarlyPaid: vadesi henüz gelmemiş bir dönem zaten "Ödendi" (peşin ödeme)
  */
+type BalanceMonth = { paymentId: string; month: number; year: number; label: string; amount: number; dueDate: Date };
+
 async function getStudentBalances(studentIds: string[]) {
-  const result = new Map<
-    string,
-    {
-      unpaidMonths: { paymentId: string; month: number; year: number; label: string; amount: number; dueDate: Date }[];
-      totalDueAmount: number;
-      isEarlyPaid: boolean;
-    }
-  >();
+  const result = new Map<string, { unpaidMonths: BalanceMonth[]; pendingMonths: BalanceMonth[]; totalDueAmount: number; isEarlyPaid: boolean }>();
   if (studentIds.length === 0) return result;
 
   const now = new Date();
@@ -178,7 +176,7 @@ async function getStudentBalances(studentIds: string[]) {
     prisma.payment.findMany({
       where: { studentId: { in: studentIds }, status: "odenmedi" },
       orderBy: [{ periodYear: "asc" }, { periodMonth: "asc" }],
-      select: { id: true, studentId: true, periodMonth: true, periodYear: true, amount: true, dueDate: true },
+      select: { id: true, studentId: true, periodMonth: true, periodYear: true, dueDay: true, amount: true, dueDate: true },
     }),
     prisma.payment.findMany({
       where: { studentId: { in: studentIds }, status: "odendi", dueDate: { gt: startOfToday } },
@@ -187,19 +185,24 @@ async function getStudentBalances(studentIds: string[]) {
     }),
   ]);
 
-  for (const id of studentIds) result.set(id, { unpaidMonths: [], totalDueAmount: 0, isEarlyPaid: false });
+  for (const id of studentIds) result.set(id, { unpaidMonths: [], pendingMonths: [], totalDueAmount: 0, isEarlyPaid: false });
   for (const u of unpaid) {
     const entry = result.get(u.studentId)!;
     const amount = Number(u.amount);
-    entry.unpaidMonths.push({
+    const item: BalanceMonth = {
       paymentId: u.id,
       month: u.periodMonth,
       year: u.periodYear,
       label: `${TURKISH_MONTHS[u.periodMonth - 1]} ${u.periodYear}`,
       amount,
       dueDate: u.dueDate,
-    });
+    };
+    entry.pendingMonths.push(item);
     entry.totalDueAmount += amount;
+    // Dönem, bir sonraki dönemin başladığı gün (ertesi ayın aynı ödeme günü) biter.
+    const nextMonth = u.periodMonth === 12 ? 1 : u.periodMonth + 1;
+    const nextYear = u.periodMonth === 12 ? u.periodYear + 1 : u.periodYear;
+    if (startOfToday >= computeDueDate(nextYear, nextMonth, u.dueDay)) entry.unpaidMonths.push(item);
   }
   for (const e of earlyPaid) result.get(e.studentId)!.isEarlyPaid = true;
   return result;

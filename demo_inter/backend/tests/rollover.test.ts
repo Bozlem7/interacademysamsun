@@ -105,10 +105,11 @@ describe("rolloverBillingCycle", () => {
 });
 
 describe("birikmiş borç + toplu tahsilat", () => {
+  // Geçmiş dönemler (2025): Eylül dönemi 15 Ekim 2025'te, Ekim dönemi 15 Kasım 2025'te bitmiştir.
   async function seedTwoUnpaid(branchId: string) {
     const student = await studentWithDay(branchId, 15);
-    const sep = await prisma.payment.create({ data: { studentId: student.id, periodYear: 2098, periodMonth: 9, dueDay: 15, dueDate: new Date(Date.UTC(2098, 8, 15)), amount: 3500 } });
-    const oct = await prisma.payment.create({ data: { studentId: student.id, periodYear: 2098, periodMonth: 10, dueDay: 15, dueDate: new Date(Date.UTC(2098, 9, 15)), amount: 3500 } });
+    const sep = await prisma.payment.create({ data: { studentId: student.id, periodYear: 2025, periodMonth: 9, dueDay: 15, dueDate: new Date(Date.UTC(2025, 8, 15)), amount: 3500 } });
+    const oct = await prisma.payment.create({ data: { studentId: student.id, periodYear: 2025, periodMonth: 10, dueDay: 15, dueDate: new Date(Date.UTC(2025, 9, 15)), amount: 3500 } });
     return { student, sep, oct };
   }
 
@@ -118,9 +119,22 @@ describe("birikmiş borç + toplu tahsilat", () => {
 
     const rows = await listPayments({ branchId: branch.id, studentId: student.id });
     expect(rows.length).toBe(2);
-    expect(rows[0].unpaidMonths.map((m) => m.label)).toEqual(["Eylül 2098", "Ekim 2098"]);
+    expect(rows[0].unpaidMonths.map((m) => m.label)).toEqual(["Eylül 2025", "Ekim 2025"]);
+    expect(rows[0].pendingMonths.length).toBe(2);
     expect(rows[0].totalDueAmount).toBe(7000);
     expect(rows[0].isEarlyPaid).toBe(false);
+  });
+
+  test("içinde bulunulan (bitmemiş) dönem 'ödenmeyen ay' sayılmaz ama tahsilat listesinde (pendingMonths) yer alır", async () => {
+    const branch = await createBranch("CurrentPeriodBranch");
+    const student = await studentWithDay(branch.id, 15);
+    // Gelecekteki bir dönem = henüz bitmemiş güncel dönem gibi davranır.
+    await prisma.payment.create({ data: { studentId: student.id, periodYear: 2098, periodMonth: 10, dueDay: 15, dueDate: new Date(Date.UTC(2098, 9, 15)), amount: 3500 } });
+    await prisma.payment.create({ data: { studentId: student.id, periodYear: 2025, periodMonth: 9, dueDay: 15, dueDate: new Date(Date.UTC(2025, 8, 15)), amount: 3500 } });
+
+    const rows = await listPayments({ branchId: branch.id, studentId: student.id });
+    expect(rows[0].unpaidMonths.map((m) => m.label)).toEqual(["Eylül 2025"]);
+    expect(rows[0].pendingMonths.map((m) => m.label)).toEqual(["Eylül 2025", "Ekim 2098"]);
   });
 
   test("peşin ödenmiş gelecek dönem isEarlyPaid=true yapar", async () => {
