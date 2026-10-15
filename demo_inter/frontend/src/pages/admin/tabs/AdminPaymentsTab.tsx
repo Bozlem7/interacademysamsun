@@ -37,7 +37,7 @@ interface UnpaidMonth {
 }
 
 /** `onPick` verilirse (yalnızca ödeme onay yetkisi olan yönetici) her ay rozeti tıklanabilir olur. */
-function UnpaidMonthsBadge({ p, onPick }: { p: PaymentRow; onPick?: (m: UnpaidMonth) => void }) {
+function UnpaidMonthsBadge({ p, onPick, onOpenAll }: { p: PaymentRow; onPick?: (m: UnpaidMonth) => void; onOpenAll?: () => void }) {
   if (p.status === "odenmedi") {
     // Backend, dönemi BİTMİŞ ödenmemiş ayları Türkçe adıyla döndürür (Ekim ancak 15 Kasım'da girer).
     // Yalnızca güncel dönem ödenmemişse rozet çıkmaz — satırın "Ödenmedi" durumu zaten bunu gösterir.
@@ -71,6 +71,15 @@ function UnpaidMonthsBadge({ p, onPick }: { p: PaymentRow; onPick?: (m: UnpaidMo
             </span>
           )
         )}
+        {onOpenAll && (
+          <button
+            type="button"
+            onClick={onOpenAll}
+            className="cursor-pointer rounded-full bg-brand px-2.5 py-0.5 text-[10px] font-extrabold text-white hover:opacity-90"
+          >
+            Geçmiş Ödeme Al
+          </button>
+        )}
       </div>
     );
   }
@@ -99,11 +108,12 @@ export function AdminPaymentsTab() {
   const [amountInputs, setAmountInputs] = useState<Record<string, string>>({});
   const [markPaidError, setMarkPaidError] = useState<string | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
-  const [monthSettleTarget, setMonthSettleTarget] = useState<{ studentId: string; studentName: string; month: UnpaidMonth } | null>(null);
-  const [monthSettleAmount, setMonthSettleAmount] = useState("");
-  const [monthSettleNote, setMonthSettleNote] = useState("");
-  const [monthSettleError, setMonthSettleError] = useState<string | null>(null);
-  const [monthSettling, setMonthSettling] = useState(false);
+  const [histTarget, setHistTarget] = useState<{ studentId: string; studentName: string; months: UnpaidMonth[] } | null>(null);
+  const [histSelected, setHistSelected] = useState<Set<string>>(new Set());
+  const [histAmounts, setHistAmounts] = useState<Record<string, string>>({});
+  const [histNotes, setHistNotes] = useState<Record<string, string>>({});
+  const [histError, setHistError] = useState<string | null>(null);
+  const [histSaving, setHistSaving] = useState(false);
   const [search, setSearch] = useState("");
   const [remindingId, setRemindingId] = useState<string | null>(null);
   const [remindResult, setRemindResult] = useState<{ id: string; ok: boolean; text: string } | null>(null);
@@ -155,36 +165,58 @@ export function AdminPaymentsTab() {
     setConfirmTarget(p);
   }
 
-  // Geçmiş (ödenmemiş) bir ayı tek başına tahsil eden pencere — rozetteki ay adına tıklanınca açılır.
-  function openMonthSettle(p: PaymentRow, m: UnpaidMonth) {
-    if (!canConfirmPayment) return;
-    setMonthSettleError(null);
-    setMonthSettleAmount(String(m.amount));
-    setMonthSettleNote("");
-    setMonthSettleTarget({ studentId: p.student.id, studentName: p.student.fullName, month: m });
+  // "Geçmiş Ödeme Al": öğrencinin bitmiş ödenmemiş aylarını seçip her biri için ayrı tutarla tahsil eden
+  // pencere. Yalnızca "muhammet" (canConfirmPayment). Rozetteki bir aya tıklanırsa o ay önceden seçili gelir.
+  function openHistorical(p: PaymentRow, preselect?: UnpaidMonth) {
+    if (!canConfirmPayment || !p.unpaidMonths?.length) return;
+    setHistError(null);
+    setHistSelected(new Set(preselect ? [preselect.paymentId] : []));
+    setHistAmounts(Object.fromEntries(p.unpaidMonths.map((m) => [m.paymentId, String(m.amount)])));
+    setHistNotes({});
+    setHistTarget({ studentId: p.student.id, studentName: p.student.fullName, months: p.unpaidMonths });
   }
 
-  async function submitMonthSettle() {
-    if (!monthSettleTarget || !canConfirmPayment || monthSettling) return;
-    const amount = Number(monthSettleAmount);
-    if (!(amount > 0)) {
-      setMonthSettleError("Ödenen tutar 0'dan büyük olmalıdır.");
+  const histSelectedMonths = histTarget ? histTarget.months.filter((m) => histSelected.has(m.paymentId)) : [];
+  const histTotal = histSelectedMonths.reduce((s, m) => s + (Number(histAmounts[m.paymentId]) || 0), 0);
+  const histOverdueBalance = histTarget ? histTarget.months.reduce((s, m) => s + m.amount, 0) : 0;
+
+  async function submitHistorical() {
+    if (!histTarget || !canConfirmPayment || histSaving) return;
+    if (histSelectedMonths.length === 0) {
+      setHistError("En az bir ay seçmelisiniz.");
       return;
     }
-    setMonthSettling(true);
+    const bad = histSelectedMonths.find((m) => !(Number(histAmounts[m.paymentId]) > 0));
+    if (bad) {
+      setHistError(`${bad.label} için ödenen tutar 0'dan büyük olmalıdır.`);
+      return;
+    }
+    setHistSaving(true);
     try {
-      await apiClient.post("/payments/settle", {
-        items: [{ paymentId: monthSettleTarget.month.paymentId, amount, ...(monthSettleNote.trim() ? { note: monthSettleNote.trim() } : {}) }],
+      await apiClient.post(`/students/${histTarget.studentId}/settle-historical-payments`, {
+        items: histSelectedMonths.map((m) => {
+          const note = (histNotes[m.paymentId] ?? "").trim();
+          return { paymentId: m.paymentId, amount: Number(histAmounts[m.paymentId]), ...(note ? { note } : {}) };
+        }),
         confirm: true,
       });
-      setMonthSettleTarget(null);
-      load(); // liste yenilenir: ay "Ödenmeyen Aylar" rozetinden kalkar
+      setHistTarget(null);
+      load(); // liste yenilenir: tahsil edilen aylar "Ödenmeyen Aylar"dan düşer
       setActivityRefreshKey((k) => k + 1);
     } catch (e: any) {
-      setMonthSettleError(e.response?.data?.error?.message ?? "Ödeme kaydedilemedi.");
+      setHistError(e.response?.data?.error?.message ?? "Ödeme kaydedilemedi.");
     } finally {
-      setMonthSettling(false);
+      setHistSaving(false);
     }
+  }
+
+  function toggleHist(id: string) {
+    setHistSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
   }
 
   function toggleSelected(id: string) {
@@ -356,7 +388,7 @@ export function AdminPaymentsTab() {
                 </div>
               )}
               <div className="flex min-w-[120px] flex-1 items-center self-center">
-                <UnpaidMonthsBadge p={p} onPick={canConfirmPayment ? (m) => openMonthSettle(p, m) : undefined} />
+                <UnpaidMonthsBadge p={p} onPick={canConfirmPayment ? (m) => openHistorical(p, m) : undefined} onOpenAll={canConfirmPayment ? () => openHistorical(p) : undefined} />
               </div>
               {canConfirmPayment ? (
                 <button
@@ -471,51 +503,70 @@ export function AdminPaymentsTab() {
         </div>
       </Modal>
 
-      <Modal open={!!monthSettleTarget} onClose={() => !monthSettling && setMonthSettleTarget(null)} title="Geçmiş Ay Borcunu Tahsil Et">
+      <Modal open={!!histTarget} onClose={() => !histSaving && setHistTarget(null)} title="Geçmiş Ödeme Al">
         <div className="space-y-3.5">
           <dl className="grid grid-cols-[auto,1fr] gap-x-4 gap-y-1.5 rounded-xl bg-slate-50 p-3.5 text-sm dark:bg-surface2">
             <dt className="font-bold text-slate-500">Öğrenci</dt>
-            <dd className="font-bold text-slate-800 dark:text-slate-100">{monthSettleTarget?.studentName}</dd>
-            <dt className="font-bold text-slate-500">Dönem</dt>
-            <dd className="font-extrabold text-red-700 dark:text-red-400">{monthSettleTarget?.month.label} Borcu</dd>
+            <dd className="font-bold text-slate-800 dark:text-slate-100">{histTarget?.studentName}</dd>
+            <dt className="font-bold text-slate-500">Biriken Borç</dt>
+            <dd className="font-extrabold text-red-700 dark:text-red-400">{formatTL(histOverdueBalance)}</dd>
           </dl>
-          <div>
-            <label className="mb-1 block text-xs font-bold text-slate-500">Ödenen Tutar (TL)</label>
-            <input
-              type="number"
-              min="0"
-              step="0.01"
-              value={monthSettleAmount}
-              onChange={(e) => setMonthSettleAmount(e.target.value)}
-              className="w-full rounded-xl border border-slate-200 bg-paper2 p-3 text-sm outline-none focus:border-brand dark:border-slate-700 dark:bg-surface dark:text-white"
-            />
-          </div>
-          <div>
-            <label className="mb-1 block text-xs font-bold text-slate-500">Not (isteğe bağlı)</label>
-            <textarea
-              rows={2}
-              maxLength={300}
-              value={monthSettleNote}
-              onChange={(e) => setMonthSettleNote(e.target.value)}
-              placeholder="Bu ay için not düşebilirsiniz…"
-              className="w-full rounded-xl border border-slate-200 bg-paper2 p-3 text-sm outline-none focus:border-brand dark:border-slate-700 dark:bg-surface dark:text-white"
-            />
+          <div className="space-y-2">
+            <div className="text-xs font-bold text-slate-500">Tahsil edilecek aylar</div>
+            {histTarget?.months.map((m) => {
+              const checked = histSelected.has(m.paymentId);
+              return (
+                <div key={m.paymentId} className="rounded-xl border border-slate-200 p-2.5 dark:border-slate-700">
+                  <label className="flex cursor-pointer items-center gap-2 text-sm font-semibold text-slate-700 dark:text-slate-200">
+                    <input type="checkbox" checked={checked} onChange={() => toggleHist(m.paymentId)} />
+                    {m.label}
+                  </label>
+                  {checked && (
+                    <div className="mt-2 space-y-2">
+                      <div>
+                        <label className="mb-1 block text-[11px] font-bold text-slate-500">Ödenen Tutar (TL)</label>
+                        <input
+                          type="number"
+                          min="0"
+                          step="0.01"
+                          value={histAmounts[m.paymentId] ?? ""}
+                          onChange={(e) => setHistAmounts((prev) => ({ ...prev, [m.paymentId]: e.target.value }))}
+                          className="w-full rounded-lg border border-slate-200 bg-paper2 p-2.5 text-sm font-bold outline-none focus:border-brand dark:border-slate-700 dark:bg-surface dark:text-white"
+                        />
+                      </div>
+                      <input
+                        type="text"
+                        maxLength={300}
+                        value={histNotes[m.paymentId] ?? ""}
+                        onChange={(e) => setHistNotes((prev) => ({ ...prev, [m.paymentId]: e.target.value }))}
+                        placeholder="Not (isteğe bağlı)"
+                        className="w-full rounded-lg border border-slate-200 bg-paper2 p-2.5 text-xs outline-none focus:border-brand dark:border-slate-700 dark:bg-surface dark:text-white"
+                      />
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+            <div className="flex justify-between border-t border-slate-200 pt-2 text-sm font-extrabold text-slate-800 dark:border-slate-700 dark:text-slate-100">
+              <span>Girilen Toplam</span>
+              <span>{formatTL(histTotal)}</span>
+            </div>
           </div>
           <div className="text-xs text-slate-500">
-            Tutar bugünün tarihiyle Finans / Gelir kaydına yazılır ve ödeme hareketleri geçmişinde görünür.
+            Her ay girdiğiniz tutarla bugünün tarihiyle Finans / Gelir kaydına yazılır ve ödeme hareketleri geçmişinde görünür.
           </div>
-          {monthSettleError && <div className="text-xs font-semibold text-red-600">{monthSettleError}</div>}
+          {histError && <div className="text-xs font-semibold text-red-600">{histError}</div>}
           <div className="flex gap-2.5">
             <button
-              onClick={submitMonthSettle}
-              disabled={monthSettling}
+              onClick={submitHistorical}
+              disabled={histSaving}
               className="flex-1 rounded-xl bg-green-600 py-3 text-sm font-extrabold text-white hover:bg-green-700 disabled:opacity-60"
             >
-              {monthSettling ? "Kaydediliyor…" : "Ödendi Olarak Kaydet"}
+              {histSaving ? "Kaydediliyor…" : "Seçili Ayları Ödendi Yap"}
             </button>
             <button
-              onClick={() => setMonthSettleTarget(null)}
-              disabled={monthSettling}
+              onClick={() => setHistTarget(null)}
+              disabled={histSaving}
               className="flex-1 rounded-xl bg-slate-100 py-3 text-sm font-bold text-slate-600 hover:bg-slate-200 dark:bg-surface2 dark:text-slate-300 dark:hover:bg-slate-700"
             >
               Vazgeç
@@ -524,7 +575,7 @@ export function AdminPaymentsTab() {
         </div>
       </Modal>
 
-      <Modal open={!!revertTarget}onClose={() => !reverting && setRevertTarget(null)} title="Ödemeyi Geri Al">
+      <Modal open={!!revertTarget} onClose={() => !reverting && setRevertTarget(null)} title="Ödemeyi Geri Al">
         <div className="space-y-3.5">
           <div className="text-sm leading-relaxed text-slate-600 dark:text-slate-400">
             Bu öğrencinin ödeme durumunu tekrar 'Ödenmedi' yapacak ve kaydedilen tutarı gelirlerden/kasadan düşeceksiniz. Emin misiniz?

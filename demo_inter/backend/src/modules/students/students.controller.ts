@@ -8,7 +8,7 @@ import { studentInputSchema, studentUpdateSchema } from "./students.dto";
 import * as service from "./students.service";
 import { uploadRegistrationDocuments, deleteRegistrationDocuments } from "./studentDocuments.service";
 import { generatePaymentReportPdf } from "../payments/paymentReport.service";
-import { listPaymentLogs, revertPayment } from "../payments/payments.service";
+import { listPaymentLogs, revertPayment, settlePayments } from "../payments/payments.service";
 import { getStudentAttendanceReport } from "../attendance/attendanceReport.service";
 
 export const studentsRouter = Router();
@@ -94,6 +94,32 @@ studentsRouter.post(
         studentId: req.params.id,
         paymentId: req.body.paymentId,
         branchId: req.auth!.branchId,
+        adminId: req.auth!.sub,
+        adminUsername: req.auth!.username,
+      })
+    );
+  }
+);
+
+const settleHistoricalSchema = z.object({
+  items: z.array(z.object({ paymentId: z.string().uuid(), amount: z.number().positive(), note: z.string().max(300).optional() })).min(1),
+  confirm: z.literal(true),
+});
+
+// "Geçmiş Ödeme Al": öğrencinin bitmiş (geçmiş) ödenmemiş aylarını ay bazlı tutarlarla tek transaction'da
+// "Ödendi" yapar, her ay için Finans/Gelir kaydı ve PAID denetim logu yazar. Yalnızca "muhammet".
+studentsRouter.post(
+  "/:id/settle-historical-payments",
+  requireRole("yonetici"),
+  requirePaymentConfirmationAccess(),
+  validateBody(settleHistoricalSchema),
+  async (req, res) => {
+    res.json(
+      await settlePayments({
+        items: req.body.items,
+        historicalStudentId: req.params.id,
+        branchId: req.auth!.branchId,
+        confirm: req.body.confirm,
         adminId: req.auth!.sub,
         adminUsername: req.auth!.username,
       })

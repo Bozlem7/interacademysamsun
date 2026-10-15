@@ -182,6 +182,63 @@ describe("geçmiş ay tahsilatı → Finans", () => {
   });
 });
 
+describe("Geçmiş Ödeme Al (settle-historical-payments)", () => {
+  const past = (m: number) => ({ periodYear: 2025, periodMonth: m, dueDay: 15, dueDate: new Date(Date.UTC(2025, m - 1, 15)), amount: 3500 });
+
+  test("seçilen geçmiş aylar ay bazlı tutarlarla tek işlemde ödenir; açıklama 'Geçmiş Ay Tahsilatı - Ad (Ay Yıl)' olur; Net Kasa artar", async () => {
+    const branch = await createBranch("HistBranch");
+    const { user } = await createAdmin();
+    const student = await studentWithDay(branch.id, 15);
+    await prisma.student.update({ where: { id: student.id }, data: { fullName: "Hist Öğrenci" } });
+    const sep = await prisma.payment.create({ data: { studentId: student.id, ...past(9) } });
+    const oct = await prisma.payment.create({ data: { studentId: student.id, ...past(10) } });
+
+    const before = await getFinanceSummary({});
+    const res = await settlePayments({
+      items: [{ paymentId: sep.id, amount: 3500 }, { paymentId: oct.id, amount: 2000, note: "indirimli" }],
+      historicalStudentId: student.id,
+      branchId: branch.id,
+      confirm: true,
+      adminId: user.id,
+      adminUsername: "muhammet",
+    });
+    expect(res.settled).toBe(2);
+    expect((await getFinanceSummary({})).netBalance - before.netBalance).toBe(5500);
+
+    const incomes = await prisma.financeTransaction.findMany({ where: { studentId: student.id, isDeleted: false }, orderBy: { amount: "desc" } });
+    expect(incomes.map((i) => i.description)).toEqual([
+      "Geçmiş Ay Tahsilatı - Hist Öğrenci (Eylül 2025)",
+      "Geçmiş Ay Tahsilatı - Hist Öğrenci (Ekim 2025) — Not: indirimli",
+    ]);
+    expect(incomes.every((i) => i.createdBy === user.id)).toBe(true);
+    expect(await prisma.studentPaymentLog.count({ where: { studentId: student.id, actionType: "PAID" } })).toBe(2);
+
+    const rows = await listPayments({ branchId: branch.id, studentId: student.id });
+    expect(rows[0].unpaidMonths).toEqual([]);
+  });
+
+  test("henüz bitmemiş (güncel/gelecek) dönem ve başka öğrencinin kaydı bu yolla tahsil edilemez; hiçbir şey yazılmaz", async () => {
+    const branch = await createBranch("HistGuardBranch");
+    const { user } = await createAdmin();
+    const a = await studentWithDay(branch.id, 15);
+    const b = await studentWithDay(branch.id, 15);
+    const current = await prisma.payment.create({ data: { studentId: a.id, periodYear: 2098, periodMonth: 10, dueDay: 15, dueDate: new Date(Date.UTC(2098, 9, 15)), amount: 3500 } });
+    const bPast = await prisma.payment.create({ data: { studentId: b.id, ...past(9) } });
+    const aPast = await prisma.payment.create({ data: { studentId: a.id, ...past(9) } });
+
+    const base = { branchId: branch.id, confirm: true as const, adminId: user.id };
+    await expect(settlePayments({ ...base, historicalStudentId: a.id, items: [{ paymentId: current.id, amount: 3500 }] })).rejects.toThrow();
+    await expect(settlePayments({ ...base, historicalStudentId: a.id, items: [{ paymentId: bPast.id, amount: 3500 }] })).rejects.toThrow();
+    // Geçerli bir ay + geçersiz ay birlikte gönderilirse hiçbiri uygulanmaz (atomik).
+    await expect(
+      settlePayments({ ...base, historicalStudentId: a.id, items: [{ paymentId: aPast.id, amount: 3500 }, { paymentId: current.id, amount: 3500 }] })
+    ).rejects.toThrow();
+
+    expect((await prisma.payment.findUniqueOrThrow({ where: { id: aPast.id } })).status).toBe("odenmedi");
+    expect(await prisma.financeTransaction.count({ where: { studentId: { in: [a.id, b.id] } } })).toBe(0);
+  });
+});
+
 describe("birikmiş borç + toplu tahsilat", () => {
   // Geçmiş dönemler (2025): Eylül dönemi 15 Ekim 2025'te, Ekim dönemi 15 Kasım 2025'te bitmiştir.
   async function seedTwoUnpaid(branchId: string) {

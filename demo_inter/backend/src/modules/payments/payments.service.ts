@@ -72,6 +72,11 @@ function istanbulDateParts(date: Date) {
   return { year: get("year"), month: get("month"), day: get("day") };
 }
 
+/** Dönem, bir sonraki dönemin başladığı gün (ertesi ayın aynı ödeme günü) biter. */
+function periodEndDate(year: number, month: number, dueDay: number): Date {
+  return month === 12 ? computeDueDate(year + 1, 1, dueDay) : computeDueDate(year, month + 1, dueDay);
+}
+
 // Eşzamanlı/çoklu instance tetiklemelerinde rollover'ın tek seferde çalışması için advisory lock anahtarı.
 const ROLLOVER_LOCK_KEY = 727401;
 
@@ -236,10 +241,7 @@ async function getStudentBalances(studentIds: string[]) {
     };
     entry.pendingMonths.push(item);
     entry.totalDueAmount += amount;
-    // Dönem, bir sonraki dönemin başladığı gün (ertesi ayın aynı ödeme günü) biter.
-    const nextMonth = u.periodMonth === 12 ? 1 : u.periodMonth + 1;
-    const nextYear = u.periodMonth === 12 ? u.periodYear + 1 : u.periodYear;
-    if (startOfToday >= computeDueDate(nextYear, nextMonth, u.dueDay)) entry.unpaidMonths.push(item);
+    if (startOfToday >= periodEndDate(u.periodYear, u.periodMonth, u.dueDay)) entry.unpaidMonths.push(item);
   }
   for (const e of earlyPaid) result.get(e.studentId)!.isEarlyPaid = true;
   return result;
@@ -275,7 +277,7 @@ export async function markPaymentPaid(
 
   return prisma.$transaction(async (tx) => {
     const adminName = await resolveAdminName(tx, confirmedByUserId, confirmedByUsername);
-    return applyPaid(tx, payment, amount, confirmedByUserId, adminName);
+    return applyPaid(tx, payment, amount, confirmedByUserId, adminName, `${payment.periodMonth}/${payment.periodYear} dönemi aidat tahsilatı`);
   });
 }
 
@@ -287,6 +289,8 @@ export async function markPaymentPaid(
  */
 export async function settlePayments(params: {
   items: { paymentId: string; amount: number; note?: string }[];
+  /** Verilirse "Geçmiş Ödeme Al" modu: yalnızca bu öğrencinin bitmiş dönemleri, "Geçmiş Ay Tahsilatı - …" açıklamasıyla. */
+  historicalStudentId?: string;
   branchId: string;
   confirm: boolean;
   adminId: string;
@@ -306,12 +310,27 @@ export async function settlePayments(params: {
   if (new Set(payments.map((p) => p.studentId)).size > 1) throw new ValidationError("Seçilen dönemler aynı öğrenciye ait olmalıdır");
   if (payments.some((p) => p.status === "odendi")) throw new ConflictError("Seçilen dönemlerden biri zaten ödenmiş olarak işaretli");
 
+  if (params.historicalStudentId) {
+    // "Geçmiş Ödeme Al" yolu: yalnızca belirtilen öğrencinin, dönemi BİTMİŞ aylarını tahsil eder.
+    if (payments.some((p) => p.studentId !== params.historicalStudentId)) throw new NotFoundError("Ödeme kaydı bulunamadı");
+    const now = new Date();
+    const startOfToday = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+    if (payments.some((p) => startOfToday < periodEndDate(p.periodYear, p.periodMonth, p.dueDay))) {
+      throw new ValidationError("Yalnızca dönemi bitmiş geçmiş aylar bu yolla tahsil edilebilir");
+    }
+  }
+
   return prisma.$transaction(async (tx) => {
     const adminName = await resolveAdminName(tx, params.adminId, params.adminUsername);
     const ordered = [...payments].sort((a, b) => a.periodYear - b.periodYear || a.periodMonth - b.periodMonth);
     const results = [];
     for (const payment of ordered) {
-      results.push(await applyPaid(tx, payment, amounts.get(payment.id)!, params.adminId, adminName, notes.get(payment.id)));
+      const note = notes.get(payment.id);
+      const suffix = note ? ` — Not: ${note}` : "";
+      const description = params.historicalStudentId
+        ? `Geçmiş Ay Tahsilatı - ${stripSeedTag(payment.student.fullName)} (${TURKISH_MONTHS[payment.periodMonth - 1]} ${payment.periodYear})${suffix}`
+        : `${payment.periodMonth}/${payment.periodYear} dönemi aidat tahsilatı${suffix}`;
+      results.push(await applyPaid(tx, payment, amounts.get(payment.id)!, params.adminId, adminName, description));
     }
     return { settled: results.length, totalAmount: results.reduce((s, r) => s + Number(r.amount), 0), payments: results };
   });
@@ -324,7 +343,7 @@ async function applyPaid(
   amount: number,
   adminId: string,
   adminName: string,
-  note?: string
+  description: string
 ) {
   // Statü koşullu update: eşzamanlı iki istekten yalnızca biri geçer.
   const { count } = await tx.payment.updateMany({
@@ -337,8 +356,8 @@ async function applyPaid(
     data: {
       type: "gelir",
       // İşlem tarihi (transactionDate) varsayılan olarak "şimdi"dir: geçmiş bir dönemin tahsilatı da
-      // bugünün tarihiyle Finans/Net Kasa'ya yazılır. Not varsa açıklamaya eklenir.
-      description: `${payment.periodMonth}/${payment.periodYear} dönemi aidat tahsilatı${note ? ` — Not: ${note}` : ""}`,
+      // bugünün tarihiyle Finans/Net Kasa'ya yazılır.
+      description,
       amount,
       studentId: payment.studentId,
       paymentId: payment.id,
