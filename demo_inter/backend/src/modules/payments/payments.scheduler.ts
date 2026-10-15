@@ -1,9 +1,12 @@
 import cron from "node-cron";
-import { generateMonthlyPayments, rolloverBillingCycle } from "./payments.service";
+import { rolloverBillingCycle } from "./payments.service";
 
 /**
  * Registers the period-generation cron job:
- * - 1st of month, 00:05: generate this month's payment rows for every student.
+ * - Every day 00:00 (Europe/Istanbul): on the 15th (payment day 15 students) and on the 30th
+ *   or the last day of shorter months (payment day 30 students) open the month's period as
+ *   "Ödenmedi". See `rolloverBillingCycle`. The old "1st of month, every student" generator
+ *   was removed — periods now open on each student's own payment day.
  *
  * The actual overdue-reminder WhatsApp notification (vade tarihi + 2 gün, 12:00-13:00 arası)
  * is handled by the WPPConnect-based `jobs/paymentReminderCron.js`, registered in server.ts —
@@ -14,25 +17,13 @@ import { generateMonthlyPayments, rolloverBillingCycle } from "./payments.servic
  * Cloud API integration is set up in the future.
  */
 export function registerPaymentCronJobs() {
-  // Sunucu (VPS) saati UTC olduğu için timezone belirtilmeden "5 0 1 * *" aslında
-  // 00:05 UTC'de, yani Türkiye saatiyle 03:05'te tetikleniyordu — aidat hatırlatma
-  // cron'undaki (jobs/paymentReminderCron.js) aynı +3 saatlik kaymanın kardeşi.
-  cron.schedule(
-    "5 0 1 * *",
-    async () => {
-      console.log(`[Aidat Üretim Cron] Tetiklendi: ${new Date().toLocaleString("tr-TR", { timeZone: "Europe/Istanbul" })}`);
-      try {
-        const result = await generateMonthlyPayments();
-        console.info("[cron] generateMonthlyPayments", result);
-      } catch (err) {
-        console.error("[cron] generateMonthlyPayments failed", err);
-      }
-    },
-    {
-      scheduled: true,
-      timezone: "Europe/Istanbul",
-    }
-  );
+  // Açılışta bir kez telafi: sunucu 00:00'da kapalıydıysa veya güncelleme gün içinde geldiyse bugünün
+  // devri kaçmasın. Idempotent — mevcut kayıtlara (ör. "Ödendi") dokunmaz, yalnızca eksikleri açar.
+  rolloverBillingCycle()
+    .then((result) => {
+      if (!result.skipped) console.info("[startup] rolloverBillingCycle", result);
+    })
+    .catch((err) => console.error("[startup] rolloverBillingCycle failed", err));
 
   // Faturalama döngüsü devri: her gün 00:00 (TR) tetiklenir, yalnızca ayın 15'i ve 30'unda
   // (kısa aylarda son günde) iş yapar. Bkz. rolloverBillingCycle.

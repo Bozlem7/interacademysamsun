@@ -20,7 +20,7 @@ registerWhatsAppGateway(io);
 httpServer.listen(env.port, () => {
   console.log(`Inter Academy API listening on port ${env.port} (${env.nodeEnv})`);
 
-  // Aylık aidat kaydı üretim job'ı (her ayın 1'i, 00:05)
+  // Aidat dönemi devri (her gün 00:00; ayın 15'i ve 30'u / kısa aylarda son gün)
   registerPaymentCronJobs();
 
   // WPPConnect oturumunu başlat (kalıcı oturum varsa QR sormadan bağlanır) ve bağlı client

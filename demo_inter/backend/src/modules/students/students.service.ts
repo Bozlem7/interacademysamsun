@@ -60,7 +60,7 @@ export async function suspendStudent(id: string, adminId: string, adminUsername?
 }
 
 /**
- * Askıdaki öğrenciyi tekrar aktif eder. Askıdayken aylık aidat üretimi atlandığı için içinde
+ * Askıdaki öğrenciyi tekrar aktif eder. Askıdayken dönem devri (rolloverBillingCycle) atlandığı için içinde
  * bulunulan dönemin ödeme satırı burada (idempotent upsert ile) tamamlanır — öğrenci ödeme
  * listesine bu ayın aidatıyla geri döner.
  */

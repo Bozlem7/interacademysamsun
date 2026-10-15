@@ -44,41 +44,6 @@ export async function generatePaymentForNewStudent(studentId: string) {
   });
 }
 
-/**
- * Monthly period-generation job — run on the 1st of every month at 00:05.
- * Idempotent: relies on the (studentId, periodYear, periodMonth) unique constraint,
- * so re-running it (e.g. after a redeploy) never duplicates rows.
- */
-export async function generateMonthlyPayments(referenceDate: Date = new Date()) {
-  const year = referenceDate.getUTCFullYear();
-  const month = referenceDate.getUTCMonth() + 1;
-  const amount = await getMonthlyFee();
-
-  // Askıdaki öğrencilere yeni dönem borcu açılmaz; aktif edildiklerinde içinde bulunulan dönem
-  // students.service.reactivateStudent'ta tamamlanır.
-  const students = await prisma.student.findMany({ where: { status: "ACTIVE" }, select: { id: true, paymentDueDay: true } });
-
-  let created = 0;
-  for (const student of students) {
-    const result = await prisma.payment.upsert({
-      where: {
-        studentId_periodYear_periodMonth: { studentId: student.id, periodYear: year, periodMonth: month },
-      },
-      create: {
-        studentId: student.id,
-        periodYear: year,
-        periodMonth: month,
-        dueDay: student.paymentDueDay,
-        dueDate: computeDueDate(year, month, student.paymentDueDay),
-        amount,
-      },
-      update: {},
-    });
-    if (result.createdAt.getTime() === result.updatedAt.getTime()) created++;
-  }
-  return { year, month, studentsProcessed: students.length, created };
-}
-
 const TURKISH_MONTHS = [
   "Ocak", "Şubat", "Mart", "Nisan", "Mayıs", "Haziran",
   "Temmuz", "Ağustos", "Eylül", "Ekim", "Kasım", "Aralık",

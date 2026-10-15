@@ -75,10 +75,6 @@ paymentsRouter.post(
   }
 );
 
-paymentsRouter.post("/generate-period", requireRole("yonetici"), async (_req, res) => {
-  res.json(await service.generateMonthlyPayments());
-});
-
 // 15/30 döngü devrinin manuel tetikleyicisi (günlük cron'un aynısı; idempotent).
 paymentsRouter.post("/run-rollover", requireRole("yonetici"), async (_req, res) => {
   res.json(await service.rolloverBillingCycle());

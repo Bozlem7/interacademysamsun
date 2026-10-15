@@ -1,7 +1,7 @@
 import request from "supertest";
 import { createApp } from "../src/app";
 import { prisma } from "../src/config/prisma";
-import { generateMonthlyPayments } from "../src/modules/payments/payments.service";
+import { rolloverBillingCycle } from "../src/modules/payments/payments.service";
 import { createAdmin, createBranch, createGroup, createInstructor, createStudent } from "./helpers/fixtures";
 
 // Baileys ESM paketi Jest'in CommonJS ortamında yüklenemiyor; bu testler gerçek WhatsApp
@@ -145,7 +145,7 @@ describe("Öğrenci Askıya Alma", () => {
     });
     await prisma.student.update({ where: { id: suspended.id }, data: { status: "SUSPENDED", suspendedAt: new Date() } });
 
-    await generateMonthlyPayments(new Date(Date.UTC(periodYear, periodMonth - 1, 1)));
+    await rolloverBillingCycle(new Date(Date.UTC(periodYear, periodMonth - 1, 15, 12)));
     const generated = await prisma.payment.findMany({
       where: { periodYear, periodMonth, studentId: { in: [active.id, suspended.id] } },
     });
