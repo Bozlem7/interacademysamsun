@@ -51,8 +51,37 @@ paymentsRouter.patch(
   }
 );
 
+const settleSchema = z.object({
+  items: z.array(z.object({ paymentId: z.string().uuid(), amount: z.number().positive() })).min(1),
+  confirm: z.literal(true),
+});
+
+// Birikmiş borç tahsilatı: seçilen birden fazla dönemi tek transaction'da "Ödendi" yapar.
+paymentsRouter.post(
+  "/settle",
+  requireRole("yonetici"),
+  requirePaymentConfirmationAccess(),
+  validateBody(settleSchema),
+  async (req, res) => {
+    res.json(
+      await service.settlePayments({
+        items: req.body.items,
+        branchId: req.auth!.branchId,
+        confirm: req.body.confirm,
+        adminId: req.auth!.sub,
+        adminUsername: req.auth!.username,
+      })
+    );
+  }
+);
+
 paymentsRouter.post("/generate-period", requireRole("yonetici"), async (_req, res) => {
   res.json(await service.generateMonthlyPayments());
+});
+
+// 15/30 döngü devrinin manuel tetikleyicisi (günlük cron'un aynısı; idempotent).
+paymentsRouter.post("/run-rollover", requireRole("yonetici"), async (_req, res) => {
+  res.json(await service.rolloverBillingCycle());
 });
 
 paymentsRouter.post("/run-overdue-check", requireRole("yonetici"), async (_req, res) => {

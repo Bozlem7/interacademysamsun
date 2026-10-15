@@ -17,7 +17,60 @@ interface PaymentRow {
   amount: string;
   status: "odenmedi" | "odendi";
   paidAt: string | null;
+  /** Öğrencinin tüm ödenmemiş dönemleri (eskiden yeniye) — backend birikmiş borç özeti. */
+  unpaidMonths: UnpaidMonth[];
+  totalDueAmount: number;
+  /** Vadesi gelmemiş bir dönem zaten ödenmiş (peşin ödeme). */
+  isEarlyPaid: boolean;
   student: { id: string; fullName: string; tcNoMasked: string } & StudentNotifyFields;
+}
+
+interface UnpaidMonth {
+  paymentId: string;
+  month: number;
+  year: number;
+  label: string;
+  amount: number;
+  dueDate: string;
+}
+
+function UnpaidMonthsBadge({ p }: { p: PaymentRow }) {
+  const others = (p.unpaidMonths ?? []).filter((m) => m.paymentId !== p.id);
+  if (p.status === "odenmedi") {
+    if (others.length === 0) {
+      return (
+        <span className="rounded-lg bg-amber-100 px-2.5 py-1 text-[11px] font-extrabold text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">
+          Günü Geldi / Ödenmedi
+        </span>
+      );
+    }
+    return (
+      <div className="flex flex-wrap items-center gap-1.5">
+        {p.isEarlyPaid && (
+          <span className="rounded-full bg-green-100 px-2 py-0.5 text-[10px] font-extrabold text-green-700 dark:bg-green-900/30 dark:text-green-400">
+            Gelecek Dönem Ödendi
+          </span>
+        )}
+        <span className="text-[11px] font-extrabold text-red-700 dark:text-red-400">Ödenmeyen Aylar:</span>
+        {p.unpaidMonths.map((m) => (
+          <span
+            key={m.paymentId}
+            className="rounded-full bg-red-100 px-2 py-0.5 text-[10px] font-extrabold text-red-700 dark:bg-red-900/30 dark:text-red-400"
+          >
+            {m.label}
+          </span>
+        ))}
+      </div>
+    );
+  }
+  if (p.isEarlyPaid && new Date(p.dueDate) > new Date()) {
+    return (
+      <span className="rounded-lg bg-green-100 px-2.5 py-1 text-[11px] font-extrabold text-green-700 dark:bg-green-900/30 dark:text-green-400">
+        Gelecek Dönem Ödendi
+      </span>
+    );
+  }
+  return null;
 }
 
 function isOverdue(p: PaymentRow) {
@@ -32,8 +85,9 @@ export function AdminPaymentsTab() {
   }, [username, canConfirmPayment]);
   const [payments, setPayments] = useState<PaymentRow[]>([]);
   const [confirmTarget, setConfirmTarget] = useState<PaymentRow | null>(null);
-  const [paidAmountInput, setPaidAmountInput] = useState("");
+  const [amountInputs, setAmountInputs] = useState<Record<string, string>>({});
   const [markPaidError, setMarkPaidError] = useState<string | null>(null);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [search, setSearch] = useState("");
   const [remindingId, setRemindingId] = useState<string | null>(null);
   const [remindResult, setRemindResult] = useState<{ id: string; ok: boolean; text: string } | null>(null);
@@ -73,20 +127,53 @@ export function AdminPaymentsTab() {
 
   function openConfirm(p: PaymentRow) {
     if (!canConfirmPayment) return;
-    setPaidAmountInput(p.amount);
     setMarkPaidError(null);
+    // Varsayılan: tüm birikmiş borç seçili (toplam bakiyeyi kapat); yönetici istediği ayı çıkarabilir.
+    const months = p.unpaidMonths?.length ? p.unpaidMonths : [];
+    const ids = months.map((m) => m.paymentId);
+    setSelectedIds(new Set(ids.includes(p.id) ? ids : [...ids, p.id]));
+    // Her ayın tutarı varsayılan (nominal) değerle dolu gelir; yönetici ay bazında düzeltebilir.
+    const amounts: Record<string, string> = { [p.id]: String(Number(p.amount)) };
+    for (const m of months) amounts[m.paymentId] = String(m.amount);
+    setAmountInputs(amounts);
     setConfirmTarget(p);
   }
 
+  function toggleSelected(id: string) {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  // Modalda listelenecek dönemler: öğrencinin tüm ödenmemiş ayları (yoksa yalnızca tıklanan satır).
+  const modalMonths: UnpaidMonth[] = confirmTarget
+    ? confirmTarget.unpaidMonths?.length
+      ? confirmTarget.unpaidMonths
+      : [{ paymentId: confirmTarget.id, month: confirmTarget.periodMonth, year: confirmTarget.periodYear, label: `${confirmTarget.periodMonth}/${confirmTarget.periodYear}`, amount: Number(confirmTarget.amount), dueDate: confirmTarget.dueDate }]
+    : [];
+  const selectedMonths = modalMonths.filter((m) => selectedIds.has(m.paymentId));
+  const amountOf = (id: string) => Number(amountInputs[id]);
+  const selectedTotal = selectedMonths.reduce((s, m) => s + (amountOf(m.paymentId) || 0), 0);
+
   async function markPaid() {
     if (!confirmTarget || !canConfirmPayment) return;
-    const paidAmount = Number(paidAmountInput);
-    if (!(paidAmount > 0)) {
-      setMarkPaidError("Ödeme tutarı 0'dan büyük olmalıdır.");
+    if (selectedMonths.length === 0) {
+      setMarkPaidError("En az bir dönem seçmelisiniz.");
+      return;
+    }
+    const bad = selectedMonths.find((m) => !(amountOf(m.paymentId) > 0));
+    if (bad) {
+      setMarkPaidError(`${bad.label} için ödeme tutarı 0'dan büyük olmalıdır.`);
       return;
     }
     try {
-      await apiClient.patch(`/payments/${confirmTarget.id}/status`, { confirm: true, paidAmount });
+      await apiClient.post("/payments/settle", {
+        items: selectedMonths.map((m) => ({ paymentId: m.paymentId, amount: amountOf(m.paymentId) })),
+        confirm: true,
+      });
       setConfirmTarget(null);
       load();
       setActivityRefreshKey((k) => k + 1);
@@ -133,20 +220,39 @@ export function AdminPaymentsTab() {
     }
   }
 
-  const unpaidCount = payments.filter((p) => p.status === "odenmedi").length;
-  const overdueCount = payments.filter(isOverdue).length;
+  // Veritabanında her dönem ayrı kayıt olarak durur; ekranda öğrenci başına TEK satır gösterilir:
+  // ödenmemiş dönemi olan öğrencide en güncel ödenmemiş dönem, yoksa en güncel dönem. Diğer
+  // ödenmemiş aylar satırın ortasındaki rozette (UnpaidMonthsBadge) listelenir.
+  const studentRows = useMemo(() => {
+    const byStudent = new Map<string, PaymentRow>();
+    const rank = (p: PaymentRow) => p.periodYear * 12 + p.periodMonth;
+    for (const p of payments) {
+      const cur = byStudent.get(p.student.id);
+      if (!cur) {
+        byStudent.set(p.student.id, p);
+        continue;
+      }
+      const better =
+        p.status !== cur.status ? p.status === "odenmedi" : rank(p) > rank(cur);
+      if (better) byStudent.set(p.student.id, p);
+    }
+    return [...byStudent.values()];
+  }, [payments]);
+
+  const unpaidCount = studentRows.filter((p) => p.status === "odenmedi").length;
+  const overdueCount = studentRows.filter(isOverdue).length;
 
   const filteredPayments = useMemo(() => {
     const q = search.trim().toLocaleLowerCase("tr-TR");
     const filtered = q
-      ? payments.filter(
+      ? studentRows.filter(
           (p) => p.student.fullName.toLocaleLowerCase("tr-TR").includes(q) || p.student.tcNoMasked.toLowerCase().includes(q)
         )
-      : payments;
+      : studentRows;
     // Backend'in ORDER BY'ı Türkçe collation garantili değil — kesin doğru alfabetik sıra
     // burada garanti edilir. Dönem/vade sırasını değil, öğrenci adını esas alır.
     return [...filtered].sort((a, b) => turkishCompare(a.student.fullName, b.student.fullName));
-  }, [payments, search]);
+  }, [studentRows, search]);
 
   return (
     <div className="p-7">
@@ -201,6 +307,9 @@ export function AdminPaymentsTab() {
                   Veli ({primaryRecipient.role}): {primaryRecipient.name}
                 </div>
               )}
+              <div className="flex min-w-[120px] flex-1 items-center self-center">
+                <UnpaidMonthsBadge p={p} />
+              </div>
               {canConfirmPayment ? (
                 <button
                   disabled={p.status === "odendi"}
@@ -273,20 +382,31 @@ export function AdminPaymentsTab() {
       <Modal open={!!confirmTarget} onClose={() => setConfirmTarget(null)} title="Ödemeyi onayla">
         <div className="space-y-3.5">
           <div className="text-sm leading-relaxed text-slate-600 dark:text-slate-400">
-            {confirmTarget?.student.fullName} için {confirmTarget?.periodMonth}/{confirmTarget?.periodYear} dönemi "Ödendi" olarak işaretlenecek. Tahsil
-            edilen tutarı (tam ödeme, indirim veya özel taksit) aşağıdan belirleyebilirsiniz. Hatalı işaretleme olursa "Geri Al" ile
-            düzeltebilirsiniz; işlem ödeme hareketleri geçmişine kaydedilir.
+            {confirmTarget?.student.fullName} için aşağıdan seçtiğiniz dönemler tek işlemde "Ödendi" olarak işaretlenecek (ya hepsi, ya
+            hiçbiri). Hatalı işaretleme olursa "Geri Al" ile düzeltebilirsiniz; işlem ödeme hareketleri geçmişine kaydedilir.
           </div>
-          <div>
-            <label className="mb-1 block text-xs font-bold text-slate-500">Tahsil Edilen Tutar (TL)</label>
-            <input
-              type="number"
-              min="0"
-              step="0.01"
-              value={paidAmountInput}
-              onChange={(e) => setPaidAmountInput(e.target.value)}
-              className="w-full rounded-xl border border-slate-200 bg-paper2 p-3 text-sm outline-none focus:border-brand dark:border-slate-700 dark:bg-surface dark:text-white"
-            />
+          <div className="space-y-1.5 rounded-xl bg-slate-50 p-3 dark:bg-surface2">
+            <div className="text-xs font-bold text-slate-500">Ödenmeyen Aylar</div>
+            {modalMonths.map((m) => (
+              <label key={m.paymentId} className="flex cursor-pointer items-center gap-2 text-sm text-slate-700 dark:text-slate-200">
+                <input type="checkbox" checked={selectedIds.has(m.paymentId)} onChange={() => toggleSelected(m.paymentId)} />
+                <span className="flex-1 font-semibold">{m.label}</span>
+                <input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  disabled={!selectedIds.has(m.paymentId)}
+                  value={amountInputs[m.paymentId] ?? ""}
+                  onChange={(e) => setAmountInputs((prev) => ({ ...prev, [m.paymentId]: e.target.value }))}
+                  className="w-28 rounded-lg border border-slate-200 bg-paper2 px-2 py-1 text-right text-sm font-bold outline-none focus:border-brand disabled:opacity-40 dark:border-slate-700 dark:bg-surface dark:text-white"
+                />
+                <span className="text-xs font-bold text-slate-500">TL</span>
+              </label>
+            ))}
+            <div className="flex justify-between border-t border-slate-200 pt-1.5 text-sm font-extrabold text-slate-800 dark:border-slate-700 dark:text-slate-100">
+              <span>Seçilen Toplam</span>
+              <span>{formatTL(selectedTotal)}</span>
+            </div>
           </div>
           {markPaidError && <div className="text-xs font-semibold text-red-600">{markPaidError}</div>}
           <div className="flex gap-2.5">

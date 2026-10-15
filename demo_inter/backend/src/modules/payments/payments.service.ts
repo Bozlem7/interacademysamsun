@@ -79,6 +79,75 @@ export async function generateMonthlyPayments(referenceDate: Date = new Date()) 
   return { year, month, studentsProcessed: students.length, created };
 }
 
+const TURKISH_MONTHS = [
+  "Ocak", "Şubat", "Mart", "Nisan", "Mayıs", "Haziran",
+  "Temmuz", "Ağustos", "Eylül", "Ekim", "Kasım", "Aralık",
+];
+
+/** Verilen anın Türkiye saatindeki takvim günü (sunucu UTC olsa bile 00:00 TR doğru gün sayılır). */
+function istanbulDateParts(date: Date) {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Europe/Istanbul",
+    year: "numeric",
+    month: "numeric",
+    day: "numeric",
+  }).formatToParts(date);
+  const get = (type: string) => Number(parts.find((p) => p.type === type)!.value);
+  return { year: get("year"), month: get("month"), day: get("day") };
+}
+
+// Eşzamanlı/çoklu instance tetiklemelerinde rollover'ın tek seferde çalışması için advisory lock anahtarı.
+const ROLLOVER_LOCK_KEY = 727401;
+
+/**
+ * Faturalama döngüsü devri — her gün 00:00'da (Europe/Istanbul) çalışır.
+ * - Ayın 15'i: ödeme günü 15 olan aktif öğrencilerin bir SONRAKİ dönem (ay+1) kaydı "Ödenmedi" açılır.
+ * - Ayın 30'u (veya 30'dan kısa ayların son günü): ödeme günü 30 olan öğrenciler için aynısı.
+ *
+ * Güvenlik: kayıtlar `createMany({ skipDuplicates })` ile eklenir, yani (öğrenci, yıl, ay) için zaten
+ * var olan kayıt — örn. önceden "Ödendi" olarak girilmiş peşin ödeme — ASLA ezilmez. İşlem tek
+ * transaction + `pg_try_advisory_xact_lock` altında çalışır; aynı anda tetiklenen ikinci çalıştırma
+ * (çoklu instance, manuel tetikleme) kilidi alamayıp atlanır, ayrıca unique kısıt çift kaydı engeller.
+ */
+export async function rolloverBillingCycle(referenceDate: Date = new Date()) {
+  const { year, month, day } = istanbulDateParts(referenceDate);
+  const lastDay = lastDayOfMonth(year, month);
+
+  const cycles: number[] = [];
+  if (day === 15) cycles.push(15);
+  if (day === 30 || (day === lastDay && lastDay < 30)) cycles.push(30);
+  if (cycles.length === 0) return { skipped: true as const, reason: "not-a-rollover-day", cycles, created: 0 };
+
+  const nextMonth = month === 12 ? 1 : month + 1;
+  const nextYear = month === 12 ? year + 1 : year;
+  const amount = await getMonthlyFee();
+
+  return prisma.$transaction(async (tx) => {
+    const [{ locked }] = await tx.$queryRaw<{ locked: boolean }[]>`SELECT pg_try_advisory_xact_lock(${ROLLOVER_LOCK_KEY}) AS locked`;
+    if (!locked) return { skipped: true as const, reason: "locked", cycles, created: 0 };
+
+    // Askıdaki öğrencilere yeni dönem borcu açılmaz (aktif edildiklerinde reactivateStudent tamamlar).
+    const students = await tx.student.findMany({
+      where: { status: "ACTIVE", paymentDueDay: { in: cycles } },
+      select: { id: true, paymentDueDay: true },
+    });
+
+    const { count } = await tx.payment.createMany({
+      data: students.map((s) => ({
+        studentId: s.id,
+        periodYear: nextYear,
+        periodMonth: nextMonth,
+        dueDay: s.paymentDueDay,
+        dueDate: computeDueDate(nextYear, nextMonth, s.paymentDueDay),
+        amount,
+      })),
+      skipDuplicates: true,
+    });
+
+    return { skipped: false as const, cycles, term: { year: nextYear, month: nextMonth }, studentsProcessed: students.length, created: count };
+  });
+}
+
 export function listPayments(params: {
   periodYear?: number;
   periodMonth?: number;
@@ -100,19 +169,73 @@ export function listPayments(params: {
       include: { student: true },
       orderBy: [{ periodYear: "desc" }, { periodMonth: "desc" }, { dueDay: "asc" }, { student: { fullName: "asc" } }],
     })
-    .then((rows) =>
-      rows.map((p) => {
+    .then(async (rows) => {
+      const balances = await getStudentBalances([...new Set(rows.map((r) => r.studentId))]);
+      return rows.map((p) => {
         const { tcNoEncrypted, tcNoHash, ...restStudent } = p.student;
+        const balance = balances.get(p.studentId) ?? { unpaidMonths: [], totalDueAmount: 0, isEarlyPaid: false };
         return {
           ...p,
+          ...balance,
           student: {
             ...restStudent,
             fullName: stripSeedTag(p.student.fullName),
             tcNoMasked: maskTc(decryptTc(tcNoEncrypted)),
           },
         };
-      })
-    );
+      });
+    });
+}
+
+/**
+ * Öğrenci başına birikmiş borç özeti — dönem filtresinden bağımsız, tüm "Ödenmedi" dönemleri:
+ * - unpaidMonths: ödenmemiş dönemler (eskiden yeniye), her biri kendi payment id'si ve tutarıyla
+ * - totalDueAmount: bu dönemlerin tutar toplamı (birikmiş + güncel dönem)
+ * - isEarlyPaid: vadesi henüz gelmemiş bir dönem zaten "Ödendi" (peşin ödeme)
+ */
+async function getStudentBalances(studentIds: string[]) {
+  const result = new Map<
+    string,
+    {
+      unpaidMonths: { paymentId: string; month: number; year: number; label: string; amount: number; dueDate: Date }[];
+      totalDueAmount: number;
+      isEarlyPaid: boolean;
+    }
+  >();
+  if (studentIds.length === 0) return result;
+
+  const now = new Date();
+  const startOfToday = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+
+  const [unpaid, earlyPaid] = await Promise.all([
+    prisma.payment.findMany({
+      where: { studentId: { in: studentIds }, status: "odenmedi" },
+      orderBy: [{ periodYear: "asc" }, { periodMonth: "asc" }],
+      select: { id: true, studentId: true, periodMonth: true, periodYear: true, amount: true, dueDate: true },
+    }),
+    prisma.payment.findMany({
+      where: { studentId: { in: studentIds }, status: "odendi", dueDate: { gt: startOfToday } },
+      select: { studentId: true },
+      distinct: ["studentId"],
+    }),
+  ]);
+
+  for (const id of studentIds) result.set(id, { unpaidMonths: [], totalDueAmount: 0, isEarlyPaid: false });
+  for (const u of unpaid) {
+    const entry = result.get(u.studentId)!;
+    const amount = Number(u.amount);
+    entry.unpaidMonths.push({
+      paymentId: u.id,
+      month: u.periodMonth,
+      year: u.periodYear,
+      label: `${TURKISH_MONTHS[u.periodMonth - 1]} ${u.periodYear}`,
+      amount,
+      dueDate: u.dueDate,
+    });
+    entry.totalDueAmount += amount;
+  }
+  for (const e of earlyPaid) result.get(e.studentId)!.isEarlyPaid = true;
+  return result;
 }
 
 /**
@@ -144,35 +267,86 @@ export async function markPaymentPaid(
   if (!(amount > 0)) throw new ValidationError("Ödeme tutarı 0'dan büyük olmalıdır");
 
   return prisma.$transaction(async (tx) => {
-    const updated = await tx.payment.update({
-      where: { id: paymentId },
-      data: { status: "odendi", paidAt: new Date(), confirmedBy: confirmedByUserId, amount },
-    });
-
-    await tx.financeTransaction.create({
-      data: {
-        type: "gelir",
-        description: `${payment.periodMonth}/${payment.periodYear} dönemi aidat tahsilatı`,
-        amount,
-        studentId: payment.studentId,
-        paymentId: payment.id,
-        createdBy: confirmedByUserId,
-      },
-    });
-
-    await tx.studentPaymentLog.create({
-      data: {
-        studentId: payment.studentId,
-        paymentId: payment.id,
-        adminId: confirmedByUserId,
-        adminName: await resolveAdminName(tx, confirmedByUserId, confirmedByUsername),
-        actionType: "PAID",
-        amount,
-      },
-    });
-
-    return updated;
+    const adminName = await resolveAdminName(tx, confirmedByUserId, confirmedByUsername);
+    return applyPaid(tx, payment, amount, confirmedByUserId, adminName);
   });
+}
+
+/**
+ * Birden fazla dönemi (birikmiş borç) tek transaction'da "Ödendi" yapar: ya hepsi uygulanır ya hiçbiri.
+ * Her dönem için yönetici tarafından girilen tutar kullanılır (öğrenciye özel fiyat/indirim olabilir);
+ * her dönemin gelir kaydı ve logu kendi tutarıyla yazılır. Statü koşullu update, eşzamanlı çift
+ * tıklamayı/isteği engeller.
+ */
+export async function settlePayments(params: {
+  items: { paymentId: string; amount: number }[];
+  branchId: string;
+  confirm: boolean;
+  adminId: string;
+  adminUsername?: string;
+}) {
+  if (!params.confirm) throw new ValidationError("Ödeme onayı için çift onay (confirm) gereklidir");
+  if (params.items.length === 0) throw new ValidationError("En az bir dönem seçilmelidir");
+  const amounts = new Map(params.items.map((i) => [i.paymentId, i.amount]));
+  if (amounts.size !== params.items.length) throw new ValidationError("Aynı dönem birden fazla kez gönderilemez");
+  if (params.items.some((i) => !(i.amount > 0))) throw new ValidationError("Ödeme tutarı 0'dan büyük olmalıdır");
+  const ids = [...amounts.keys()];
+
+  const payments = await prisma.payment.findMany({ where: { id: { in: ids } }, include: { student: true } });
+  if (payments.length !== ids.length) throw new NotFoundError("Ödeme kaydı bulunamadı");
+  if (payments.some((p) => p.student.branchId !== params.branchId)) throw new ForbiddenError("Bu ödeme farklı bir şubeye ait");
+  if (new Set(payments.map((p) => p.studentId)).size > 1) throw new ValidationError("Seçilen dönemler aynı öğrenciye ait olmalıdır");
+  if (payments.some((p) => p.status === "odendi")) throw new ConflictError("Seçilen dönemlerden biri zaten ödenmiş olarak işaretli");
+
+  return prisma.$transaction(async (tx) => {
+    const adminName = await resolveAdminName(tx, params.adminId, params.adminUsername);
+    const ordered = [...payments].sort((a, b) => a.periodYear - b.periodYear || a.periodMonth - b.periodMonth);
+    const results = [];
+    for (const payment of ordered) {
+      results.push(await applyPaid(tx, payment, amounts.get(payment.id)!, params.adminId, adminName));
+    }
+    return { settled: results.length, totalAmount: results.reduce((s, r) => s + Number(r.amount), 0), payments: results };
+  });
+}
+
+/** Tek dönemi "Ödendi" yapar + gelir kaydı + log yazar. Çağıran transaction içinde olmalıdır. */
+async function applyPaid(
+  tx: TxClient,
+  payment: { id: string; studentId: string; periodMonth: number; periodYear: number },
+  amount: number,
+  adminId: string,
+  adminName: string
+) {
+  // Statü koşullu update: eşzamanlı iki istekten yalnızca biri geçer.
+  const { count } = await tx.payment.updateMany({
+    where: { id: payment.id, status: "odenmedi" },
+    data: { status: "odendi", paidAt: new Date(), confirmedBy: adminId, amount },
+  });
+  if (count === 0) throw new ConflictError("Bu dönem zaten ödenmiş olarak işaretli");
+
+  await tx.financeTransaction.create({
+    data: {
+      type: "gelir",
+      description: `${payment.periodMonth}/${payment.periodYear} dönemi aidat tahsilatı`,
+      amount,
+      studentId: payment.studentId,
+      paymentId: payment.id,
+      createdBy: adminId,
+    },
+  });
+
+  await tx.studentPaymentLog.create({
+    data: {
+      studentId: payment.studentId,
+      paymentId: payment.id,
+      adminId,
+      adminName,
+      actionType: "PAID",
+      amount,
+    },
+  });
+
+  return tx.payment.findUniqueOrThrow({ where: { id: payment.id } });
 }
 
 type TxClient = Parameters<Parameters<typeof prisma.$transaction>[0]>[0];

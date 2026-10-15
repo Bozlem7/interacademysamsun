@@ -1,5 +1,5 @@
 import cron from "node-cron";
-import { generateMonthlyPayments } from "./payments.service";
+import { generateMonthlyPayments, rolloverBillingCycle } from "./payments.service";
 
 /**
  * Registers the period-generation cron job:
@@ -26,6 +26,24 @@ export function registerPaymentCronJobs() {
         console.info("[cron] generateMonthlyPayments", result);
       } catch (err) {
         console.error("[cron] generateMonthlyPayments failed", err);
+      }
+    },
+    {
+      scheduled: true,
+      timezone: "Europe/Istanbul",
+    }
+  );
+
+  // Faturalama döngüsü devri: her gün 00:00 (TR) tetiklenir, yalnızca ayın 15'i ve 30'unda
+  // (kısa aylarda son günde) iş yapar. Bkz. rolloverBillingCycle.
+  cron.schedule(
+    "0 0 * * *",
+    async () => {
+      try {
+        const result = await rolloverBillingCycle();
+        if (!result.skipped || result.reason === "locked") console.info("[cron] rolloverBillingCycle", result);
+      } catch (err) {
+        console.error("[cron] rolloverBillingCycle failed", err);
       }
     },
     {
